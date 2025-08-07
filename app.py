@@ -11,6 +11,8 @@ from scenario_db import ScenarioDB
 from vector_search import VectorSearchWrapper
 from gpt_handler import GPTHandler
 from database import HistoryDB
+from multi_user_database import MultiUserHistoryDB
+from enhanced_google_auth import EnhancedGoogleAuth
 
 # 페이지 설정
 st.set_page_config(
@@ -39,11 +41,25 @@ def init_components():
     scenario_db = ScenarioDB()
     vector_search = VectorSearchWrapper()
     
-    # API 키 설정
-    api_key = st.session_state.get('google_api_key') or os.getenv("GOOGLE_API_KEY")
+    # Google OAuth2 인증
+    google_auth = EnhancedGoogleAuth()
+    
+    # OAuth2 인증을 통한 API 키 설정
+    api_key = None
+    if google_auth.is_authenticated() and google_auth.client_id:
+        # OAuth 사용자의 경우 환경변수에서 API 키 사용
+        api_key = os.getenv("GOOGLE_API_KEY")
+    else:
+        # OAuth가 설정되지 않은 경우 환경변수에서 API 키 사용
+        api_key = os.getenv("GOOGLE_API_KEY")
+    
     gpt_handler = GPTHandler(api_key=api_key)
     
+    # 기존 데이터베이스 (호환성 유지)
     history_db = HistoryDB()
+    
+    # 다중 사용자 데이터베이스
+    multi_user_db = MultiUserHistoryDB()
     
     # 벡터 DB에 초기 샘플 데이터 추가 (데이터가 없을 경우)
     try:
@@ -55,58 +71,45 @@ def init_components():
     except Exception as e:
         print(f"⚠️ 초기 데이터 추가 실패: {e}")
     
-    return classifier, scenario_db, vector_search, gpt_handler, history_db
+    return classifier, scenario_db, vector_search, gpt_handler, history_db, multi_user_db, google_auth
 
 # 컴포넌트 초기화
-classifier, scenario_db, vector_search, gpt_handler, history_db = init_components()
+classifier, scenario_db, vector_search, gpt_handler, history_db, multi_user_db, google_auth = init_components()
 
 # 사이드바
 with st.sidebar:
+    st.markdown("## 🔐 인증")
+    
+    # Google OAuth 로그인 (OAuth가 설정된 경우에만 표시)
+    if google_auth.client_id:
+        if not google_auth.is_authenticated():
+            st.markdown("### Google 계정으로 로그인")
+            google_auth.render_login_button()
+            st.markdown("---")
+        
+        # 로그인된 사용자 정보 표시
+        if google_auth.is_authenticated():
+            st.markdown("### 👤 로그인된 사용자")
+            google_auth.render_user_info()
+            st.markdown("---")
+    else:
+        st.info("ℹ️ Google OAuth가 설정되지 않았습니다.")
+        st.markdown("---")
+    
     st.markdown("## 👤 담당자 정보")
     user_name = st.text_input("담당자명", placeholder="홍길동")
     user_role = st.selectbox("역할", ["영업", "엔지니어", "개발자"])
     st.markdown("---")
     
-    # API 키 설정 섹션 추가
-    st.markdown("## 🔑 API 설정")
+    # OAuth2 인증 상태 표시
+    if not google_auth.client_id:
+        st.warning("⚠️ Google OAuth가 설정되지 않았습니다.")
+        st.info("관리자가 OAuth 설정을 완료하면 Google 계정으로 로그인할 수 있습니다.")
+        st.markdown("---")
+    elif not google_auth.is_authenticated():
+        st.info("🔐 Google 계정으로 로그인하여 AI 분석 서비스를 이용하세요.")
+        st.markdown("---")
     
-    # 저장된 API 키 불러오기
-    saved_api_key = st.session_state.get('google_api_key')
-    
-    # API 키 입력
-    api_key = st.text_input(
-        "Google API 키", 
-        value=saved_api_key or "",
-        type="password",
-        placeholder="AIzaSy...",
-        help="Google Cloud Console에서 발급받은 API 키를 입력하세요"
-    )
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("🔧 API 키 설정"):
-            if api_key:
-                st.session_state.google_api_key = api_key
-                st.success("✅ API 키가 설정되었습니다!")
-                st.rerun()
-            else:
-                st.error("❌ API 키를 입력해주세요.")
-    
-    with col2:
-        if st.button("🗑️ API 키 삭제"):
-            if 'google_api_key' in st.session_state:
-                del st.session_state.google_api_key
-            st.success("✅ API 키가 삭제되었습니다!")
-            st.rerun()
-    
-    # 현재 상태 표시
-    if 'google_api_key' in st.session_state:
-        st.success("✅ API 키 설정됨")
-    else:
-        st.warning("⚠️ API 키가 설정되지 않음")
-    
-    st.markdown("---")
     st.markdown("## ⚙️ 시스템 설정")
     gpt_model = st.selectbox("AI 모델", ["Gemini 1.5 Pro"], index=0)
 
@@ -201,6 +204,13 @@ with tab1:
                         import time
                         start_time = time.time()
                         
+                        # API 키 확인
+                        api_key_available = st.session_state.get('google_api_key') or os.getenv("GOOGLE_API_KEY")
+                        
+                        if not api_key_available:
+                            st.error("❌ API 키가 설정되지 않아 AI 분석을 진행할 수 없습니다.")
+                            st.stop()
+                        
                         # 타임아웃 설정 (30초)
                         gemini_result = None
                         try:
@@ -274,13 +284,21 @@ with tab1:
                                     timestamp=datetime.datetime.now().isoformat()
                                 )
                             
-                            # JSON 파일에 이력 저장
+                            # 다중 사용자 데이터베이스에 이력 저장
                             st.session_state.inquiry_data['timestamp'] = datetime.datetime.now().isoformat()
-                            save_result = history_db.save_analysis(analysis_result, st.session_state.inquiry_data)
-                            if save_result.get('success'):
-                                st.success(f"✅ 이력 저장 완료 (JSON 파일)")
+                            multi_save_result = multi_user_db.save_analysis(analysis_result, st.session_state.inquiry_data)
+                            
+                            if multi_save_result.get('success'):
+                                st.success(f"✅ 다중 사용자 이력 저장 완료 (사용자: {multi_save_result.get('user_name', 'Unknown')})")
                             else:
-                                st.warning(f"⚠️ 이력 저장 실패: {save_result.get('error', 'unknown error')}")
+                                st.warning(f"⚠️ 다중 사용자 이력 저장 실패: {multi_save_result.get('error', 'unknown error')}")
+                            
+                            # 기존 JSON 파일에도 저장 (호환성 유지)
+                            legacy_save_result = history_db.save_analysis(analysis_result, st.session_state.inquiry_data)
+                            if legacy_save_result.get('success'):
+                                st.info(f"✅ 기존 이력 저장 완료 (호환성)")
+                            else:
+                                st.warning(f"⚠️ 기존 이력 저장 실패: {legacy_save_result.get('error', 'unknown error')}")
                                 
                         except Exception as e:
                             st.error(f"❌ 이력 저장 실패: {e}")
@@ -484,6 +502,13 @@ with tab2:
 with tab3:
     st.markdown("## 📊 분석 이력 관리")
     
+    # 이력 보기 모드 선택
+    history_mode = st.radio(
+        "이력 보기 모드",
+        ["👤 내 이력", "🌐 전체 이력"],
+        horizontal=True
+    )
+    
     # 필터링 옵션
     col15, col16, col17, col18 = st.columns(4)
     
@@ -500,7 +525,10 @@ with tab3:
                        "PK P 계정 로그인 안됨", "PK P 웹 접속 안됨", "기타"])
     
     with col18:
-        filter_user = st.text_input("담당자 필터", placeholder="담당자명 입력")
+        if history_mode == "👤 내 이력":
+            filter_user = st.text_input("담당자명", value=user_name, disabled=True)
+        else:
+            filter_user = st.text_input("담당자 필터", placeholder="담당자명 입력")
     
     # 검색 버튼
     search_clicked = st.button("🔍 이력 검색", type="primary")
@@ -510,33 +538,50 @@ with tab3:
         # 검색 진행 상태 표시
         with st.spinner("🔍 이력을 검색하고 있습니다..."):
             try:
-                # 이력 조회
                 # 종료 날짜를 포함하도록 23:59:59 추가
                 date_to_with_time = None
                 if filter_date_to:
                     date_to_with_time = f"{filter_date_to.isoformat()}T23:59:59"
                 
-                history_data = history_db.get_history(
-                    limit=50,
-                    issue_type=filter_type if filter_type != "전체" else None,
-                    date_from=filter_date_from.isoformat() if filter_date_from else None,
-                    date_to=date_to_with_time,
-                    user_name=filter_user if filter_user else None
-                )
+                # 다중 사용자 데이터베이스에서 이력 조회
+                if history_mode == "👤 내 이력":
+                    # 사용자별 이력 조회
+                    history_result = multi_user_db.get_user_history(
+                        user_name=user_name,
+                        user_role=user_role,
+                        limit=50,
+                        issue_type=filter_type if filter_type != "전체" else None,
+                        date_from=filter_date_from.isoformat() if filter_date_from else None,
+                        date_to=date_to_with_time,
+                        keyword=filter_user if filter_user else None
+                    )
+                else:
+                    # 전체 이력 조회
+                    history_result = multi_user_db.get_global_history(
+                        limit=50,
+                        issue_type=filter_type if filter_type != "전체" else None,
+                        date_from=filter_date_from.isoformat() if filter_date_from else None,
+                        date_to=date_to_with_time,
+                        user_name=filter_user if filter_user else None
+                    )
                 
-                if history_data:
+                if history_result.get('success') and history_result.get('data'):
+                    history_data = history_result['data']
+                    
                     # 데이터프레임 생성
                     df_data = []
-                    for i, row in enumerate(history_data, 1):  # 1부터 시작하는 인덱스
+                    for i, entry in enumerate(history_data, 1):
                         df_data.append({
                             "번호": i,
-                            "날짜": row[1][:10] if row[1] else "",
-                            "고객사명": row[2] or "",
-                            "문의유형": row[6] or "",
-                            "우선순위": row[19] or "",
-                            "담당자": row[13] or "",
-                            "분류방법": row[7] or "",
-                            "신뢰도": row[8] or ""
+                            "날짜": entry.get('timestamp', '')[:10] if entry.get('timestamp') else "",
+                            "고객사명": entry.get('customer_name', ''),
+                            "문의유형": entry.get('issue_type', ''),
+                            "우선순위": entry.get('priority', ''),
+                            "담당자": entry.get('user_name', ''),
+                            "역할": entry.get('user_role', ''),
+                            "분류방법": entry.get('classification_method', ''),
+                            "신뢰도": entry.get('confidence', ''),
+                            "응답유형": entry.get('response_type', '')
                         })
                     
                     df = pd.DataFrame(df_data)
@@ -549,31 +594,43 @@ with tab3:
                     st.dataframe(df, use_container_width=True, hide_index=True)
                     
                     # 통계 정보
-                    stats = history_db.get_statistics()
+                    if history_mode == "👤 내 이력":
+                        stats = multi_user_db.get_statistics(user_name=user_name, user_role=user_role)
+                    else:
+                        stats = multi_user_db.get_statistics()
                     
                     col19, col20, col21, col22 = st.columns(4)
                     
                     with col19:
-                        st.metric("총 문의 건수", stats.get('total_count', 0))
+                        st.metric("총 문의 건수", stats.get('total_analyses', 0))
                     
                     with col20:
-                        st.metric("최근 30일", stats.get('recent_count', 0))
+                        if history_mode == "🌐 전체 이력":
+                            st.metric("총 사용자 수", stats.get('total_users', 0))
+                        else:
+                            st.metric("내 분석 건수", stats.get('total_analyses', 0))
                     
                     with col21:
-                        st.metric("문제 유형 수", len(stats.get('issue_type_distribution', {})))
+                        st.metric("문제 유형 수", len(stats.get('issue_types', [])))
                     
                     with col22:
-                        st.metric("담당자 수", len(stats.get('user_distribution', {})))
+                        if history_mode == "🌐 전체 이력":
+                            st.metric("응답 유형 수", len(stats.get('response_types', [])))
+                        else:
+                            st.metric("응답 유형 수", len(stats.get('response_types', [])))
                     
                     # 문제 유형별 분포
-                    if stats.get('issue_type_distribution'):
+                    if stats.get('issue_types'):
                         st.markdown("### 📊 문제 유형별 분포")
                         issue_data = []
-                        for issue_type, count in stats['issue_type_distribution'].items():
-                            issue_data.append({"문제 유형": issue_type, "건수": count})
+                        for issue_type in stats['issue_types']:
+                            if issue_type:  # 빈 문자열 제외
+                                count = len([entry for entry in history_data if entry.get('issue_type') == issue_type])
+                                issue_data.append({"문제 유형": issue_type, "건수": count})
                         
-                        issue_df = pd.DataFrame(issue_data)
-                        st.bar_chart(issue_df.set_index("문제 유형"))
+                        if issue_data:
+                            issue_df = pd.DataFrame(issue_data)
+                            st.bar_chart(issue_df.set_index("문제 유형"))
                 
                 else:
                     st.info("검색 조건에 맞는 이력이 없습니다.")

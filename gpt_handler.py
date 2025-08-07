@@ -6,6 +6,9 @@ import json
 class GPTHandler:
     def __init__(self, api_key: str = None):
         """Gemini 핸들러 초기화"""
+        # 프롬프트 템플릿 로딩 (API 키와 관계없이 항상 로드)
+        self.prompt_template = self._load_prompt_template()
+        
         try:
             # API 키 설정 (환경변수 우선, 파라미터 차선)
             if api_key:
@@ -23,9 +26,6 @@ class GPTHandler:
             genai.configure(api_key=self.api_key)
             # gemini-1.5-pro 모델 사용
             self.model = genai.GenerativeModel('gemini-1.5-pro')
-            
-            # 프롬프트 템플릿 로딩
-            self.prompt_template = self._load_prompt_template()
             
             print("✅ Gemini API 초기화 성공 (환경변수 방식, gemini-1.5-pro)")
             
@@ -79,7 +79,43 @@ class GPTHandler:
                     condition_1: str = "",
                     condition_2: str = "") -> str:
         """프롬프트 조립"""
-        prompt = self.prompt_template.format(
+        if not hasattr(self, 'prompt_template') or not self.prompt_template:
+            # 기본 프롬프트 템플릿 사용
+            prompt_template = """[고객 문의 내용]
+{customer_input}
+
+[문제 유형]
+{issue_type}
+
+[조건 정보]
+- 조건 1: {condition_1}
+- 조건 2: {condition_2}
+
+[대응안 작성 지침]
+아래 형식을 참고하여, 실무자가 이해하기 쉽도록 자연스럽고 정확하게 응답을 생성하십시오.
+
+[대응유형] 해결안 / 질문 / 출동 중 하나를 선택하십시오.
+
+[응답내용]
+- 요약: 고객 문의의 핵심 내용을 간결하게 정리하십시오.
+
+- 조치 흐름: 아래 형식을 따라 단계별로 줄바꿈하며 번호를 붙여 설명하십시오.
+1. 단계 제목: 해당 단계에서 수행할 조치 설명
+2. 단계 제목: 해당 단계에서 수행할 조치 설명
+3. 단계 제목: 해당 단계에서 수행할 조치 설명
+
+※ 각 단계는 짧고 명확하게, 실무자가 바로 이해할 수 있도록 작성하십시오.
+
+- 이메일 초안: 고객에게 보낼 수 있는 실제 이메일 본문 형식으로 작성하십시오. 간결하고 정중한 표현을 사용하십시오.
+
+[예외 처리 기준]
+- 조건 정보가 불충분하거나 고객 상태가 불명확한 경우 → "추가 확인이 필요합니다. 다음 질문을 해주세요."라고 안내하십시오.
+- 문제가 시나리오 DB에 존재하지 않거나, 적절한 해결책이 없는 경우 → "현장 출동이 필요할 수 있습니다."로 안내하십시오.
+- 확실한 답변이 불가능한 경우에도 → "현장 확인 후 조치가 필요합니다" 또는 "엔지니어 출동을 권장합니다" 등으로 마무리하십시오."""
+        else:
+            prompt_template = self.prompt_template
+            
+        prompt = prompt_template.format(
             customer_input=customer_input,
             issue_type=issue_type,
             condition_1=condition_1,

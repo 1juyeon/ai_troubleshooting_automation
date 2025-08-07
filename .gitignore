@@ -142,6 +142,13 @@ chroma_db/
 # Analysis results (if you don't want to track them)
 analysis_result_*.json
 
+# User data
+user_data/
+
+# OAuth tokens
+token.pickle
+*.pickle
+
 # API keys and sensitive data
 *.json
 !requirements.txt
