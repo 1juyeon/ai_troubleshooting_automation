@@ -21,14 +21,15 @@ class EnhancedGoogleAuth:
         except:
             self.base_url = "https://privkeeperp-response.streamlit.app/"
         
-        self.redirect_uri = f"{self.base_url}"
+        # 리디렉션 URI 정확히 설정
+        self.redirect_uri = "https://privkeeperp-response.streamlit.app/"
         
     def get_auth_url(self) -> str:
         """Google OAuth2 인증 URL 생성"""
         params = {
             'client_id': self.client_id,
             'redirect_uri': self.redirect_uri,
-            'scope': 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/generative-language.retrieval',
+            'scope': 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
             'response_type': 'code',
             'access_type': 'offline',
             'prompt': 'consent',
@@ -121,6 +122,11 @@ class EnhancedGoogleAuth:
         # OAuth URL 생성 테스트
         auth_url = self.get_auth_url()
         st.info(f"🔧 디버깅: OAuth URL 생성됨")
+        
+        # URL 파라미터 확인
+        st.info(f"🔧 디버깅: 생성된 OAuth URL:")
+        st.code(auth_url, language="text")
+        
         if st.button("🔗 OAuth URL 직접 테스트"):
             st.markdown(f"[OAuth URL 직접 테스트]({auth_url})")
         
