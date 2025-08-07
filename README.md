@@ -114,4 +114,3 @@ streamlit run app.py
 ## 📄 라이선스
 
 ©2024 PrivKeeper P 장애 대응 자동화 시스템
-개발: 송무건 책임, 원주연 사원 
