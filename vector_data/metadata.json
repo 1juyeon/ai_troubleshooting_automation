@@ -376,5 +376,11 @@
     "timestamp": "2025-08-07T11:20:40.288360",
     "issue_type": "PK P 웹 접속 안됨",
     "customer_name": ""
+  },
+  {
+    "id": 63,
+    "timestamp": "2025-08-07T13:31:25.488417",
+    "issue_type": "PK P 웹 접속 안됨",
+    "customer_name": "에스원"
   }
 ]
