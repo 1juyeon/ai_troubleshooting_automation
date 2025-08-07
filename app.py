@@ -38,7 +38,11 @@ def init_components():
     classifier = IssueClassifier()
     scenario_db = ScenarioDB()
     vector_search = VectorSearchWrapper()
-    gpt_handler = GPTHandler()
+    
+    # API 키 설정
+    api_key = st.session_state.get('google_api_key') or os.getenv("GOOGLE_API_KEY")
+    gpt_handler = GPTHandler(api_key=api_key)
+    
     history_db = HistoryDB()
     
     # 벡터 DB에 초기 샘플 데이터 추가 (데이터가 없을 경우)
@@ -61,6 +65,47 @@ with st.sidebar:
     st.markdown("## 👤 담당자 정보")
     user_name = st.text_input("담당자명", placeholder="홍길동")
     user_role = st.selectbox("역할", ["영업", "엔지니어", "개발자"])
+    st.markdown("---")
+    
+    # API 키 설정 섹션 추가
+    st.markdown("## 🔑 API 설정")
+    
+    # 저장된 API 키 불러오기
+    saved_api_key = st.session_state.get('google_api_key')
+    
+    # API 키 입력
+    api_key = st.text_input(
+        "Google API 키", 
+        value=saved_api_key or "",
+        type="password",
+        placeholder="AIzaSy...",
+        help="Google Cloud Console에서 발급받은 API 키를 입력하세요"
+    )
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🔧 API 키 설정"):
+            if api_key:
+                st.session_state.google_api_key = api_key
+                st.success("✅ API 키가 설정되었습니다!")
+                st.rerun()
+            else:
+                st.error("❌ API 키를 입력해주세요.")
+    
+    with col2:
+        if st.button("🗑️ API 키 삭제"):
+            if 'google_api_key' in st.session_state:
+                del st.session_state.google_api_key
+            st.success("✅ API 키가 삭제되었습니다!")
+            st.rerun()
+    
+    # 현재 상태 표시
+    if 'google_api_key' in st.session_state:
+        st.success("✅ API 키 설정됨")
+    else:
+        st.warning("⚠️ API 키가 설정되지 않음")
+    
     st.markdown("---")
     st.markdown("## ⚙️ 시스템 설정")
     gpt_model = st.selectbox("AI 모델", ["Gemini 1.5 Pro"], index=0)
@@ -260,6 +305,23 @@ with tab1:
 # 탭 2: AI 분석 결과
 with tab2:
     st.markdown("## 🤖 AI 분석 결과")
+    
+    # API 키 확인
+    if not st.session_state.get('google_api_key') and not os.getenv("GOOGLE_API_KEY"):
+        st.error("❌ Google API 키가 설정되지 않았습니다.")
+        st.info("""
+        **API 키 설정 방법:**
+        1. 사이드바의 "🔑 API 설정" 섹션에서 Google API 키를 입력하세요
+        2. 또는 환경변수 `GOOGLE_API_KEY`를 설정하세요
+        
+        **Google API 키 발급 방법:**
+        1. [Google Cloud Console](https://console.cloud.google.com/) 접속
+        2. 프로젝트 생성 또는 선택
+        3. API 및 서비스 → 사용자 인증 정보
+        4. "사용자 인증 정보 만들기" → "API 키"
+        5. 생성된 API 키를 복사하여 앱에 입력
+        """)
+        st.stop()
     
     if st.session_state.analysis_result:
         result = st.session_state.analysis_result

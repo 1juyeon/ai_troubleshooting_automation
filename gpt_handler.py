@@ -4,18 +4,30 @@ from typing import Dict, Any, Optional
 import json
 
 class GPTHandler:
-    def __init__(self, api_key: str = "AIzaSyA9xgvZ2Ks5Ae2wXiGUsFfI6stW31j-Bn8"):
+    def __init__(self, api_key: str = None):
         """Gemini 핸들러 초기화"""
         try:
+            # API 키 설정 (환경변수 우선, 파라미터 차선)
+            if api_key:
+                self.api_key = api_key
+            else:
+                self.api_key = os.getenv("GOOGLE_API_KEY")
+            
+            if not self.api_key:
+                print("⚠️ Google API 키가 설정되지 않았습니다.")
+                print("환경변수 GOOGLE_API_KEY를 설정하거나 API 키를 직접 입력해주세요.")
+                self.model = None
+                return
+            
             # API 키 방식으로 설정
-            genai.configure(api_key=api_key)
+            genai.configure(api_key=self.api_key)
             # gemini-1.5-pro 모델 사용
             self.model = genai.GenerativeModel('gemini-1.5-pro')
             
             # 프롬프트 템플릿 로딩
             self.prompt_template = self._load_prompt_template()
             
-            print("✅ Gemini API 초기화 성공 (API 키 방식, gemini-1.5-pro)")
+            print("✅ Gemini API 초기화 성공 (환경변수 방식, gemini-1.5-pro)")
             
         except Exception as e:
             print(f"❌ Gemini API 초기화 실패: {e}")
