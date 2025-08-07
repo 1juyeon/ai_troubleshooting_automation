@@ -114,9 +114,8 @@ class EnhancedGoogleAuth:
             return False
         
         # URL 파라미터에서 인증 코드 확인
-        params = st.experimental_get_query_params()
-        code = params.get("code", [None])[0]
-        state = params.get("state", [None])[0]
+        code = st.query_params.get("code", None)
+        state = st.query_params.get("state", None)
         
         if code and state:
             with st.spinner("🔐 인증 처리 중..."):
@@ -140,7 +139,7 @@ class EnhancedGoogleAuth:
                             st.success(f"✅ {user_info.get('name', '사용자')}님 환영합니다!")
                             
                             # URL에서 인증 코드 제거
-                            st.experimental_set_query_params()
+                            st.query_params.clear()
                             return True
                         else:
                             st.error("❌ 사용자 정보를 가져올 수 없습니다.")

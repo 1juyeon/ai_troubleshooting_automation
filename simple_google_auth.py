@@ -72,8 +72,7 @@ class SimpleGoogleAuth:
             return False
         
         # URL 파라미터에서 인증 코드 확인
-        params = st.experimental_get_query_params()
-        code = params.get("code", [None])[0]
+        code = st.query_params.get("code", None)
         
         if code:
             # 인증 코드를 토큰으로 교환
@@ -89,7 +88,7 @@ class SimpleGoogleAuth:
                     st.success(f"✅ {user_info.get('name', '사용자')}님 환영합니다!")
                     
                     # URL에서 인증 코드 제거
-                    st.experimental_set_query_params()
+                    st.query_params.clear()
                     return True
         
         # 로그인 버튼 표시
