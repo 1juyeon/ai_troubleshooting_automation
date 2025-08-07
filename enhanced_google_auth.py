@@ -19,7 +19,7 @@ class EnhancedGoogleAuth:
         try:
             self.base_url = st.get_option("server.baseUrlPath")
         except:
-            self.base_url = "https://aitroubleshootingautomation-fxxn77xinek2wohl5qhpw8.streamlit.app/"
+            self.base_url = "https://privkeeperp-response.streamlit.app/"
         
         self.redirect_uri = f"{self.base_url}"
         
@@ -111,7 +111,18 @@ class EnhancedGoogleAuth:
         """향상된 로그인 버튼 렌더링"""
         if not self.client_id:
             st.error("❌ Google OAuth 클라이언트 ID가 설정되지 않았습니다.")
+            st.info("Streamlit Cloud Secrets에 GOOGLE_CLIENT_ID를 설정해주세요.")
             return False
+        
+        # 디버깅 정보 표시
+        st.info(f"🔧 디버깅: 클라이언트 ID 설정됨")
+        st.info(f"🔧 디버깅: 리디렉션 URI: {self.redirect_uri}")
+        
+        # OAuth URL 생성 테스트
+        auth_url = self.get_auth_url()
+        st.info(f"🔧 디버깅: OAuth URL 생성됨")
+        if st.button("🔗 OAuth URL 직접 테스트"):
+            st.markdown(f"[OAuth URL 직접 테스트]({auth_url})")
         
         # URL 파라미터에서 인증 코드 확인
         code = st.query_params.get("code", None)
