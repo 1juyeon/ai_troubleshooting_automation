@@ -24,6 +24,14 @@ class EnhancedGoogleAuth:
         # 리디렉션 URI 정확히 설정
         self.redirect_uri = "https://privkeeperp-response.streamlit.app/"
         
+        # 디버깅을 위한 초기화 정보
+        st.session_state.debug_oauth_init = {
+            "client_id_set": bool(self.client_id),
+            "client_secret_set": bool(self.client_secret),
+            "base_url": self.base_url,
+            "redirect_uri": self.redirect_uri
+        }
+        
     def get_auth_url(self) -> str:
         """Google OAuth2 인증 URL 생성"""
         params = {
@@ -118,6 +126,12 @@ class EnhancedGoogleAuth:
         # 디버깅 정보 표시
         st.info(f"🔧 디버깅: 클라이언트 ID 설정됨")
         st.info(f"🔧 디버깅: 리디렉션 URI: {self.redirect_uri}")
+        st.info(f"🔧 디버깅: base_url: {self.base_url}")
+        
+        # 초기화 상태 확인
+        if 'debug_oauth_init' in st.session_state:
+            st.info(f"🔧 디버깅: 초기화 상태:")
+            st.json(st.session_state.debug_oauth_init)
         
         # OAuth URL 생성 테스트
         auth_url = self.get_auth_url()
@@ -126,6 +140,22 @@ class EnhancedGoogleAuth:
         # URL 파라미터 확인
         st.info(f"🔧 디버깅: 생성된 OAuth URL:")
         st.code(auth_url, language="text")
+        
+        # URL 파라미터 분석
+        try:
+            from urllib.parse import urlparse, parse_qs
+            parsed_url = urlparse(auth_url)
+            params = parse_qs(parsed_url.query)
+            st.info(f"🔧 디버깅: URL 파라미터 분석:")
+            st.json({
+                "client_id": params.get("client_id", [""])[0][:20] + "..." if params.get("client_id") else "",
+                "redirect_uri": params.get("redirect_uri", [""])[0],
+                "scope": params.get("scope", [""])[0],
+                "response_type": params.get("response_type", [""])[0],
+                "state": params.get("state", [""])[0][:10] + "..." if params.get("state") else ""
+            })
+        except Exception as e:
+            st.error(f"🔧 디버깅: URL 파라미터 분석 실패: {e}")
         
         if st.button("🔗 OAuth URL 직접 테스트"):
             st.markdown(f"[OAuth URL 직접 테스트]({auth_url})")
