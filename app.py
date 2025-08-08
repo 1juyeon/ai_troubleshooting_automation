@@ -160,6 +160,12 @@ def handle_oauth_callback(code, state):
             
             print(f"✅ 사용자 정보 저장됨: {user_info.get('email', 'Unknown')}")
             print(f"✅ 세션 상태 업데이트됨: login_completed={st.session_state.login_completed}, user_authenticated={st.session_state.user_authenticated}")
+            print(f"✅ 세션 상태 상세:")
+            print(f"  - google_user: {bool(st.session_state.google_user)}")
+            print(f"  - google_access_token: {bool(st.session_state.google_access_token)}")
+            print(f"  - login_completed: {st.session_state.login_completed}")
+            print(f"  - user_authenticated: {st.session_state.user_authenticated}")
+            print(f"  - auth_checked: {st.session_state.auth_checked}")
             
             # URL 파라미터 정리
             st.query_params.clear()
@@ -173,6 +179,12 @@ def handle_oauth_callback(code, state):
 
 def check_authentication():
     """인증 상태 확인 및 로그인 페이지 표시"""
+    print(f"🔍 인증 체크 시작 - 현재 세션 상태:")
+    print(f"  - login_completed: {st.session_state.get('login_completed', False)}")
+    print(f"  - google_user: {bool(st.session_state.get('google_user'))}")
+    print(f"  - google_access_token: {bool(st.session_state.get('google_access_token'))}")
+    print(f"  - user_authenticated: {st.session_state.get('user_authenticated', False)}")
+    
     # 기존 인증 상태 확인 (더 강력한 검증)
     if (st.session_state.get('login_completed', False) and 
         st.session_state.get('google_user') and 
@@ -209,7 +221,11 @@ def check_authentication():
                 st.session_state.auth_checked = True
                 st.session_state.login_completed = True
                 print("✅ 로그인 성공 후 세션 상태 업데이트됨")
-                st.rerun()
+                print(f"  - user_authenticated: {st.session_state.user_authenticated}")
+                print(f"  - auth_checked: {st.session_state.auth_checked}")
+                print(f"  - login_completed: {st.session_state.login_completed}")
+                # rerun 대신 성공 상태로 반환
+                return True
             else:
                 st.error("❌ 로그인 처리에 실패했습니다.")
                 st.stop()
@@ -296,7 +312,9 @@ def render_login_page():
                     "google_user": bool(st.session_state.get('google_user')),
                     "user_authenticated": st.session_state.get('user_authenticated', False),
                     "auth_checked": st.session_state.get('auth_checked', False),
-                    "google_user_email": st.session_state.get('google_user', {}).get('email', 'None') if st.session_state.get('google_user') else 'None'
+                    "google_user_email": st.session_state.get('google_user', {}).get('email', 'None') if st.session_state.get('google_user') else 'None',
+                    "google_access_token": bool(st.session_state.get('google_access_token')),
+                    "google_refresh_token": bool(st.session_state.get('google_refresh_token'))
                 }
             })
             
@@ -310,7 +328,14 @@ def render_login_page():
 
 # 인증 체크 실행
 auth_result = check_authentication()
+print(f"🔍 메인 애플리케이션 시작 전 인증 상태 확인:")
+print(f"  - auth_result: {auth_result}")
+print(f"  - user_authenticated: {st.session_state.get('user_authenticated', False)}")
+print(f"  - login_completed: {st.session_state.get('login_completed', False)}")
+
+# 인증되지 않은 경우 애플리케이션 중단
 if not auth_result:
+    print("❌ 인증 실패 - 애플리케이션 중단")
     st.stop()
 
 # 인증 성공 시 메인 애플리케이션 시작
