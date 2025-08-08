@@ -239,14 +239,10 @@ class EnhancedGoogleAuth:
                 else:
                     st.error("❌ 인증 토큰 교환에 실패했습니다.")
         
-        # 새 창 방지를 위한 JavaScript 기반 로그인 버튼
+        # 인증 URL 생성
         auth_url = self.get_auth_url()
         if auth_url:
-            # Streamlit link_button 사용 (새 창 방지)
-            if st.link_button("🔐 Google 계정으로 로그인", auth_url, use_container_width=True, type="primary"):
-                return True
-            
-            # 백업: 직접 링크 제공
+            # 간단하고 확실한 방법: 직접 링크 버튼
             st.markdown(f"""
             <div style="margin: 10px 0;">
                 <a href="{auth_url}" target="_self" style="text-decoration: none;">
@@ -261,14 +257,20 @@ class EnhancedGoogleAuth:
                         cursor: pointer;
                         width: 100%;
                         transition: all 0.3s ease;
-                    ">
-                        🔐 Google 계정으로 로그인 (백업)
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                        🔐 Google 계정으로 로그인
                     </button>
                 </a>
             </div>
             """, unsafe_allow_html=True)
+            
+            # 디버깅용 정보 표시
+            if st.session_state.get('debug_mode', False):
+                st.info(f"🔍 디버그: 인증 URL 생성됨 - {auth_url[:50]}...")
         else:
             st.error("❌ OAuth 설정이 올바르지 않습니다.")
+            st.info("🔧 관리자에게 OAuth 설정을 요청하세요.")
         
         return False
     

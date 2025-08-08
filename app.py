@@ -147,6 +147,21 @@ with st.sidebar:
         st.info("ℹ️ Google OAuth가 설정되지 않았습니다.")
         st.markdown("---")
     
+    # 디버그 모드 토글
+    st.markdown("### 🔧 디버그 모드")
+    debug_mode = st.checkbox("디버그 모드 활성화", value=st.session_state.get('debug_mode', False))
+    st.session_state.debug_mode = debug_mode
+    
+    if debug_mode:
+        st.info("🔍 디버그 모드가 활성화되었습니다. OAuth 관련 정보가 표시됩니다.")
+        st.json({
+            "client_id_set": bool(google_auth.client_id),
+            "user_authenticated": st.session_state.get('user_authenticated', False),
+            "auth_checked": st.session_state.get('auth_checked', False),
+            "login_success": st.session_state.get('login_success', False),
+            "google_user_exists": bool(st.session_state.get('google_user', None))
+        })
+    
     # OAuth 디버그 페이지 링크
     st.markdown("### 🔍 OAuth 디버그")
     st.link_button("🔧 OAuth 설정 확인", "/OAuth_Debug", use_container_width=True)
