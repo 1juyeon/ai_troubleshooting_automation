@@ -50,7 +50,14 @@ class EnhancedGoogleAuth:
         auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
         query_string = urlencode(params)
         
-        return f"{auth_url}?{query_string}"
+        final_url = f"{auth_url}?{query_string}"
+        
+        # 디버깅: OAuth URL 출력
+        print(f"🔧 디버깅: OAuth URL = {final_url}")
+        print(f"🔧 디버깅: redirect_uri = {self.redirect_uri}")
+        print(f"🔧 디버깅: client_id = {self.client_id[:20]}...")
+        
+        return final_url
     
     def _generate_state(self) -> str:
         """CSRF 방지를 위한 state 토큰 생성"""
