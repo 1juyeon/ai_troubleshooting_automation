@@ -38,6 +38,16 @@ def save_auth_to_persistent_storage(auth_data: Dict[str, Any]):
             'login_timestamp': datetime.datetime.now().isoformat()
         }
         
+        # 토큰 정보도 저장 (암호화하여)
+        if st.session_state.get('google_access_token'):
+            safe_data['access_token'] = st.session_state.google_access_token
+        if st.session_state.get('google_refresh_token'):
+            safe_data['refresh_token'] = st.session_state.google_refresh_token
+        if st.session_state.get('token_expires_at'):
+            safe_data['token_expires_at'] = st.session_state.token_expires_at
+        if st.session_state.get('last_token_refresh'):
+            safe_data['last_token_refresh'] = st.session_state.last_token_refresh
+        
         # 데이터를 base64로 인코딩
         encoded_data = base64.b64encode(pickle.dumps(safe_data)).decode()
         
@@ -48,8 +58,16 @@ def save_auth_to_persistent_storage(auth_data: Dict[str, Any]):
         try:
             backup_file = "user_data/auth_backup.json"
             os.makedirs("user_data", exist_ok=True)
+            
+            # 민감한 정보는 별도로 저장
+            backup_data = safe_data.copy()
+            if 'access_token' in backup_data:
+                backup_data['access_token'] = '***HIDDEN***'
+            if 'refresh_token' in backup_data:
+                backup_data['refresh_token'] = '***HIDDEN***'
+            
             with open(backup_file, 'w', encoding='utf-8') as f:
-                json.dump(safe_data, f, ensure_ascii=False, indent=2)
+                json.dump(backup_data, f, ensure_ascii=False, indent=2)
         except:
             pass  # 백업 실패는 무시
         
@@ -67,6 +85,15 @@ def load_auth_from_persistent_storage():
             try:
                 auth_data = pickle.loads(base64.b64decode(encoded_data))
                 if auth_data.get('login_completed') and auth_data.get('user_email'):
+                    # 토큰 정보도 복원
+                    if 'access_token' in auth_data:
+                        st.session_state.google_access_token = auth_data['access_token']
+                    if 'refresh_token' in auth_data:
+                        st.session_state.google_refresh_token = auth_data['refresh_token']
+                    if 'token_expires_at' in auth_data:
+                        st.session_state.token_expires_at = auth_data['token_expires_at']
+                    if 'last_token_refresh' in auth_data:
+                        st.session_state.last_token_refresh = auth_data['last_token_refresh']
                     return auth_data
             except:
                 pass
@@ -155,8 +182,80 @@ def init_session_state():
                 'name': persistent_auth.get('user_name')
             }
         
-        st.success("✅ 영구 저장소에서 인증 상태 복원됨")
-        st.info(f"✅ 사용자: {persistent_auth.get('user_email', 'Unknown')}")
+        # 토큰 정보가 복원되었는지 확인하고 인증 상태 강화
+        if (st.session_state.get('google_access_token') and 
+            st.session_state.get('google_user')):
+            
+            # 토큰 만료 확인
+            token_expires_at = st.session_state.get('token_expires_at')
+            if token_expires_at:
+                try:
+                    expires_at = datetime.datetime.fromisoformat(token_expires_at)
+                    if datetime.datetime.now() > expires_at:
+                        # 토큰 갱신 시도
+                        refresh_token = st.session_state.get('google_refresh_token')
+                        if refresh_token:
+                            client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
+                            client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
+                            
+                            if client_id and client_secret:
+                                token_url = "https://oauth2.googleapis.com/token"
+                                data = {
+                                    'client_id': client_id,
+                                    'client_secret': client_secret,
+                                    'refresh_token': refresh_token,
+                                    'grant_type': 'refresh_token'
+                                }
+                                
+                                try:
+                                    response = requests.post(token_url, data=data)
+                                    if response.status_code == 200:
+                                        token_data = response.json()
+                                        new_access_token = token_data.get('access_token')
+                                        new_expires_in = token_data.get('expires_in', 3600)
+                                        
+                                        if new_access_token:
+                                            st.session_state.google_access_token = new_access_token
+                                            st.session_state.last_token_refresh = datetime.datetime.now().isoformat()
+                                            st.session_state.token_expires_at = (
+                                                datetime.datetime.now() + datetime.timedelta(seconds=new_expires_in)
+                                            ).isoformat()
+                                            st.success("✅ 토큰이 자동으로 갱신되었습니다.")
+                                except:
+                                    st.warning("⚠️ 토큰 갱신에 실패했습니다.")
+                except:
+                    pass
+            
+            # 토큰 유효성 검증
+            try:
+                user_info_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+                headers = {'Authorization': f'Bearer {st.session_state.google_access_token}'}
+                user_response = requests.get(user_info_url, headers=headers)
+                
+                if user_response.status_code == 200:
+                    st.session_state.user_authenticated = True
+                    st.session_state.auth_checked = True
+                    st.session_state.login_success = True
+                    st.success("✅ 영구 저장소에서 인증 상태 복원됨")
+                    st.info(f"✅ 사용자: {persistent_auth.get('user_email', 'Unknown')}")
+                else:
+                    st.warning("⚠️ 저장된 토큰이 유효하지 않습니다. 다시 로그인해주세요.")
+                    # 세션 상태 초기화
+                    for key in ['google_user', 'google_access_token', 'google_refresh_token', 
+                               'login_completed', 'user_authenticated', 'auth_checked']:
+                        st.session_state[key] = None
+            except:
+                st.warning("⚠️ 토큰 검증에 실패했습니다. 다시 로그인해주세요.")
+                # 세션 상태 초기화
+                for key in ['google_user', 'google_access_token', 'google_refresh_token', 
+                           'login_completed', 'user_authenticated', 'auth_checked']:
+                    st.session_state[key] = None
+        else:
+            st.warning("⚠️ 토큰 정보가 복원되지 않았습니다. 다시 로그인해주세요.")
+            # 세션 상태 초기화
+            for key in ['google_user', 'google_access_token', 'google_refresh_token', 
+                       'login_completed', 'user_authenticated', 'auth_checked']:
+                st.session_state[key] = None
     
     # 세션 상태 강화 함수
     def ensure_session_persistence():
@@ -490,8 +589,20 @@ def handle_oauth_callback(code, state):
             'login_completed': True,
             'login_timestamp': datetime.datetime.now().isoformat()
         }
+        
+        # 토큰 정보도 함께 저장
+        if access_token:
+            auth_data['access_token'] = access_token
+        if refresh_token:
+            auth_data['refresh_token'] = refresh_token
+        if st.session_state.get('token_expires_at'):
+            auth_data['token_expires_at'] = st.session_state.token_expires_at
+        if st.session_state.get('last_token_refresh'):
+            auth_data['last_token_refresh'] = st.session_state.last_token_refresh
+        
         if save_auth_to_persistent_storage(auth_data):
             st.success("✅ 영구 저장소에 인증 정보 저장됨 (새로고침 시 세션 유지)")
+            st.info("✅ 토큰 정보도 함께 저장되어 새로고침 후에도 세션이 유지됩니다.")
         
         # UI에 성공 정보 표시
         st.success(f"✅ 사용자 정보 저장됨: {user_info.get('email', 'Unknown')}")
@@ -538,7 +649,9 @@ def check_authentication():
             "token_expires_at": st.session_state.get('token_expires_at', 'Unknown'),
             "last_token_refresh": st.session_state.get('last_token_refresh', 'Unknown'),
             "auth_cookie_exists": bool(st.session_state.get('auth_cookie')),
-            "persistent_storage_restored": bool(load_auth_from_persistent_storage())
+            "persistent_storage_restored": bool(load_auth_from_persistent_storage()),
+            "token_restored_from_storage": bool(st.session_state.get('google_access_token') and st.session_state.get('google_refresh_token')),
+            "session_restoration_status": "✅ 완료" if (st.session_state.get('google_access_token') and st.session_state.get('google_user')) else "❌ 실패"
         })
     
     # 토큰 갱신 함수
