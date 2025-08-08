@@ -24,14 +24,6 @@ class EnhancedGoogleAuth:
         # 리디렉션 URI 정확히 설정
         self.redirect_uri = "https://privkeeperp-response.streamlit.app/"
         
-        # 디버깅을 위한 초기화 정보
-        st.session_state.debug_oauth_init = {
-            "client_id_set": bool(self.client_id),
-            "client_secret_set": bool(self.client_secret),
-            "base_url": self.base_url,
-            "redirect_uri": self.redirect_uri
-        }
-        
     def get_auth_url(self) -> str:
         """Google OAuth2 인증 URL 생성"""
         params = {
@@ -119,46 +111,9 @@ class EnhancedGoogleAuth:
     def render_login_button(self):
         """향상된 로그인 버튼 렌더링"""
         if not self.client_id:
-            st.error("❌ Google OAuth 클라이언트 ID가 설정되지 않았습니다.")
-            st.info("Streamlit Cloud Secrets에 GOOGLE_CLIENT_ID를 설정해주세요.")
+            st.error("❌ Google OAuth가 설정되지 않았습니다.")
+            st.info("관리자가 OAuth 설정을 완료하면 Google 계정으로 로그인할 수 있습니다.")
             return False
-        
-        # 디버깅 정보 표시
-        st.info(f"🔧 디버깅: 클라이언트 ID 설정됨")
-        st.info(f"🔧 디버깅: 리디렉션 URI: {self.redirect_uri}")
-        st.info(f"🔧 디버깅: base_url: {self.base_url}")
-        
-        # 초기화 상태 확인
-        if 'debug_oauth_init' in st.session_state:
-            st.info(f"🔧 디버깅: 초기화 상태:")
-            st.json(st.session_state.debug_oauth_init)
-        
-        # OAuth URL 생성 테스트
-        auth_url = self.get_auth_url()
-        st.info(f"🔧 디버깅: OAuth URL 생성됨")
-        
-        # URL 파라미터 확인
-        st.info(f"🔧 디버깅: 생성된 OAuth URL:")
-        st.code(auth_url, language="text")
-        
-        # URL 파라미터 분석
-        try:
-            from urllib.parse import urlparse, parse_qs
-            parsed_url = urlparse(auth_url)
-            params = parse_qs(parsed_url.query)
-            st.info(f"🔧 디버깅: URL 파라미터 분석:")
-            st.json({
-                "client_id": params.get("client_id", [""])[0][:20] + "..." if params.get("client_id") else "",
-                "redirect_uri": params.get("redirect_uri", [""])[0],
-                "scope": params.get("scope", [""])[0],
-                "response_type": params.get("response_type", [""])[0],
-                "state": params.get("state", [""])[0][:10] + "..." if params.get("state") else ""
-            })
-        except Exception as e:
-            st.error(f"🔧 디버깅: URL 파라미터 분석 실패: {e}")
-        
-        if st.button("🔗 OAuth URL 직접 테스트"):
-            st.markdown(f"[OAuth URL 직접 테스트]({auth_url})")
         
         # URL 파라미터에서 인증 코드 확인
         code = st.query_params.get("code", None)
@@ -222,7 +177,10 @@ class EnhancedGoogleAuth:
         </div>
         """, unsafe_allow_html=True)
         
-        st.info("🔐 Google 계정으로 로그인하여 AI 분석 서비스를 이용하세요.")
+        # 로그인 상태 안내
+        st.markdown("---")
+        st.markdown("### 🔐 로그인 필요")
+        st.info("AI 분석 서비스를 이용하려면 Google 계정으로 로그인해주세요.")
         return False
     
     def render_user_info(self):
@@ -230,7 +188,9 @@ class EnhancedGoogleAuth:
         if 'google_user' in st.session_state:
             user = st.session_state.google_user
             
-            st.markdown("### 👤 로그인된 사용자")
+            # 로그인 상태 표시
+            st.markdown("---")
+            st.markdown("### ✅ 로그인 완료")
             
             col1, col2 = st.columns([1, 3])
             
@@ -252,6 +212,9 @@ class EnhancedGoogleAuth:
                 
                 if user.get('verified_email'):
                     st.markdown("✅ 이메일 인증됨")
+                
+                # AI 분석 가능 상태 표시
+                st.success("🎉 AI 분석 서비스를 이용할 수 있습니다!")
                 
                 col3, col4 = st.columns(2)
                 with col3:

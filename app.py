@@ -55,6 +55,12 @@ def init_components():
     
     gpt_handler = GPTHandler(api_key=api_key)
     
+    # API 키 상태 확인
+    if not api_key:
+        st.error("❌ Google API 키가 설정되지 않았습니다.")
+        st.info("관리자가 API 키를 설정하면 AI 분석이 가능합니다.")
+        st.stop()
+    
     # 기존 데이터베이스 (호환성 유지)
     history_db = HistoryDB()
     
@@ -109,6 +115,9 @@ with st.sidebar:
     elif not google_auth.is_authenticated():
         st.info("🔐 Google 계정으로 로그인하여 AI 분석 서비스를 이용하세요.")
         st.markdown("---")
+    else:
+        # 로그인된 사용자 정보 표시
+        google_auth.render_user_info()
     
     st.markdown("## ⚙️ 시스템 설정")
     gpt_model = st.selectbox("AI 모델", ["Gemini 1.5 Pro"], index=0)
@@ -120,6 +129,14 @@ st.markdown("""
     <p>Gemini AI 기반 고객 문의 자동 분석 및 응답 도구</p>
 </div>
 """, unsafe_allow_html=True)
+
+# 로그인 상태에 따른 메시지 표시
+if google_auth.is_authenticated():
+    user_name = google_auth.get_user_name()
+    st.success(f"✅ {user_name}님, AI 분석 서비스를 이용할 수 있습니다!")
+else:
+    st.warning("⚠️ AI 분석을 이용하려면 Google 계정으로 로그인해주세요.")
+    st.info("사이드바에서 로그인 버튼을 클릭하세요.")
 
 # 탭 생성
 tab_names = ["📝 고객 문의 입력", "🤖 AI 분석 결과", "📊 이력 관리", "🔍 시스템 상태", "📚 사용 가이드"]
@@ -168,157 +185,128 @@ with tab1:
             error_code = st.text_input("오류 코드", placeholder="ERR_001")
     
     # 제출 버튼
-    if st.button("🚀 AI 분석 요청", type="primary", use_container_width=True):
-        if inquiry_content.strip():
-            # 진행 상황을 표시할 컨테이너 생성
-            progress_container = st.container()
-            
-            with progress_container:
-                st.info("🚀 AI 분석을 시작합니다...")
+    if google_auth.is_authenticated():
+        if st.button("🚀 AI 분석 요청", type="primary", use_container_width=True):
+            if inquiry_content.strip():
+                # 진행 상황을 표시할 컨테이너 생성
+                progress_container = st.container()
                 
-                try:
-                    # 1. 문제 유형 자동 분류
-                    with st.spinner("1단계: 문제 유형 분류 중..."):
-                        classification_result = classifier.classify_issue(inquiry_content)
-                        issue_type = classification_result['issue_type']
-                        st.success(f"✅ 문제 유형 분류 완료: {issue_type}")
+                with progress_container:
+                    st.info("🚀 AI 분석을 시작합니다...")
                     
-                    # 2. 시나리오 조회
-                    with st.spinner("2단계: 시나리오 조회 중..."):
-                        scenarios = scenario_db.get_scenarios_by_issue_type(issue_type)
-                        best_scenario = scenario_db.find_best_scenario(issue_type, inquiry_content)
-                        st.success(f"✅ 시나리오 조회 완료: {len(scenarios)}개 시나리오 발견")
-                    
-                    # 3. 유사 사례 검색
-                    with st.spinner("3단계: 유사 사례 검색 중..."):
-                        similar_cases = vector_search.search_similar_cases(inquiry_content, top_k=3)
-                        st.success(f"✅ 유사 사례 검색 완료: {len(similar_cases)}개 사례 발견")
-                    
-                    # 4. 매뉴얼 참조 조회
-                    with st.spinner("4단계: 매뉴얼 참조 조회 중..."):
-                        manual_ref = scenario_db.get_manual_reference(issue_type)
-                        st.success("✅ 매뉴얼 참조 조회 완료")
-                    
-                    # 5. Gemini 응답 생성 (타임아웃 설정)
-                    with st.spinner("5단계: AI 응답 생성 중... (최대 30초)"):
-                        import time
-                        start_time = time.time()
+                    try:
+                        # 1. 문제 유형 자동 분류
+                        with st.spinner("1단계: 문제 유형 분류 중..."):
+                            classification_result = classifier.classify_issue(inquiry_content)
+                            issue_type = classification_result['issue_type']
+                            st.success(f"✅ 문제 유형 분류 완료: {issue_type}")
                         
-                        # API 키 확인
-                        api_key_available = st.session_state.get('google_api_key') or os.getenv("GOOGLE_API_KEY")
+                        # 2. 시나리오 조회
+                        with st.spinner("2단계: 시나리오 조회 중..."):
+                            scenarios = scenario_db.get_scenarios_by_issue_type(issue_type)
+                            best_scenario = scenario_db.find_best_scenario(issue_type, inquiry_content)
+                            st.success(f"✅ 시나리오 조회 완료: {len(scenarios)}개 시나리오 발견")
                         
-                        if not api_key_available:
-                            st.error("❌ API 키가 설정되지 않아 AI 분석을 진행할 수 없습니다.")
-                            st.stop()
+                        # 3. 유사 사례 검색
+                        with st.spinner("3단계: 유사 사례 검색 중..."):
+                            similar_cases = vector_search.search_similar_cases(inquiry_content, top_k=3)
+                            st.success(f"✅ 유사 사례 검색 완료: {len(similar_cases)}개 사례 발견")
                         
-                        # 타임아웃 설정 (30초)
-                        gemini_result = None
-                        try:
-                            gemini_result = gpt_handler.generate_complete_response(
-                                customer_input=inquiry_content,
-                                issue_type=issue_type,
-                                condition_1=best_scenario.get('condition_1', '') if best_scenario else '',
-                                condition_2=best_scenario.get('condition_2', '') if best_scenario else ''
-                            )
+                        # 4. 매뉴얼 참조 조회
+                        with st.spinner("4단계: 매뉴얼 참조 조회 중..."):
+                            manual_ref = scenario_db.get_manual_reference(issue_type)
+                            st.success("✅ 매뉴얼 참조 조회 완료")
+                        
+                        # 5. Gemini 응답 생성 (타임아웃 설정)
+                        with st.spinner("5단계: AI 응답 생성 중... (최대 30초)"):
+                            import time
+                            start_time = time.time()
                             
-                            elapsed_time = time.time() - start_time
-                            if gemini_result["success"]:
-                                st.success(f"✅ AI 응답 생성 완료 ({elapsed_time:.1f}초)")
-                            else:
-                                st.warning(f"⚠️ AI 응답 생성 실패, 기본 응답 사용 ({elapsed_time:.1f}초)")
-                                
-                        except Exception as e:
-                            elapsed_time = time.time() - start_time
-                            st.error(f"❌ AI 응답 생성 중 오류 발생 ({elapsed_time:.1f}초): {e}")
-                            # 기본 응답 생성
-                            gemini_result = {
-                                "success": False,
-                                "error": str(e),
-                                "parsed_response": gpt_handler._generate_default_response(
-                                    inquiry_content, issue_type, 
-                                    best_scenario.get('condition_1', '') if best_scenario else '',
-                                    best_scenario.get('condition_2', '') if best_scenario else ''
-                                )
-                            }
-                    
-                    # 결과 저장
-                    analysis_result = {
-                        'classification': classification_result,
-                        'issue_type': issue_type,
-                        'scenarios': scenarios,
-                        'best_scenario': best_scenario,
-                        'similar_cases': similar_cases,
-                        'gemini_result': gemini_result,
-                        'timestamp': datetime.datetime.now().isoformat()
-                    }
-                    
-                    st.session_state.analysis_result = analysis_result
-                    
-                    st.session_state.inquiry_data = {
-                        "customer_name": customer_name,
-                        "customer_contact": customer_contact,
-                        "customer_manager": customer_manager,
-                        "inquiry_content": inquiry_content,
-                        "system_version": system_version,
-                        "browser_info": browser_info,
-                        "os_info": os_info,
-                        "error_code": error_code,
-                        "priority": priority,
-                        "contract_type": contract_type,
-                        "user_name": user_name,
-                        "user_role": user_role
-                    }
-                    
-                    # 6. 이력 저장
-                    with st.spinner("6단계: 이력 저장 중..."):
-                        try:
-                            # 벡터 DB에 사례 추가
-                            if gemini_result and gemini_result.get('success'):
-                                parsed_response = gemini_result.get('parsed_response', {})
-                                vector_search.add_case(
+                            # API 키 확인
+                            api_key_available = st.session_state.get('google_api_key') or os.getenv("GOOGLE_API_KEY")
+                            
+                            if not api_key_available:
+                                st.error("❌ API 키가 설정되지 않아 AI 분석을 진행할 수 없습니다.")
+                                st.stop()
+                            
+                            # 타임아웃 설정 (30초)
+                            gemini_result = None
+                            try:
+                                gemini_result = gpt_handler.generate_complete_response(
                                     customer_input=inquiry_content,
                                     issue_type=issue_type,
-                                    summary=parsed_response.get('summary', ''),
-                                    action_flow=parsed_response.get('action_flow', ''),
-                                    customer_name=customer_name,
-                                    timestamp=datetime.datetime.now().isoformat()
+                                    condition_1=best_scenario.get('condition_1', '') if best_scenario else '',
+                                    condition_2=best_scenario.get('condition_2', '') if best_scenario else ''
                                 )
-                            
-                            # 다중 사용자 데이터베이스에 이력 저장
-                            st.session_state.inquiry_data['timestamp'] = datetime.datetime.now().isoformat()
-                            multi_save_result = multi_user_db.save_analysis(analysis_result, st.session_state.inquiry_data)
-                            
-                            if multi_save_result.get('success'):
-                                st.success(f"✅ 다중 사용자 이력 저장 완료 (사용자: {multi_save_result.get('user_name', 'Unknown')})")
-                            else:
-                                st.warning(f"⚠️ 다중 사용자 이력 저장 실패: {multi_save_result.get('error', 'unknown error')}")
-                            
-                            # 기존 JSON 파일에도 저장 (호환성 유지)
-                            legacy_save_result = history_db.save_analysis(analysis_result, st.session_state.inquiry_data)
-                            if legacy_save_result.get('success'):
-                                st.info(f"✅ 기존 이력 저장 완료 (호환성)")
-                            else:
-                                st.warning(f"⚠️ 기존 이력 저장 실패: {legacy_save_result.get('error', 'unknown error')}")
                                 
-                        except Exception as e:
-                            st.error(f"❌ 이력 저장 실패: {e}")
-                    
-                    st.balloons()
-                    
-                    # 수정된 분석 완료 메시지
-                    st.markdown("---")
-                    
-                    # 분석 완료 후 성공 메시지만 표시
-                    st.session_state.analysis_completed = True
-                    st.success("✅ AI 분석이 완료되었습니다! AI 분석 결과 탭에서 상세한 결과를 확인하세요.")
-                    # st.rerun() 제거하여 탭 전환 방지
-                    
-                except Exception as e:
-                    st.error(f"❌ 분석 중 오류가 발생했습니다: {e}")
-                    st.error("상세 오류 정보:")
-                    st.code(str(e))
-        else:
-            st.error("❌ 문의 내용을 입력해주세요.")
+                                elapsed_time = time.time() - start_time
+                                if gemini_result["success"]:
+                                    st.success(f"✅ AI 응답 생성 완료 ({elapsed_time:.1f}초)")
+                                else:
+                                    st.warning(f"⚠️ AI 응답 생성 실패, 기본 응답 사용 ({elapsed_time:.1f}초)")
+                                    
+                            except Exception as e:
+                                elapsed_time = time.time() - start_time
+                                st.error(f"❌ AI 응답 생성 중 오류 발생 ({elapsed_time:.1f}초): {e}")
+                                # 기본 응답 생성
+                                gemini_result = {
+                                    "success": False,
+                                    "error": str(e),
+                                    "parsed_response": gpt_handler._generate_default_response(
+                                        inquiry_content, issue_type, 
+                                        best_scenario.get('condition_1', '') if best_scenario else '',
+                                        best_scenario.get('condition_2', '') if best_scenario else ''
+                                    )
+                                }
+                        
+                        # 결과 저장
+                        analysis_result = {
+                            'classification': classification_result,
+                            'issue_type': issue_type,
+                            'scenarios': scenarios,
+                            'best_scenario': best_scenario,
+                            'similar_cases': similar_cases,
+                            'gemini_result': gemini_result,
+                            'timestamp': datetime.datetime.now().isoformat()
+                        }
+                        
+                        st.session_state.analysis_result = analysis_result
+                        
+                        st.session_state.inquiry_data = {
+                            "customer_name": customer_name,
+                            "customer_contact": customer_contact,
+                            "customer_manager": customer_manager,
+                            "inquiry_content": inquiry_content,
+                            "system_version": system_version,
+                            "browser_info": browser_info,
+                            "os_info": os_info,
+                            "error_code": error_code,
+                            "priority": priority,
+                            "contract_type": contract_type,
+                            "user_name": user_name,
+                            "user_role": user_role
+                        }
+                        
+                        # 다중 사용자 데이터베이스에 저장
+                        if google_auth.is_authenticated():
+                            user_email = google_auth.get_user_email()
+                            multi_user_db.save_analysis(user_email, analysis_result, st.session_state.inquiry_data)
+                        
+                        # 기존 데이터베이스에도 저장 (호환성 유지)
+                        history_db.save_analysis(analysis_result, st.session_state.inquiry_data)
+                        
+                        st.session_state.analysis_completed = True
+                        st.success("🎉 AI 분석이 완료되었습니다!")
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"❌ 분석 중 오류가 발생했습니다: {e}")
+                        st.info("다시 시도해주세요.")
+            else:
+                st.warning("⚠️ 문의 내용을 입력해주세요.")
+    else:
+        st.warning("⚠️ AI 분석을 이용하려면 Google 계정으로 로그인해주세요.")
+        st.info("사이드바에서 로그인 버튼을 클릭하세요.")
 
 # 탭 2: AI 분석 결과
 with tab2:
