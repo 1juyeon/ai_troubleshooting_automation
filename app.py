@@ -61,6 +61,7 @@ def init_session_state():
         st.session_state.user_authenticated = True
         st.session_state.auth_checked = True
         print("✅ 세션에서 인증 상태 복원됨")
+        print(f"✅ 사용자: {st.session_state.get('google_user', {}).get('email', 'Unknown')}")
     else:
         # 인증되지 않은 경우 상태 초기화
         st.session_state.user_authenticated = False
@@ -155,6 +156,9 @@ def handle_oauth_callback(code, state):
             st.session_state.user_authenticated = True
             st.session_state.auth_checked = True
             
+            print(f"✅ 사용자 정보 저장됨: {user_info.get('email', 'Unknown')}")
+            print(f"✅ 세션 상태 업데이트됨: login_completed={st.session_state.login_completed}, user_authenticated={st.session_state.user_authenticated}")
+            
             # URL 파라미터 정리
             st.query_params.clear()
             
@@ -171,6 +175,7 @@ def check_authentication():
     if st.session_state.get('login_completed', False) and st.session_state.get('google_user'):
         st.session_state.user_authenticated = True
         st.session_state.auth_checked = True
+        print("✅ 기존 인증 상태 확인됨")
         return True
     
     # OAuth 콜백 처리 (URL 파라미터에 code가 있는 경우)
@@ -194,12 +199,18 @@ def check_authentication():
                 st.success("✅ 로그인 성공!")
                 # URL 파라미터 정리 후 페이지 새로고침
                 st.query_params.clear()
+                # 세션 상태 강제 업데이트
+                st.session_state.user_authenticated = True
+                st.session_state.auth_checked = True
+                st.session_state.login_completed = True
+                print("✅ 로그인 성공 후 세션 상태 업데이트됨")
                 st.rerun()
             else:
                 st.error("❌ 로그인 처리에 실패했습니다.")
                 st.stop()
     
     # 로그인되지 않은 경우 로그인 페이지 표시
+    print("ℹ️ 인증되지 않음 - 로그인 페이지 표시")
     render_login_page()
     st.stop()
 
@@ -279,7 +290,8 @@ def render_login_page():
                     "login_completed": st.session_state.get('login_completed', False),
                     "google_user": bool(st.session_state.get('google_user')),
                     "user_authenticated": st.session_state.get('user_authenticated', False),
-                    "auth_checked": st.session_state.get('auth_checked', False)
+                    "auth_checked": st.session_state.get('auth_checked', False),
+                    "google_user_email": st.session_state.get('google_user', {}).get('email', 'None') if st.session_state.get('google_user') else 'None'
                 }
             })
             
@@ -292,7 +304,8 @@ def render_login_page():
                 st.rerun()
 
 # 인증 체크 실행
-if not check_authentication():
+auth_result = check_authentication()
+if not auth_result:
     st.stop()
 
 # OAuth 세션 상태는 EnhancedGoogleAuth 클래스에서 자동으로 초기화됨
