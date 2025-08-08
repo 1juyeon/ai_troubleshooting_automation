@@ -65,37 +65,175 @@ def init_session_state():
 # 세션 상태 초기화
 init_session_state()
 
-# 인증 체크 - 로그인되지 않은 경우 로그인 페이지로 리다이렉트
+# 인증 체크 - 로그인되지 않은 경우 로그인 페이지 표시
 def check_authentication():
-    """인증 상태 확인 및 리다이렉트"""
+    """인증 상태 확인 및 로그인 페이지 표시"""
     if not st.session_state.get('login_completed', False) or not st.session_state.get('google_user'):
-        st.warning("⚠️ 로그인이 필요합니다.")
-        
-        # 로그인 링크 제공
-        st.markdown("""
-        <div style="text-align: center; margin: 20px 0;">
-            <a href="https://privkeeperp-response.streamlit.app/login" style="
-                background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
-                color: white;
-                border: none;
-                padding: 12px 24px;
-                border-radius: 8px;
-                font-size: 16px;
-                font-weight: bold;
-                cursor: pointer;
-                text-decoration: none;
-                display: inline-block;
-            ">
-                🔐 로그인 페이지로 이동
-            </a>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.info("위 버튼을 클릭하여 로그인 페이지로 이동하세요.")
+        # 로그인 페이지 표시
+        render_login_page()
         st.stop()
     else:
         st.session_state.user_authenticated = True
         st.session_state.auth_checked = True
+
+def render_login_page():
+    """로그인 페이지 렌더링"""
+    # 헤더
+    st.markdown("""
+    <div style='background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 10px; color: white; text-align: center; margin-bottom:2rem;'>
+        <h1>🔐 PrivKeeper P 로그인</h1>
+        <p>Google 계정으로 로그인하여 시스템에 접근하세요</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # OAuth 설정 확인
+    try:
+        client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
+        client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
+    except:
+        client_id = ""
+        client_secret = ""
+    
+    if not client_id:
+        st.error("❌ Google OAuth가 설정되지 않았습니다.")
+        st.info("관리자에게 OAuth 설정을 요청하세요.")
+        return
+    
+    # OAuth 콜백 처리
+    code = st.query_params.get("code", None)
+    state = st.query_params.get("state", None)
+    
+    if code and state:
+        with st.spinner("🔐 로그인 처리 중..."):
+            # 토큰 교환 및 사용자 정보 가져오기
+            if handle_oauth_callback(code, state):
+                st.success("✅ 로그인 성공! 페이지를 새로고침하세요.")
+                st.rerun()
+    
+    # 로그인 버튼 표시
+    auth_url = get_auth_url()
+    if auth_url:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown(f"""
+            <a href="{auth_url}" target="_blank" style="
+                background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
+                color: white;
+                border: none;
+                padding: 15px 30px;
+                border-radius: 8px;
+                font-size: 18px;
+                font-weight: bold;
+                cursor: pointer;
+                width: 100%;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                text-decoration: none;
+                display: block;
+                text-align: center;
+            ">
+                🔐 Google 계정으로 로그인
+            </a>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+            <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #4285f4;">
+                <h4>📋 로그인 방법</h4>
+                <ol style="margin: 0; padding-left: 20px;">
+                    <li>위 버튼을 클릭하세요</li>
+                    <li>새 창에서 Google 로그인을 완료하세요</li>
+                    <li>로그인 완료 후 새 창을 닫으세요</li>
+                    <li>이 페이지를 새로고침하세요</li>
+                </ol>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # 디버그 정보
+        if st.checkbox("🔧 디버그 정보 표시"):
+            st.json({
+                "client_id_set": bool(client_id),
+                "client_secret_set": bool(client_secret),
+                "auth_url_length": len(auth_url),
+                "auth_url_preview": auth_url[:100] + "..." if len(auth_url) > 100 else auth_url
+            })
+
+def get_auth_url():
+    """Google OAuth2 인증 URL 생성"""
+    try:
+        client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
+        if not client_id:
+            return ""
+        
+        # state 토큰 생성
+        import secrets
+        state = secrets.token_urlsafe(32)
+        st.session_state.oauth_state = state
+        
+        redirect_uri = "https://privkeeperp-response.streamlit.app"
+        
+        params = {
+            'client_id': client_id,
+            'redirect_uri': redirect_uri,
+            'scope': 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+            'response_type': 'code',
+            'access_type': 'offline',
+            'prompt': 'consent',
+            'state': state
+        }
+        
+        auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
+        query_string = urlencode(params, safe='')
+        final_url = f"{auth_url}?{query_string}"
+        
+        return final_url
+    except Exception as e:
+        st.error(f"❌ 인증 URL 생성 실패: {e}")
+        return ""
+
+def handle_oauth_callback(code, state):
+    """OAuth 콜백 처리"""
+    try:
+        client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
+        client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
+        redirect_uri = "https://privkeeperp-response.streamlit.app"
+        
+        # 토큰 교환
+        token_url = "https://oauth2.googleapis.com/token"
+        data = {
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'code': code,
+            'grant_type': 'authorization_code',
+            'redirect_uri': redirect_uri
+        }
+        
+        response = requests.post(token_url, data=data, timeout=10)
+        response.raise_for_status()
+        token_data = response.json()
+        
+        access_token = token_data.get('access_token')
+        if access_token:
+            # 사용자 정보 가져오기
+            userinfo_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+            headers = {'Authorization': f'Bearer {access_token}'}
+            
+            user_response = requests.get(userinfo_url, headers=headers, timeout=10)
+            user_response.raise_for_status()
+            user_info = user_response.json()
+            
+            # 세션에 사용자 정보 저장
+            st.session_state.google_user = user_info
+            st.session_state.google_access_token = access_token
+            st.session_state.login_completed = True
+            
+            return True
+        
+        return False
+    except Exception as e:
+        st.error(f"❌ OAuth 콜백 처리 실패: {e}")
+        return False
 
 # 인증 체크 실행
 check_authentication()
