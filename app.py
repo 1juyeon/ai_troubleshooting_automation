@@ -107,15 +107,10 @@ with st.sidebar:
     user_role = st.selectbox("역할", ["영업", "엔지니어", "개발자"])
     st.markdown("---")
     
-    # OAuth2 인증 상태 표시
-    if not google_auth.client_id:
-        st.warning("⚠️ Google OAuth가 설정되지 않았습니다.")
-        st.info("관리자가 OAuth 설정을 완료하면 Google 계정으로 로그인할 수 있습니다.")
-        st.markdown("---")
-    elif not google_auth.is_authenticated():
-        st.info("🔐 Google 계정으로 로그인하여 AI 분석 서비스를 이용하세요.")
-        st.markdown("---")
-    else:
+    # OAuth2 인증 상태 표시 (간소화)
+    if google_auth.client_id and not google_auth.is_authenticated():
+        google_auth.render_login_button()
+    elif google_auth.is_authenticated():
         # 로그인된 사용자 정보 표시
         google_auth.render_user_info()
     

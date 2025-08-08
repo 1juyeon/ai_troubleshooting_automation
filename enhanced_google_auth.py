@@ -21,11 +21,14 @@ class EnhancedGoogleAuth:
         except:
             self.base_url = "https://privkeeperp-response.streamlit.app/"
         
-        # 리디렉션 URI 정확히 설정
-        self.redirect_uri = "https://privkeeperp-response.streamlit.app/"
+        # 리디렉션 URI 정확히 설정 (Streamlit Cloud URL)
+        self.redirect_uri = "https://privkeeperp-response.streamlit.app"
         
     def get_auth_url(self) -> str:
         """Google OAuth2 인증 URL 생성"""
+        if not self.client_id:
+            return ""
+            
         params = {
             'client_id': self.client_id,
             'redirect_uri': self.redirect_uri,
@@ -152,35 +155,34 @@ class EnhancedGoogleAuth:
         
         # 로그인 버튼 표시
         auth_url = self.get_auth_url()
-        st.markdown(f"""
-        <div style="text-align: center; margin: 20px 0;">
-            <a href="{auth_url}" target="_self">
-                <button style="
-                    background: linear-gradient(45deg, #4285f4, #34a853);
-                    color: white;
-                    padding: 15px 30px;
-                    border: none;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    font-weight: bold;
-                    cursor: pointer;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 12px;
-                    box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3);
-                    transition: all 0.3s ease;
-                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(66, 133, 244, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 8px rgba(66, 133, 244, 0.3)'">
-                    <img src="https://developers.google.com/identity/images/g-logo.png" width="24" height="24" style="filter: brightness(0) invert(1);">
-                    Google 계정으로 로그인
-                </button>
-            </a>
-        </div>
-        """, unsafe_allow_html=True)
+        if auth_url:
+            st.markdown(f"""
+            <div style="text-align: center; margin: 20px 0;">
+                <a href="{auth_url}" target="_self">
+                    <button style="
+                        background: linear-gradient(45deg, #4285f4, #34a853);
+                        color: white;
+                        padding: 15px 30px;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 12px;
+                        box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3);
+                        transition: all 0.3s ease;
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(66, 133, 244, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 8px rgba(66, 133, 244, 0.3)'">
+                        <img src="https://developers.google.com/identity/images/g-logo.png" width="24" height="24" style="filter: brightness(0) invert(1);">
+                        Google 계정으로 로그인
+                    </button>
+                </a>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.error("❌ OAuth 설정이 올바르지 않습니다.")
         
-        # 로그인 상태 안내
-        st.markdown("---")
-        st.markdown("### 🔐 로그인 필요")
-        st.info("AI 분석 서비스를 이용하려면 Google 계정으로 로그인해주세요.")
         return False
     
     def render_user_info(self):
