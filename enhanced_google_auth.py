@@ -9,10 +9,13 @@ import datetime
 class EnhancedGoogleAuth:
     def __init__(self):
         """향상된 Google OAuth2 인증"""
+        # st.secrets에 안정적으로 접근
         try:
             self.client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
             self.client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
-        except:
+            print(f"✅ OAuth 설정 로드 - Client ID: {bool(self.client_id)}, Client Secret: {bool(self.client_secret)}")
+        except Exception as e:
+            print(f"❌ OAuth 설정 로드 실패: {e}")
             self.client_id = ""
             self.client_secret = ""
         
