@@ -42,16 +42,54 @@ class EnhancedGoogleAuth:
         if 'google_auth_initialized' not in st.session_state:
             st.session_state.google_auth_initialized = True
             
-        if 'google_user' not in st.session_state:
-            st.session_state.google_user = None
-        if 'google_access_token' not in st.session_state:
-            st.session_state.google_access_token = None
-        if 'google_refresh_token' not in st.session_state:
-            st.session_state.google_refresh_token = None
-        if 'oauth_state' not in st.session_state:
-            st.session_state.oauth_state = None
-        if 'last_token_refresh' not in st.session_state:
-            st.session_state.last_token_refresh = None
+        # 세션 상태를 더 안정적으로 초기화
+        session_keys = [
+            'google_user', 
+            'google_access_token', 
+            'google_refresh_token', 
+            'oauth_state',
+            'last_token_refresh',
+            'auth_persistent_data'
+        ]
+        
+        for key in session_keys:
+            if key not in st.session_state:
+                st.session_state[key] = None
+        
+        # 영구 데이터 저장소 초기화
+        if 'auth_persistent_data' not in st.session_state:
+            st.session_state.auth_persistent_data = {}
+    
+    def _save_auth_data(self, user_info: dict, access_token: str, refresh_token: str = None):
+        """인증 데이터를 영구 저장소에 저장"""
+        st.session_state.google_user = user_info
+        st.session_state.google_access_token = access_token
+        if refresh_token:
+            st.session_state.google_refresh_token = refresh_token
+        
+        # 영구 저장소에도 저장
+        st.session_state.auth_persistent_data = {
+            'user_info': user_info,
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'timestamp': datetime.datetime.now().isoformat()
+        }
+    
+    def _load_auth_data(self) -> bool:
+        """영구 저장소에서 인증 데이터 로드"""
+        if 'auth_persistent_data' in st.session_state and st.session_state.auth_persistent_data:
+            data = st.session_state.auth_persistent_data
+            user_info = data.get('user_info')
+            access_token = data.get('access_token')
+            refresh_token = data.get('refresh_token')
+            
+            if user_info and access_token:
+                st.session_state.google_user = user_info
+                st.session_state.google_access_token = access_token
+                if refresh_token:
+                    st.session_state.google_refresh_token = refresh_token
+                return True
+        return False
     
     def get_auth_url(self) -> str:
         """Google OAuth2 인증 URL 생성"""
@@ -149,7 +187,7 @@ class EnhancedGoogleAuth:
             return False
     
     def render_login_button(self):
-        """향상된 로그인 버튼 렌더링 - Streamlit 네이티브 컴포넌트 사용"""
+        """향상된 로그인 버튼 렌더링 - 강제 같은 탭 네비게이션"""
         if not self.client_id:
             st.error("❌ Google OAuth가 설정되지 않았습니다.")
             st.info("관리자가 OAuth 설정을 완료하면 Google 계정으로 로그인할 수 있습니다.")
@@ -173,10 +211,7 @@ class EnhancedGoogleAuth:
                         
                         if user_info:
                             # 세션에 사용자 정보 저장
-                            st.session_state.google_user = user_info
-                            st.session_state.google_access_token = access_token
-                            if refresh_token:
-                                st.session_state.google_refresh_token = refresh_token
+                            self._save_auth_data(user_info, access_token, refresh_token)
                             
                             st.success(f"✅ {user_info.get('name', '사용자')}님 환영합니다!")
                             
@@ -190,12 +225,32 @@ class EnhancedGoogleAuth:
                 else:
                     st.error("❌ 인증 토큰 교환에 실패했습니다.")
         
-        # Streamlit 네이티브 버튼 사용
+        # 강제 같은 탭 네비게이션을 위한 JavaScript 사용
         auth_url = self.get_auth_url()
         if auth_url:
-            # 직접 링크 버튼 사용 (새 탭 방지)
-            if st.link_button("🔐 Google 계정으로 로그인", auth_url, use_container_width=True):
-                st.rerun()
+            st.markdown(f"""
+            <div style="text-align: center; margin: 20px 0;">
+                <button onclick="window.location.replace('{auth_url}')" style="
+                    background: linear-gradient(45deg, #4285f4, #34a853);
+                    color: white;
+                    padding: 15px 30px;
+                    border: none;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 12px;
+                    box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3);
+                    transition: all 0.3s ease;
+                    width: 100%;
+                ">
+                    <img src="https://developers.google.com/identity/images/g-logo.png" width="24" height="24" style="filter: brightness(0) invert(1);">
+                    🔐 Google 계정으로 로그인
+                </button>
+            </div>
+            """, unsafe_allow_html=True)
         else:
             st.error("❌ OAuth 설정이 올바르지 않습니다.")
         
@@ -263,7 +318,8 @@ class EnhancedGoogleAuth:
             'google_refresh_token', 
             'oauth_state',
             'last_token_refresh',
-            'google_auth_initialized'
+            'google_auth_initialized',
+            'auth_persistent_data'
         ]
         for key in keys_to_remove:
             if key in st.session_state:
@@ -277,6 +333,14 @@ class EnhancedGoogleAuth:
     
     def is_authenticated(self) -> bool:
         """인증 상태 확인 - 강화된 세션 지속성"""
+        # 먼저 영구 저장소에서 데이터 복구 시도
+        if not st.session_state.get('google_user') or not st.session_state.get('google_access_token'):
+            if self._load_auth_data():
+                # 데이터 복구 성공
+                pass
+            else:
+                return False
+        
         # 기본 세션 상태 확인
         if 'google_user' not in st.session_state or not st.session_state.google_user:
             return False
@@ -347,13 +411,17 @@ class EnhancedGoogleAuth:
             
             new_access_token = token_data.get('access_token')
             if new_access_token and self.validate_token(new_access_token):
-                st.session_state.google_access_token = new_access_token
-                st.session_state.last_token_refresh = datetime.datetime.now().isoformat()
-                
                 # 새로운 리프레시 토큰이 있다면 업데이트
-                if 'refresh_token' in token_data:
-                    st.session_state.google_refresh_token = token_data['refresh_token']
+                new_refresh_token = token_data.get('refresh_token', refresh_token)
                 
+                # 영구 저장소에 저장
+                self._save_auth_data(
+                    st.session_state.google_user, 
+                    new_access_token, 
+                    new_refresh_token
+                )
+                
+                st.session_state.last_token_refresh = datetime.datetime.now().isoformat()
                 return True
             else:
                 return False
