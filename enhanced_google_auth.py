@@ -30,7 +30,7 @@ class EnhancedGoogleAuth:
             self.base_url = "https://privkeeperp-response.streamlit.app"
         
         # 리디렉션 URI 정확히 설정 (실제 앱 URL)
-        self.redirect_uri = "https://privkeeperp-response.streamlit.app/"
+        self.redirect_uri = "https://privkeeperp-response.streamlit.app"
         
     def get_auth_url(self) -> str:
         """Google OAuth2 인증 URL 생성"""
@@ -194,7 +194,7 @@ class EnhancedGoogleAuth:
                         gap: 12px;
                         box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3);
                         transition: all 0.3s ease;
-                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(66, 133, 244, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 8px rgba(66, 133, 244, 0.3)'">
+                    ">
                         <img src="https://developers.google.com/identity/images/g-logo.png" width="24" height="24" style="filter: brightness(0) invert(1);">
                         Google 계정으로 로그인
                     </button>
