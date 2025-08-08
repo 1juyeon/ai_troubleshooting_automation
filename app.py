@@ -84,7 +84,7 @@ def get_auth_url():
         state = secrets.token_urlsafe(32)
         st.session_state.oauth_state = state
         
-        redirect_uri = "https://privkeeperp-response.streamlit.app/"
+        redirect_uri = "https://privkeeperp-response.streamlit.app"
         
         params = {
             'client_id': client_id,
@@ -110,7 +110,7 @@ def handle_oauth_callback(code, state):
     try:
         client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
         client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
-        redirect_uri = "https://privkeeperp-response.streamlit.app/"
+        redirect_uri = "https://privkeeperp-response.streamlit.app"
         
         # state 검증
         stored_state = st.session_state.get('oauth_state')
