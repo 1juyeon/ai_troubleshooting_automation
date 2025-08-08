@@ -15,14 +15,22 @@ class EnhancedGoogleAuth:
             self.client_id = ""
             self.client_secret = ""
         
-        # Streamlit Cloud URL 또는 로컬 URL
+        # Streamlit Cloud URL 자동 감지
         try:
-            self.base_url = st.get_option("server.baseUrlPath")
+            # Streamlit Cloud에서 실행 중인지 확인
+            if st.get_option("server.baseUrlPath"):
+                # 로컬 개발 환경
+                self.base_url = "http://localhost:8501"
+            else:
+                # Streamlit Cloud 환경 - 실제 앱 URL 확인
+                # 현재 사용 중인 앱의 URL을 정확히 설정
+                self.base_url = "https://aitroubleshootingautomation-fxxn77xinek2wohl5qhpw8.streamlit.app"
         except:
-            self.base_url = "https://privkeeperp-response.streamlit.app/"
+            # 기본값으로 현재 앱 URL 사용
+            self.base_url = "https://aitroubleshootingautomation-fxxn77xinek2wohl5qhpw8.streamlit.app"
         
-        # 리디렉션 URI 정확히 설정 (Streamlit Cloud URL)
-        self.redirect_uri = "https://privkeeperp-response.streamlit.app/"
+        # 리디렉션 URI 정확히 설정 (실제 앱 URL)
+        self.redirect_uri = f"{self.base_url}/"
         
     def get_auth_url(self) -> str:
         """Google OAuth2 인증 URL 생성"""
