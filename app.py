@@ -30,7 +30,8 @@ def init_session_state():
         'login_success': False,
         'user_authenticated': False,
         'google_auth_initialized': False,
-        'session_persistent': True
+        'session_persistent': True,
+        'login_completed': False
     }
     
     # 분석 결과 관련 세션 키들
@@ -54,6 +55,7 @@ def init_session_state():
     if 'google_user' in st.session_state and st.session_state.google_user:
         st.session_state.user_authenticated = True
         st.session_state.auth_checked = True
+        st.session_state.login_completed = True
         print("✅ 세션에서 인증 상태 복원됨")
     
     # 디버깅용 로그
@@ -62,6 +64,28 @@ def init_session_state():
 
 # 세션 상태 초기화
 init_session_state()
+
+# 인증 체크 - 로그인되지 않은 경우 로그인 페이지로 리다이렉트
+def check_authentication():
+    """인증 상태 확인 및 리다이렉트"""
+    if not st.session_state.get('login_completed', False) or not st.session_state.get('google_user'):
+        st.warning("⚠️ 로그인이 필요합니다.")
+        st.info("로그인 페이지로 이동합니다...")
+        
+        # 로그인 페이지로 리다이렉트
+        st.markdown("""
+        <script>
+        window.location.href = "/login";
+        </script>
+        """, unsafe_allow_html=True)
+        
+        st.stop()
+    else:
+        st.session_state.user_authenticated = True
+        st.session_state.auth_checked = True
+
+# 인증 체크 실행
+check_authentication()
 
 # OAuth 세션 상태는 EnhancedGoogleAuth 클래스에서 자동으로 초기화됨
 
