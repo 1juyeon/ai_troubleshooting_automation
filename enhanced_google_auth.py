@@ -248,11 +248,7 @@ class EnhancedGoogleAuth:
             if st.session_state.get('debug_mode', False):
                 st.info(f"🔍 디버그: 인증 URL 생성됨 - {auth_url[:50]}...")
             
-            # 방법 1: Streamlit link_button 사용
-            if st.link_button("🔐 Google 계정으로 로그인", auth_url, use_container_width=True, type="primary"):
-                return True
-            
-            # 방법 2: JavaScript를 사용한 강제 리다이렉트
+            # 방법 1: JavaScript를 사용한 강제 리다이렉트
             st.markdown(f"""
             <script>
             function redirectToGoogle() {{
@@ -273,13 +269,14 @@ class EnhancedGoogleAuth:
                     width: 100%;
                     transition: all 0.3s ease;
                     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    margin-bottom: 10px;
                 " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                     🔐 Google 계정으로 로그인 (JavaScript)
                 </button>
             </div>
             """, unsafe_allow_html=True)
             
-            # 방법 3: 직접 링크 (백업)
+            # 방법 2: 직접 링크 (백업)
             st.markdown(f"""
             <div style="margin: 10px 0;">
                 <a href="{auth_url}" target="_self" style="text-decoration: none;">
@@ -295,12 +292,21 @@ class EnhancedGoogleAuth:
                         width: 100%;
                         transition: all 0.3s ease;
                         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        margin-bottom: 10px;
                     " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                         🔐 Google 계정으로 로그인 (직접 링크)
                     </button>
                 </a>
             </div>
             """, unsafe_allow_html=True)
+            
+            # 방법 3: Streamlit 버튼 + JavaScript (추가 백업)
+            if st.button("🔐 Google 계정으로 로그인 (Streamlit 버튼)", use_container_width=True, type="primary"):
+                st.markdown(f"""
+                <script>
+                window.location.href = "{auth_url}";
+                </script>
+                """, unsafe_allow_html=True)
             
             # 추가 디버깅 정보
             if st.session_state.get('debug_mode', False):
