@@ -86,12 +86,19 @@ class EnhancedGoogleAuth:
         if 'user_authenticated' not in st.session_state:
             st.session_state.user_authenticated = False
         
+        # 강제로 초기화 상태 설정
+        st.session_state.google_auth_initialized = True
+        
         # 디버깅용 로그
         if st.session_state.google_user:
             print(f"✅ 세션에서 사용자 복원: {st.session_state.google_user.get('name', 'Unknown')}")
             # 인증 상태 업데이트
             st.session_state.user_authenticated = True
             st.session_state.auth_checked = True
+        else:
+            print("ℹ️ 새로운 세션 시작 - 사용자 정보 없음")
+        
+        print(f"✅ OAuth 세션 초기화 완료 - Client ID: {bool(self.client_id)}")
     
     def _save_auth_data(self, user_info: dict, access_token: str, refresh_token: str = None):
         """인증 데이터를 session_state에 저장"""
