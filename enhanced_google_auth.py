@@ -301,21 +301,28 @@ class EnhancedGoogleAuth:
                 return false;
             }}
             </script>
+            <style>
+            .google-login-btn {{
+                background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                width: 100%;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                margin-bottom: 10px;
+            }}
+            .google-login-btn:hover {{
+                transform: scale(1.02);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            }}
+            </style>
             <div style="margin: 10px 0;">
-                <button onclick="redirectToGoogle()" style="
-                    background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
-                    color: white;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    font-weight: bold;
-                    cursor: pointer;
-                    width: 100%;
-                    transition: all 0.3s ease;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                    margin-bottom: 10px;
-                " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                <button onclick="redirectToGoogle()" class="google-login-btn">
                     🔐 Google 계정으로 로그인 (JavaScript)
                 </button>
             </div>
@@ -323,22 +330,31 @@ class EnhancedGoogleAuth:
             
             # 방법 2: 직접 링크 (백업)
             st.markdown(f"""
+            <style>
+            .google-login-btn-red {{
+                background: linear-gradient(90deg, #ff6b6b 0%, #ee5a24 100%);
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                width: 100%;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                margin-bottom: 10px;
+                text-decoration: none;
+                display: block;
+            }}
+            .google-login-btn-red:hover {{
+                transform: scale(1.02);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            }}
+            </style>
             <div style="margin: 10px 0;">
                 <a href="{auth_url}" target="_self" style="text-decoration: none;">
-                    <button style="
-                        background: linear-gradient(90deg, #ff6b6b 0%, #ee5a24 100%);
-                        color: white;
-                        border: none;
-                        padding: 12px 24px;
-                        border-radius: 8px;
-                        font-size: 16px;
-                        font-weight: bold;
-                        cursor: pointer;
-                        width: 100%;
-                        transition: all 0.3s ease;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                        margin-bottom: 10px;
-                    " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    <button class="google-login-btn-red">
                         🔐 Google 계정으로 로그인 (직접 링크)
                     </button>
                 </a>
