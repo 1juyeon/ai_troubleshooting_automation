@@ -22,7 +22,7 @@ class EnhancedGoogleAuth:
             self.base_url = "https://privkeeperp-response.streamlit.app/"
         
         # 리디렉션 URI 정확히 설정 (Streamlit Cloud URL)
-        self.redirect_uri = "https://privkeeperp-response.streamlit.app"
+        self.redirect_uri = "https://privkeeperp-response.streamlit.app/"
         
     def get_auth_url(self) -> str:
         """Google OAuth2 인증 URL 생성"""

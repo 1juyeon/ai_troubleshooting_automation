@@ -107,12 +107,7 @@ with st.sidebar:
     user_role = st.selectbox("역할", ["영업", "엔지니어", "개발자"])
     st.markdown("---")
     
-    # OAuth2 인증 상태 표시 (간소화)
-    if google_auth.client_id and not google_auth.is_authenticated():
-        google_auth.render_login_button()
-    elif google_auth.is_authenticated():
-        # 로그인된 사용자 정보 표시
-        google_auth.render_user_info()
+
     
     st.markdown("## ⚙️ 시스템 설정")
     gpt_model = st.selectbox("AI 모델", ["Gemini 1.5 Pro"], index=0)
