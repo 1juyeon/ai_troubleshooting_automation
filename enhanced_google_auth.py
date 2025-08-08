@@ -215,7 +215,7 @@ class EnhancedGoogleAuth:
                 st.success("🎉 AI 분석 서비스 이용 가능")
                 
                 # 로그아웃 버튼
-                if st.button("🚪 로그아웃", use_container_width=True):
+                if st.button("🚪 로그아웃"):
                     self.logout()
                     st.rerun()
     
