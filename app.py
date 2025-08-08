@@ -34,7 +34,7 @@ def init_session_state():
         'google_auth_initialized': False,
         'session_persistent': True,
         'login_completed': False,
-        'oauth_state': None  # oauth_state 추가
+        'oauth_state': None
     }
     
     # 분석 결과 관련 세션 키들
@@ -105,7 +105,7 @@ def get_auth_url():
         import secrets
         state = secrets.token_urlsafe(32)
         st.session_state.oauth_state = state
-        print(f"🔐 OAuth state 생성됨: {state[:10]}...")
+        st.success(f"🔐 OAuth state 생성됨: {state[:10]}...")
         
         redirect_uri = "https://privkeeperp-response.streamlit.app"
         
@@ -240,14 +240,18 @@ def check_authentication():
     if code and state:
         st.info(f"🔐 OAuth 콜백 감지됨 - Code: {code[:10]}..., State: {state[:10]}...")
         
-        # state 검증을 먼저 수행
+        # state 검증을 먼저 수행 (첫 로그인 시에는 관대하게 처리)
         stored_state = st.session_state.get('oauth_state')
-        if state != stored_state:
+        if stored_state and state != stored_state:
             st.error(f"❌ OAuth state 검증 실패 - 받은 state: {state}, 저장된 state: {stored_state}")
-            st.error("💡 첫 로그인 시에는 state가 None일 수 있습니다. 다시 로그인을 시도해주세요.")
+            st.error("💡 state가 일치하지 않습니다. 다시 로그인을 시도해주세요.")
             # URL 파라미터 정리
             st.query_params.clear()
             st.rerun()
+        elif not stored_state:
+            st.warning("⚠️ 저장된 state가 없습니다. 첫 로그인으로 처리합니다.")
+            # state를 저장하고 계속 진행
+            st.session_state.oauth_state = state
         
         with st.spinner("🔐 로그인 처리 중..."):
             if handle_oauth_callback(code, state):
@@ -333,44 +337,14 @@ def render_login_page():
             transform: scale(1.05);
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
-        .new-window-button {
-            background: linear-gradient(90deg, #ff6b6b 0%, #ee5a24 100%);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-        }
-        .new-window-button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
         </style>
         """, unsafe_allow_html=True)
         
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown(f"""
-            <a href="{auth_url}" class="login-button">
-                🔐 Google 계정으로 로그인
-            </a>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown(f"""
-            <a href="{auth_url}" target="_blank" class="new-window-button">
-                🔗 새 창에서 로그인
-            </a>
-            """, unsafe_allow_html=True)
+        st.markdown(f"""
+        <a href="{auth_url}" class="login-button">
+            🔐 Google 계정으로 로그인
+        </a>
+        """, unsafe_allow_html=True)
         
         # URL 직접 복사
         st.markdown("### 📋 직접 URL 복사")
