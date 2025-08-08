@@ -62,12 +62,14 @@ def init_session_state():
         st.session_state.auth_checked = True
         print("✅ 세션에서 인증 상태 복원됨")
         print(f"✅ 사용자: {st.session_state.get('google_user', {}).get('email', 'Unknown')}")
+        print(f"✅ 세션 상태: user_authenticated={st.session_state.user_authenticated}, auth_checked={st.session_state.auth_checked}")
     else:
         # 인증되지 않은 경우 상태 초기화
         st.session_state.user_authenticated = False
         st.session_state.auth_checked = False
         st.session_state.login_completed = False
         print("ℹ️ 인증되지 않은 상태로 초기화됨")
+        print(f"ℹ️ 세션 상태: user_authenticated={st.session_state.user_authenticated}, auth_checked={st.session_state.auth_checked}")
 
 # 세션 상태 초기화
 init_session_state()
@@ -171,8 +173,11 @@ def handle_oauth_callback(code, state):
 
 def check_authentication():
     """인증 상태 확인 및 로그인 페이지 표시"""
-    # 기존 인증 상태 확인
-    if st.session_state.get('login_completed', False) and st.session_state.get('google_user'):
+    # 기존 인증 상태 확인 (더 강력한 검증)
+    if (st.session_state.get('login_completed', False) and 
+        st.session_state.get('google_user') and 
+        st.session_state.get('google_access_token')):
+        
         st.session_state.user_authenticated = True
         st.session_state.auth_checked = True
         print("✅ 기존 인증 상태 확인됨")
@@ -212,7 +217,7 @@ def check_authentication():
     # 로그인되지 않은 경우 로그인 페이지 표시
     print("ℹ️ 인증되지 않음 - 로그인 페이지 표시")
     render_login_page()
-    st.stop()
+    return False
 
 def render_login_page():
     """로그인 페이지 렌더링"""
@@ -306,6 +311,13 @@ def render_login_page():
 # 인증 체크 실행
 auth_result = check_authentication()
 if not auth_result:
+    st.stop()
+
+# 인증 성공 시 메인 애플리케이션 시작
+if st.session_state.get('user_authenticated', False):
+    print("✅ 인증된 사용자 - 메인 애플리케이션 시작")
+else:
+    print("❌ 인증되지 않은 사용자 - 애플리케이션 중단")
     st.stop()
 
 # OAuth 세션 상태는 EnhancedGoogleAuth 클래스에서 자동으로 초기화됨
@@ -451,9 +463,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 로그인 상태에 따른 메시지 표시
-if google_auth.is_authenticated():
-    user_name = google_auth.get_user_name()
-    st.success(f"✅ {user_name}님, AI 분석 서비스를 이용할 수 있습니다!")
+if st.session_state.get('user_authenticated', False):
+    user_email = st.session_state.get('google_user', {}).get('email', '사용자')
+    st.success(f"✅ {user_email}님, AI 분석 서비스를 이용할 수 있습니다!")
 else:
     st.warning("⚠️ AI 분석을 이용하려면 Google 계정으로 로그인해주세요.")
     st.info("사이드바에서 로그인 버튼을 클릭하세요.")
@@ -505,7 +517,7 @@ with tab1:
             error_code = st.text_input("오류 코드", placeholder="ERR_001")
     
     # 제출 버튼
-    if google_auth.is_authenticated():
+    if st.session_state.get('user_authenticated', False):
         if st.button("🚀 AI 분석 요청", type="primary", use_container_width=True):
             if inquiry_content.strip():
                 # 진행 상황을 표시할 컨테이너 생성
@@ -608,9 +620,9 @@ with tab1:
                         }
                         
                         # 다중 사용자 데이터베이스에 저장
-                        if google_auth.is_authenticated():
+                        if st.session_state.get('user_authenticated', False):
                             try:
-                                user_email = google_auth.get_user_email()
+                                user_email = st.session_state.get('google_user', {}).get('email', 'unknown@example.com')
                                 # inquiry_data에 사용자 이메일 추가
                                 inquiry_data_with_email = st.session_state.inquiry_data.copy()
                                 inquiry_data_with_email['user_email'] = user_email
