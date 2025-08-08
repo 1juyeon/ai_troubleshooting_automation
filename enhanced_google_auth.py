@@ -27,14 +27,16 @@ class EnhancedGoogleAuth:
                 self.base_url = "http://localhost:8501"
                 self.redirect_uri = "http://localhost:8501"
             else:
-                # Streamlit Cloud 환경 - 실제 앱 URL 확인
-                # 현재 사용 중인 앱의 URL을 정확히 설정
+                # Streamlit Cloud 환경 - 정확한 리다이렉트 URI 설정
                 self.base_url = "https://privkeeperp-response.streamlit.app"
                 self.redirect_uri = "https://privkeeperp-response.streamlit.app"
         except:
             # 기본값으로 현재 앱 URL 사용
             self.base_url = "https://privkeeperp-response.streamlit.app"
             self.redirect_uri = "https://privkeeperp-response.streamlit.app"
+        
+        # 디버깅용 로그
+        print(f"🔧 OAuth 설정 - Client ID: {bool(self.client_id)}, Redirect URI: {self.redirect_uri}")
         
         # 세션 초기화 (새로고침 시에도 유지)
         self._init_session_state()
@@ -242,7 +244,11 @@ class EnhancedGoogleAuth:
         # 인증 URL 생성
         auth_url = self.get_auth_url()
         if auth_url:
-            # 간단하고 확실한 방법: 직접 링크 버튼
+            # 디버깅용 정보 표시
+            if st.session_state.get('debug_mode', False):
+                st.info(f"🔍 디버그: 인증 URL 생성됨 - {auth_url[:50]}...")
+            
+            # 간단하고 확실한 방법: 직접 링크
             st.markdown(f"""
             <div style="margin: 10px 0;">
                 <a href="{auth_url}" target="_self" style="text-decoration: none;">
@@ -265,9 +271,14 @@ class EnhancedGoogleAuth:
             </div>
             """, unsafe_allow_html=True)
             
-            # 디버깅용 정보 표시
+            # 추가 디버깅 정보
             if st.session_state.get('debug_mode', False):
-                st.info(f"🔍 디버그: 인증 URL 생성됨 - {auth_url[:50]}...")
+                st.json({
+                    "auth_url_length": len(auth_url),
+                    "redirect_uri": self.redirect_uri,
+                    "client_id_set": bool(self.client_id),
+                    "client_secret_set": bool(self.client_secret)
+                })
         else:
             st.error("❌ OAuth 설정이 올바르지 않습니다.")
             st.info("🔧 관리자에게 OAuth 설정을 요청하세요.")
