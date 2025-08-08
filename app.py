@@ -21,17 +21,25 @@ st.set_page_config(
     layout="wide"
 )
 
+# 세션 상태 초기화 - 강화된 방식
+def init_session_state():
+    """세션 상태 초기화"""
+    session_keys = {
+        'analysis_result': None,
+        'inquiry_data': None,
+        'history_search_results': None,
+        'history_search_performed': False,
+        'analysis_completed': False,
+        'page_initialized': True,
+        'auth_checked': False
+    }
+    
+    for key, default_value in session_keys.items():
+        if key not in st.session_state:
+            st.session_state[key] = default_value
+
 # 세션 상태 초기화
-if 'analysis_result' not in st.session_state:
-    st.session_state.analysis_result = None
-if 'inquiry_data' not in st.session_state:
-    st.session_state.inquiry_data = None
-if 'history_search_results' not in st.session_state:
-    st.session_state.history_search_results = None
-if 'history_search_performed' not in st.session_state:
-    st.session_state.history_search_performed = False
-if 'analysis_completed' not in st.session_state:
-    st.session_state.analysis_completed = False
+init_session_state()
 
 # OAuth 세션 상태는 EnhancedGoogleAuth 클래스에서 자동으로 초기화됨
 
@@ -90,13 +98,21 @@ with st.sidebar:
     
     # Google OAuth 로그인 (OAuth가 설정된 경우에만 표시)
     if google_auth.client_id:
-        if not google_auth.is_authenticated():
-            st.markdown("### Google 계정으로 로그인")
-            google_auth.render_login_button()
-            st.markdown("---")
+        # 인증 상태 확인 - 강화된 방식
+        if not st.session_state.get('auth_checked', False):
+            st.session_state.auth_checked = True
         
-        # 로그인된 사용자 정보 표시
-        if google_auth.is_authenticated():
+        is_auth = google_auth.is_authenticated()
+        
+        if not is_auth:
+            st.markdown("### Google 계정으로 로그인")
+            # 로그인 버튼 렌더링
+            login_success = google_auth.render_login_button()
+            if login_success:
+                st.rerun()
+            st.markdown("---")
+        else:
+            # 로그인된 사용자 정보 표시
             st.markdown("### 👤 로그인된 사용자")
             google_auth.render_user_info()
             st.markdown("---")
