@@ -148,13 +148,27 @@ with st.sidebar:
     
     if debug_mode:
         st.info("🔍 디버그 모드가 활성화되었습니다. OAuth 관련 정보가 표시됩니다.")
-        st.json({
+        
+        # OAuth 상태 상세 정보
+        oauth_status = {
             "client_id_set": bool(google_auth.client_id),
+            "client_secret_set": bool(google_auth.client_secret),
+            "redirect_uri": google_auth.redirect_uri,
             "user_authenticated": st.session_state.get('user_authenticated', False),
             "auth_checked": st.session_state.get('auth_checked', False),
             "login_success": st.session_state.get('login_success', False),
-            "google_user_exists": bool(st.session_state.get('google_user', None))
-        })
+            "google_user_exists": bool(st.session_state.get('google_user', None)),
+            "google_auth_initialized": st.session_state.get('google_auth_initialized', False)
+        }
+        
+        st.json(oauth_status)
+        
+        # OAuth 설정 강제 업데이트 버튼
+        if st.button("🔄 OAuth 상태 강제 업데이트"):
+            st.session_state.google_auth_initialized = True
+            st.session_state.auth_checked = True
+            st.success("✅ OAuth 상태가 업데이트되었습니다!")
+            st.rerun()
     
     # OAuth 디버그 페이지 링크
     st.markdown("### 🔍 OAuth 디버그")

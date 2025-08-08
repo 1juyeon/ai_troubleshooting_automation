@@ -10,14 +10,27 @@ class EnhancedGoogleAuth:
     def __init__(self):
         """향상된 Google OAuth2 인증"""
         # st.secrets에 안정적으로 접근
+        self.client_id = ""
+        self.client_secret = ""
+        
         try:
-            self.client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
-            self.client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
-            print(f"✅ OAuth 설정 로드 - Client ID: {bool(self.client_id)}, Client Secret: {bool(self.client_secret)}")
+            # 여러 방법으로 secrets에 접근 시도
+            if hasattr(st, 'secrets'):
+                self.client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
+                self.client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
+                print(f"✅ st.secrets에서 OAuth 설정 로드 - Client ID: {bool(self.client_id)}")
+            else:
+                print("❌ st.secrets에 접근할 수 없습니다")
         except Exception as e:
             print(f"❌ OAuth 설정 로드 실패: {e}")
-            self.client_id = ""
-            self.client_secret = ""
+            # 환경변수에서 시도
+            try:
+                import os
+                self.client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+                self.client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "")
+                print(f"✅ 환경변수에서 OAuth 설정 로드 - Client ID: {bool(self.client_id)}")
+            except Exception as e2:
+                print(f"❌ 환경변수에서도 로드 실패: {e2}")
         
         # Streamlit Cloud URL 자동 감지
         try:
