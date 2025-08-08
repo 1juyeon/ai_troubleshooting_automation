@@ -24,10 +24,10 @@ class EnhancedGoogleAuth:
             else:
                 # Streamlit Cloud 환경 - 실제 앱 URL 확인
                 # 현재 사용 중인 앱의 URL을 정확히 설정
-                self.base_url = "https://aitroubleshootingautomation-fxxn77xinek2wohl5qhpw8.streamlit.app"
+                self.base_url = "https://privkeeperp-response.streamlit.app"
         except:
             # 기본값으로 현재 앱 URL 사용
-            self.base_url = "https://aitroubleshootingautomation-fxxn77xinek2wohl5qhpw8.streamlit.app"
+            self.base_url = "https://privkeeperp-response.streamlit.app"
         
         # 리디렉션 URI 정확히 설정 (실제 앱 URL)
         self.redirect_uri = f"{self.base_url}/"
