@@ -293,8 +293,24 @@ class EnhancedGoogleAuth:
             if st.session_state.get('debug_mode', False):
                 st.info(f"🔍 디버그: 인증 URL 생성됨 - {auth_url[:50]}...")
             
-            # 방법 1: 순수 CSS 버튼 (React 오류 방지)
+            # 방법 1: 새 창에서 OAuth + 원래 창 닫기
             st.markdown(f"""
+            <script>
+            function openOAuthAndClose() {{
+                var authWindow = window.open("{auth_url}", "google_oauth", "width=500,height=600,scrollbars=yes,resizable=yes");
+                
+                // 새 창이 닫힐 때 체크
+                var checkClosed = setInterval(function() {{
+                    if (authWindow.closed) {{
+                        clearInterval(checkClosed);
+                        // 원래 창도 닫기
+                        window.close();
+                        // 또는 페이지 새로고침
+                        window.location.reload();
+                    }}
+                }}, 1000);
+            }}
+            </script>
             <style>
             .google-login-btn {{
                 background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
@@ -319,9 +335,9 @@ class EnhancedGoogleAuth:
             }}
             </style>
             <div style="margin: 10px 0;">
-                <a href="{auth_url}" target="_self" class="google-login-btn">
-                    🔐 Google 계정으로 로그인 (CSS 링크)
-                </a>
+                <button onclick="openOAuthAndClose()" class="google-login-btn">
+                    🔐 Google 계정으로 로그인 (새 창 + 자동 닫기)
+                </button>
             </div>
             """, unsafe_allow_html=True)
             
