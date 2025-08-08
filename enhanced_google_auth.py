@@ -132,6 +132,7 @@ class EnhancedGoogleAuth:
     def get_auth_url(self) -> str:
         """Google OAuth2 인증 URL 생성"""
         if not self.client_id:
+            print(f"❌ get_auth_url: client_id가 비어있음")
             return ""
             
         params = {
@@ -149,6 +150,7 @@ class EnhancedGoogleAuth:
         
         final_url = f"{auth_url}?{query_string}"
         
+        print(f"✅ get_auth_url: 인증 URL 생성됨 - 길이: {len(final_url)}")
         return final_url
     
     def _generate_state(self) -> str:
@@ -226,9 +228,20 @@ class EnhancedGoogleAuth:
     
     def render_login_button(self):
         """향상된 로그인 버튼 렌더링 - session_state 활용"""
+        print(f"🔍 render_login_button 시작 - client_id: {bool(self.client_id)}")
+        
         if not self.client_id:
             st.error("❌ Google OAuth가 설정되지 않았습니다.")
             st.info("관리자가 OAuth 설정을 완료하면 Google 계정으로 로그인할 수 있습니다.")
+            
+            # 디버깅 정보 추가
+            if st.session_state.get('debug_mode', False):
+                st.json({
+                    "client_id_set": bool(self.client_id),
+                    "client_secret_set": bool(self.client_secret),
+                    "redirect_uri": self.redirect_uri,
+                    "secrets_available": hasattr(st, 'secrets')
+                })
             return False
         
         # URL 파라미터에서 인증 코드 확인
@@ -266,6 +279,8 @@ class EnhancedGoogleAuth:
         
         # 인증 URL 생성
         auth_url = self.get_auth_url()
+        print(f"🔍 render_login_button: auth_url 생성됨 - 길이: {len(auth_url) if auth_url else 0}")
+        
         if auth_url:
             # 디버깅용 정보 표시
             if st.session_state.get('debug_mode', False):
@@ -343,6 +358,15 @@ class EnhancedGoogleAuth:
         else:
             st.error("❌ OAuth 설정이 올바르지 않습니다.")
             st.info("🔧 관리자에게 OAuth 설정을 요청하세요.")
+            
+            # 디버깅 정보 추가
+            if st.session_state.get('debug_mode', False):
+                st.json({
+                    "client_id_set": bool(self.client_id),
+                    "client_secret_set": bool(self.client_secret),
+                    "redirect_uri": self.redirect_uri,
+                    "secrets_available": hasattr(st, 'secrets')
+                })
         
         return False
     
