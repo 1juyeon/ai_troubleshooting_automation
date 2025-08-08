@@ -90,14 +90,25 @@ class EnhancedGoogleAuth:
             'redirect_uri': self.redirect_uri
         }
         
+        print(f"🔧 디버깅: 토큰 교환 시도")
+        print(f"🔧 디버깅: client_id 길이: {len(self.client_id)}")
+        print(f"🔧 디버깅: client_secret 길이: {len(self.client_secret)}")
+        print(f"🔧 디버깅: code 길이: {len(authorization_code)}")
+        print(f"🔧 디버깅: redirect_uri: {self.redirect_uri}")
+        
         try:
             response = requests.post(token_url, data=data, timeout=10)
+            print(f"🔧 디버깅: 응답 상태 코드: {response.status_code}")
+            print(f"🔧 디버깅: 응답 내용: {response.text[:200]}...")
+            
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
+            print(f"🔧 디버깅: RequestException: {e}")
             st.error(f"❌ 토큰 교환 실패: {e}")
             return None
         except Exception as e:
+            print(f"🔧 디버깅: Exception: {e}")
             st.error(f"❌ 토큰 교환 중 오류: {e}")
             return None
     
@@ -179,28 +190,14 @@ class EnhancedGoogleAuth:
         # 로그인 버튼 표시
         auth_url = self.get_auth_url()
         if auth_url:
-            st.markdown(f"""
-            <div style="text-align: center; margin: 20px 0;">
-                <button onclick="window.open('{auth_url}', '_blank', 'width=500,height=600')" style="
-                    background: linear-gradient(45deg, #4285f4, #34a853);
-                    color: white;
-                    padding: 15px 30px;
-                    border: none;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    font-weight: bold;
-                    cursor: pointer;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 12px;
-                    box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3);
-                    transition: all 0.3s ease;
-                ">
-                    <img src="https://developers.google.com/identity/images/g-logo.png" width="24" height="24" style="filter: brightness(0) invert(1);">
-                    Google 계정으로 로그인
-                </button>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown("### Google 계정으로 로그인")
+            if st.link_button(
+                "🔐 Google 계정으로 로그인",
+                url=auth_url,
+                type="primary",
+                use_container_width=True
+            ):
+                pass  # 버튼 클릭 시 자동으로 새 탭에서 열림
         else:
             st.error("❌ OAuth 설정이 올바르지 않습니다.")
         
