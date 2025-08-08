@@ -169,6 +169,19 @@ with st.sidebar:
             st.session_state.auth_checked = True
             st.success("✅ OAuth 상태가 업데이트되었습니다!")
             st.rerun()
+        
+        # OAuth 설정 직접 테스트
+        if st.button("🧪 OAuth 설정 직접 테스트"):
+            try:
+                client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
+                client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
+                st.success(f"✅ 직접 테스트 성공 - Client ID: {bool(client_id)}, Client Secret: {bool(client_secret)}")
+                st.json({
+                    "direct_client_id": client_id[:20] + "..." if client_id else "None",
+                    "direct_client_secret": client_secret[:10] + "..." if client_secret else "None"
+                })
+            except Exception as e:
+                st.error(f"❌ 직접 테스트 실패: {e}")
     
     # OAuth 디버그 페이지 링크
     st.markdown("### 🔍 OAuth 디버그")
