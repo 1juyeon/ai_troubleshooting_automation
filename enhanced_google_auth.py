@@ -135,6 +135,10 @@ class EnhancedGoogleAuth:
             print(f"❌ get_auth_url: client_id가 비어있음")
             return ""
             
+        # state 토큰 생성
+        state = self._generate_state()
+        
+        # URL 파라미터 구성
         params = {
             'client_id': self.client_id,
             'redirect_uri': self.redirect_uri,
@@ -142,15 +146,18 @@ class EnhancedGoogleAuth:
             'response_type': 'code',
             'access_type': 'offline',
             'prompt': 'consent',
-            'state': self._generate_state()
+            'state': state
         }
         
+        # URL 인코딩
         auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
-        query_string = urlencode(params)
+        query_string = urlencode(params, safe='')
         
         final_url = f"{auth_url}?{query_string}"
         
         print(f"✅ get_auth_url: 인증 URL 생성됨 - 길이: {len(final_url)}")
+        print(f"🔍 URL 파라미터 확인: response_type={params.get('response_type')}, client_id={params.get('client_id')[:20]}...")
+        
         return final_url
     
     def _generate_state(self) -> str:
@@ -353,7 +360,8 @@ class EnhancedGoogleAuth:
                     "redirect_uri": self.redirect_uri,
                     "client_id_set": bool(self.client_id),
                     "client_secret_set": bool(self.client_secret),
-                    "auth_url_preview": auth_url[:100] + "..." if len(auth_url) > 100 else auth_url
+                    "auth_url_preview": auth_url[:100] + "..." if len(auth_url) > 100 else auth_url,
+                    "full_auth_url": auth_url  # 전체 URL 추가
                 })
         else:
             st.error("❌ OAuth 설정이 올바르지 않습니다.")
