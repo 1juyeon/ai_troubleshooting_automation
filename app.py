@@ -33,6 +33,14 @@ if 'history_search_performed' not in st.session_state:
 if 'analysis_completed' not in st.session_state:
     st.session_state.analysis_completed = False
 
+# OAuth 세션 상태 유지 (새로고침 시에도 유지)
+if 'google_user' not in st.session_state:
+    st.session_state.google_user = None
+if 'google_access_token' not in st.session_state:
+    st.session_state.google_access_token = None
+if 'google_refresh_token' not in st.session_state:
+    st.session_state.google_refresh_token = None
+
 # 컴포넌트 초기화
 @st.cache_resource
 def init_components():

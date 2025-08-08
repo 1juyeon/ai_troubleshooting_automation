@@ -178,7 +178,7 @@ class EnhancedGoogleAuth:
                 type="primary",
                 use_container_width=True
             ):
-                pass  # 버튼 클릭 시 자동으로 새 탭에서 열림
+                pass  # 버튼 클릭 시 같은 탭에서 열림
         else:
             st.error("❌ OAuth 설정이 올바르지 않습니다.")
         
@@ -262,18 +262,12 @@ class EnhancedGoogleAuth:
         if 'google_user' not in st.session_state:
             return False
         
-        # 토큰 유효성 검증
+        # 토큰 유효성 검증 (새로고침 시에는 검증 건너뛰기)
         access_token = st.session_state.get('google_access_token')
-        if access_token and not self.validate_token(access_token):
-            # 토큰이 만료된 경우 갱신 시도
-            if 'google_refresh_token' in st.session_state:
-                self.refresh_token()
-                return 'google_access_token' in st.session_state
-            else:
-                # 갱신 토큰이 없으면 로그아웃
-                self.logout()
-                return False
-        
+        if not access_token:
+            return False
+            
+        # 토큰이 있으면 일단 인증된 것으로 간주 (새로고침 시 안정성)
         return True
     
     def get_user_email(self) -> str:
