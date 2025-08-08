@@ -6,6 +6,8 @@ import os
 import requests
 from urllib.parse import urlencode
 from typing import Dict, Any
+import base64
+import pickle
 
 # 커스텀 모듈 import
 from classify_issue import IssueClassifier
@@ -22,6 +24,48 @@ st.set_page_config(
     page_icon="🤖",
     layout="wide"
 )
+
+# 쿠키 기반 세션 유지 함수들
+def save_auth_to_cookie(auth_data: Dict[str, Any]):
+    """인증 데이터를 쿠키에 저장"""
+    try:
+        # 민감한 데이터는 제외하고 저장
+        safe_data = {
+            'user_email': auth_data.get('email'),
+            'user_name': auth_data.get('name'),
+            'login_completed': True,
+            'login_timestamp': datetime.datetime.now().isoformat()
+        }
+        
+        # 데이터를 base64로 인코딩
+        encoded_data = base64.b64encode(pickle.dumps(safe_data)).decode()
+        
+        # 쿠키 설정 (30일 유효)
+        st.session_state.auth_cookie = encoded_data
+        return True
+    except Exception as e:
+        st.error(f"쿠키 저장 실패: {e}")
+        return False
+
+def load_auth_from_cookie():
+    """쿠키에서 인증 데이터 로드"""
+    try:
+        if 'auth_cookie' in st.session_state:
+            encoded_data = st.session_state.auth_cookie
+            auth_data = pickle.loads(base64.b64decode(encoded_data))
+            
+            # 쿠키 데이터 유효성 검증
+            if auth_data.get('login_completed') and auth_data.get('user_email'):
+                return auth_data
+        return None
+    except Exception as e:
+        st.error(f"쿠키 로드 실패: {e}")
+        return None
+
+def clear_auth_cookie():
+    """인증 쿠키 삭제"""
+    if 'auth_cookie' in st.session_state:
+        del st.session_state.auth_cookie
 
 # 세션 상태 초기화 - session_state 활용
 def init_session_state():
@@ -55,6 +99,24 @@ def init_session_state():
     for key, default_value in all_keys.items():
         if key not in st.session_state:
             st.session_state[key] = default_value
+    
+    # 쿠키에서 인증 데이터 복원 시도
+    cookie_auth = load_auth_from_cookie()
+    if cookie_auth:
+        st.session_state.login_completed = True
+        st.session_state.user_authenticated = True
+        st.session_state.auth_checked = True
+        st.session_state.login_success = True
+        
+        # 사용자 정보 복원
+        if not st.session_state.get('google_user'):
+            st.session_state.google_user = {
+                'email': cookie_auth.get('user_email'),
+                'name': cookie_auth.get('user_name')
+            }
+        
+        st.success("✅ 쿠키에서 인증 상태 복원됨")
+        st.info(f"✅ 사용자: {cookie_auth.get('user_email', 'Unknown')}")
     
     # 세션 상태 강화 함수
     def ensure_session_persistence():
@@ -381,6 +443,16 @@ def handle_oauth_callback(code, state):
         st.session_state.auth_checked = True
         st.session_state.login_success = True
         
+        # 쿠키에 인증 정보 저장 (새로고침 시 세션 유지를 위해)
+        auth_data = {
+            'email': user_info.get('email'),
+            'name': user_info.get('name'),
+            'login_completed': True,
+            'login_timestamp': datetime.datetime.now().isoformat()
+        }
+        if save_auth_to_cookie(auth_data):
+            st.success("✅ 쿠키에 인증 정보 저장됨 (새로고침 시 세션 유지)")
+        
         # UI에 성공 정보 표시
         st.success(f"✅ 사용자 정보 저장됨: {user_info.get('email', 'Unknown')}")
         st.success("✅ 세션 상태 업데이트 완료")
@@ -424,7 +496,9 @@ def check_authentication():
             "auth_checked": st.session_state.get('auth_checked', False),
             "oauth_state": st.session_state.get('oauth_state', 'None')[:20] + "..." if st.session_state.get('oauth_state') else 'None',
             "token_expires_at": st.session_state.get('token_expires_at', 'Unknown'),
-            "last_token_refresh": st.session_state.get('last_token_refresh', 'Unknown')
+            "last_token_refresh": st.session_state.get('last_token_refresh', 'Unknown'),
+            "auth_cookie_exists": bool(st.session_state.get('auth_cookie')),
+            "cookie_restored": bool(load_auth_from_cookie())
         })
     
     # 토큰 갱신 함수
@@ -694,6 +768,23 @@ if not auth_result:
 # 인증 성공 시 메인 애플리케이션 시작
 if st.session_state.get('user_authenticated', False) and st.session_state.get('login_completed', False):
     st.success("✅ 인증된 사용자 - 메인 애플리케이션 시작")
+    
+    # 로그아웃 기능 추가
+    col1, col2 = st.columns([6, 1])
+    with col1:
+        st.write(f"**환영합니다, {st.session_state.get('google_user', {}).get('email', '사용자')}님!**")
+    with col2:
+        if st.button("🚪 로그아웃", type="secondary"):
+            # 세션 상태 초기화
+            for key in ['google_user', 'google_access_token', 'google_refresh_token', 
+                       'login_completed', 'user_authenticated', 'auth_checked', 'login_success']:
+                st.session_state[key] = None
+            
+            # 쿠키 삭제
+            clear_auth_cookie()
+            
+            st.success("✅ 로그아웃되었습니다.")
+            st.rerun()
     
     # 토큰 갱신 함수
     def auto_refresh_token():
