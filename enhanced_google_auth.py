@@ -64,12 +64,10 @@ class EnhancedGoogleAuth:
     def _verify_state(self, state: str) -> bool:
         """state 토큰 검증"""
         stored_state = st.session_state.get('oauth_state', '')
-        # state가 비어있거나 일치하지 않아도 일단 진행 (디버깅용)
+        # state가 비어있거나 일치하지 않아도 일단 진행
         if not stored_state:
-            print(f"⚠️ 저장된 state가 없음. 받은 state: {state}")
             return True
         if state != stored_state:
-            print(f"⚠️ state 불일치. 저장된: {stored_state}, 받은: {state}")
             return True  # 일단 진행
         return True
     
@@ -90,25 +88,14 @@ class EnhancedGoogleAuth:
             'redirect_uri': self.redirect_uri
         }
         
-        print(f"🔧 디버깅: 토큰 교환 시도")
-        print(f"🔧 디버깅: client_id 길이: {len(self.client_id)}")
-        print(f"🔧 디버깅: client_secret 길이: {len(self.client_secret)}")
-        print(f"🔧 디버깅: code 길이: {len(authorization_code)}")
-        print(f"🔧 디버깅: redirect_uri: {self.redirect_uri}")
-        
         try:
             response = requests.post(token_url, data=data, timeout=10)
-            print(f"🔧 디버깅: 응답 상태 코드: {response.status_code}")
-            print(f"🔧 디버깅: 응답 내용: {response.text[:200]}...")
-            
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            print(f"🔧 디버깅: RequestException: {e}")
             st.error(f"❌ 토큰 교환 실패: {e}")
             return None
         except Exception as e:
-            print(f"🔧 디버깅: Exception: {e}")
             st.error(f"❌ 토큰 교환 중 오류: {e}")
             return None
     
@@ -151,8 +138,6 @@ class EnhancedGoogleAuth:
         code = st.query_params.get("code", None)
         state = st.query_params.get("state", None)
         
-        print(f"🔧 디버깅: code={code}, state={state}")
-        
         if code and state:
             with st.spinner("🔐 인증 처리 중..."):
                 # 인증 코드를 토큰으로 교환
@@ -161,14 +146,11 @@ class EnhancedGoogleAuth:
                     access_token = token_data.get('access_token')
                     refresh_token = token_data.get('refresh_token')
                     
-                    print(f"🔧 디버깅: 토큰 교환 성공, access_token 길이: {len(access_token) if access_token else 0}")
-                    
                     # 토큰 유효성 검증
                     if self.validate_token(access_token):
                         user_info = self.get_user_info(access_token)
                         
                         if user_info:
-                            print(f"🔧 디버깅: 사용자 정보 가져오기 성공: {user_info.get('name', 'Unknown')}")
                             # 세션에 사용자 정보 저장
                             st.session_state.google_user = user_info
                             st.session_state.google_access_token = access_token
@@ -190,7 +172,6 @@ class EnhancedGoogleAuth:
         # 로그인 버튼 표시
         auth_url = self.get_auth_url()
         if auth_url:
-            st.markdown("### Google 계정으로 로그인")
             if st.link_button(
                 "🔐 Google 계정으로 로그인",
                 url=auth_url,
@@ -208,20 +189,17 @@ class EnhancedGoogleAuth:
         if 'google_user' in st.session_state:
             user = st.session_state.google_user
             
-            # 로그인 상태 표시
-            st.markdown("---")
-            st.markdown("### ✅ 로그인 완료")
-            
+            # 사용자 정보 표시
             col1, col2 = st.columns([1, 3])
             
             with col1:
                 if user.get('picture'):
-                    st.image(user['picture'], width=60, use_column_width=True)
+                    st.image(user['picture'], width=50)
                 else:
                     st.markdown("""
-                    <div style="text-align: center; padding: 10px;">
-                        <div style="width: 60px; height: 60px; background: #f0f0f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                            <span style="font-size: 24px;">👤</span>
+                    <div style="text-align: center;">
+                        <div style="width: 50px; height: 50px; background: #f0f0f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                            <span style="font-size: 20px;">👤</span>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -231,20 +209,15 @@ class EnhancedGoogleAuth:
                 st.markdown(f"📧 {user.get('email', '')}")
                 
                 if user.get('verified_email'):
-                    st.markdown("✅ 이메일 인증됨")
+                    st.success("✅ 이메일 인증됨")
                 
                 # AI 분석 가능 상태 표시
-                st.success("🎉 AI 분석 서비스를 이용할 수 있습니다!")
+                st.success("🎉 AI 분석 서비스 이용 가능")
                 
-                col3, col4 = st.columns(2)
-                with col3:
-                    if st.button("🚪 로그아웃", use_container_width=True):
-                        self.logout()
-                        st.rerun()
-                
-                with col4:
-                    if st.button("🔄 토큰 갱신", use_container_width=True):
-                        self.refresh_token()
+                # 로그아웃 버튼
+                if st.button("🚪 로그아웃", use_container_width=True):
+                    self.logout()
+                    st.rerun()
     
     def refresh_token(self):
         """리프레시 토큰을 사용하여 액세스 토큰 갱신"""
