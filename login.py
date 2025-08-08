@@ -224,6 +224,5 @@ class GoogleOAuthLogin:
             })
 
 # 메인 실행
-if __name__ == "__main__":
-    oauth_login = GoogleOAuthLogin()
-    oauth_login.render_login_page()
+oauth_login = GoogleOAuthLogin()
+oauth_login.render_login_page()
