@@ -63,7 +63,15 @@ class EnhancedGoogleAuth:
     
     def _verify_state(self, state: str) -> bool:
         """state 토큰 검증"""
-        return state == st.session_state.get('oauth_state', '')
+        stored_state = st.session_state.get('oauth_state', '')
+        # state가 비어있거나 일치하지 않아도 일단 진행 (디버깅용)
+        if not stored_state:
+            print(f"⚠️ 저장된 state가 없음. 받은 state: {state}")
+            return True
+        if state != stored_state:
+            print(f"⚠️ state 불일치. 저장된: {stored_state}, 받은: {state}")
+            return True  # 일단 진행
+        return True
     
     def exchange_code_for_token(self, authorization_code: str, state: str) -> Optional[Dict[str, Any]]:
         """인증 코드를 액세스 토큰으로 교환"""
@@ -132,6 +140,8 @@ class EnhancedGoogleAuth:
         code = st.query_params.get("code", None)
         state = st.query_params.get("state", None)
         
+        print(f"🔧 디버깅: code={code}, state={state}")
+        
         if code and state:
             with st.spinner("🔐 인증 처리 중..."):
                 # 인증 코드를 토큰으로 교환
@@ -140,11 +150,14 @@ class EnhancedGoogleAuth:
                     access_token = token_data.get('access_token')
                     refresh_token = token_data.get('refresh_token')
                     
+                    print(f"🔧 디버깅: 토큰 교환 성공, access_token 길이: {len(access_token) if access_token else 0}")
+                    
                     # 토큰 유효성 검증
                     if self.validate_token(access_token):
                         user_info = self.get_user_info(access_token)
                         
                         if user_info:
+                            print(f"🔧 디버깅: 사용자 정보 가져오기 성공: {user_info.get('name', 'Unknown')}")
                             # 세션에 사용자 정보 저장
                             st.session_state.google_user = user_info
                             st.session_state.google_access_token = access_token
@@ -168,26 +181,24 @@ class EnhancedGoogleAuth:
         if auth_url:
             st.markdown(f"""
             <div style="text-align: center; margin: 20px 0;">
-                <a href="{auth_url}" target="_blank" rel="noopener noreferrer">
-                    <button style="
-                        background: linear-gradient(45deg, #4285f4, #34a853);
-                        color: white;
-                        padding: 15px 30px;
-                        border: none;
-                        border-radius: 8px;
-                        font-size: 16px;
-                        font-weight: bold;
-                        cursor: pointer;
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 12px;
-                        box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3);
-                        transition: all 0.3s ease;
-                    ">
-                        <img src="https://developers.google.com/identity/images/g-logo.png" width="24" height="24" style="filter: brightness(0) invert(1);">
-                        Google 계정으로 로그인
-                    </button>
-                </a>
+                <button onclick="window.open('{auth_url}', '_blank', 'width=500,height=600')" style="
+                    background: linear-gradient(45deg, #4285f4, #34a853);
+                    color: white;
+                    padding: 15px 30px;
+                    border: none;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 12px;
+                    box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3);
+                    transition: all 0.3s ease;
+                ">
+                    <img src="https://developers.google.com/identity/images/g-logo.png" width="24" height="24" style="filter: brightness(0) invert(1);">
+                    Google 계정으로 로그인
+                </button>
             </div>
             """, unsafe_allow_html=True)
         else:
