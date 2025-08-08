@@ -70,15 +70,28 @@ def check_authentication():
     """인증 상태 확인 및 리다이렉트"""
     if not st.session_state.get('login_completed', False) or not st.session_state.get('google_user'):
         st.warning("⚠️ 로그인이 필요합니다.")
-        st.info("로그인 페이지로 이동합니다...")
         
-        # 로그인 페이지로 리다이렉트
+        # 로그인 링크 제공
         st.markdown("""
-        <script>
-        window.location.href = "/login";
-        </script>
+        <div style="text-align: center; margin: 20px 0;">
+            <a href="https://privkeeperp-response.streamlit.app/login" style="
+                background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                text-decoration: none;
+                display: inline-block;
+            ">
+                🔐 로그인 페이지로 이동
+            </a>
+        </div>
         """, unsafe_allow_html=True)
         
+        st.info("위 버튼을 클릭하여 로그인 페이지로 이동하세요.")
         st.stop()
     else:
         st.session_state.user_authenticated = True
