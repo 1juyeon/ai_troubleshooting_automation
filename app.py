@@ -3,6 +3,8 @@ import datetime
 import pandas as pd
 import json
 import os
+import requests
+from urllib.parse import urlencode
 from typing import Dict, Any
 
 # 커스텀 모듈 import
