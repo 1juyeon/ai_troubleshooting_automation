@@ -147,6 +147,10 @@ with st.sidebar:
         st.info("ℹ️ Google OAuth가 설정되지 않았습니다.")
         st.markdown("---")
     
+    # OAuth 디버그 페이지 링크
+    st.markdown("### 🔍 OAuth 디버그")
+    st.link_button("🔧 OAuth 설정 확인", "/OAuth_Debug", use_container_width=True)
+    
     st.markdown("## 👤 담당자 정보")
     user_name = st.text_input("담당자명", placeholder="홍길동")
     user_role = st.selectbox("역할", ["영업", "엔지니어", "개발자"])

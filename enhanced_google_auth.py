@@ -242,12 +242,15 @@ class EnhancedGoogleAuth:
         # 새 창 방지를 위한 JavaScript 기반 로그인 버튼
         auth_url = self.get_auth_url()
         if auth_url:
-            # HTML과 JavaScript를 사용하여 새 창 방지
+            # Streamlit link_button 사용 (새 창 방지)
+            if st.link_button("🔐 Google 계정으로 로그인", auth_url, use_container_width=True, type="primary"):
+                return True
+            
+            # 백업: 직접 링크 제공
             st.markdown(f"""
             <div style="margin: 10px 0;">
-                <button 
-                    onclick="window.location.href='{auth_url}'; return false;"
-                    style="
+                <a href="{auth_url}" target="_self" style="text-decoration: none;">
+                    <button style="
                         background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
                         color: white;
                         border: none;
@@ -258,26 +261,11 @@ class EnhancedGoogleAuth:
                         cursor: pointer;
                         width: 100%;
                         transition: all 0.3s ease;
-                    "
-                    onmouseover="this.style.transform='scale(1.02)'"
-                    onmouseout="this.style.transform='scale(1)'"
-                >
-                    🔐 Google 계정으로 로그인
-                </button>
+                    ">
+                        🔐 Google 계정으로 로그인 (백업)
+                    </button>
+                </a>
             </div>
-            <script>
-            // 새 창 방지를 위한 추가 처리
-            document.addEventListener('DOMContentLoaded', function() {{
-                const loginButton = document.querySelector('button[onclick*="window.location.href"]');
-                if (loginButton) {{
-                    loginButton.addEventListener('click', function(e) {{
-                        e.preventDefault();
-                        // 현재 창에서 OAuth URL로 이동
-                        window.location.href = '{auth_url}';
-                    }});
-                }}
-            }});
-            </script>
             """, unsafe_allow_html=True)
         else:
             st.error("❌ OAuth 설정이 올바르지 않습니다.")

@@ -153,15 +153,24 @@ def check_oauth_configuration():
     
     return True
 
-if __name__ == "__main__":
-    st.set_page_config(page_title="OAuth 디버깅", page_icon="🔍")
-    
-    st.title("🔍 OAuth 디버깅 도구")
-    
-    tab1, tab2 = st.tabs(["📊 세션 디버깅", "⚙️ 설정 확인"])
-    
-    with tab1:
-        debug_oauth_session()
-    
-    with tab2:
-        check_oauth_configuration()
+# 페이지 설정
+st.set_page_config(
+    page_title="OAuth 디버깅", 
+    page_icon="🔍",
+    layout="wide"
+)
+
+# 페이지 제목
+st.title("🔍 OAuth 디버깅 도구")
+
+# 메인 페이지로 돌아가기 버튼
+st.link_button("🏠 메인 페이지로 돌아가기", "/", use_container_width=True)
+
+# 탭 생성
+tab1, tab2 = st.tabs(["📊 세션 디버깅", "⚙️ 설정 확인"])
+
+with tab1:
+    debug_oauth_session()
+
+with tab2:
+    check_oauth_configuration()
