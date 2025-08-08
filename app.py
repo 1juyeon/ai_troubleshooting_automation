@@ -33,8 +33,7 @@ def init_session_state():
         'user_authenticated': False,
         'google_auth_initialized': False,
         'session_persistent': True,
-        'login_completed': False,
-        'oauth_state': None
+        'login_completed': False
     }
     
     # 분석 결과 관련 세션 키들
@@ -83,6 +82,7 @@ def get_auth_url():
         import secrets
         state = secrets.token_urlsafe(32)
         st.session_state.oauth_state = state
+        print(f"🔐 OAuth state 생성됨: {state[:10]}...")
         
         redirect_uri = "https://privkeeperp-response.streamlit.app"
         
@@ -111,12 +111,6 @@ def handle_oauth_callback(code, state):
         client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
         client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
         redirect_uri = "https://privkeeperp-response.streamlit.app"
-        
-        # state 검증
-        stored_state = st.session_state.get('oauth_state')
-        if state != stored_state:
-            st.error(f"❌ OAuth state 검증 실패 - 받은 state: {state}, 저장된 state: {stored_state}")
-            return False
         
         # 토큰 교환
         token_url = "https://oauth2.googleapis.com/token"
@@ -185,6 +179,16 @@ def check_authentication():
     
     if code and state:
         st.info(f"🔐 OAuth 콜백 감지됨 - Code: {code[:10]}..., State: {state[:10]}...")
+        
+        # state 검증을 먼저 수행
+        stored_state = st.session_state.get('oauth_state')
+        if state != stored_state:
+            st.error(f"❌ OAuth state 검증 실패 - 받은 state: {state}, 저장된 state: {stored_state}")
+            st.error("💡 첫 로그인 시에는 state가 None일 수 있습니다. 다시 로그인을 시도해주세요.")
+            # URL 파라미터 정리
+            st.query_params.clear()
+            st.rerun()
+        
         with st.spinner("🔐 로그인 처리 중..."):
             if handle_oauth_callback(code, state):
                 st.success("✅ 로그인 성공!")
@@ -263,18 +267,29 @@ def render_login_page():
         
         # 디버그 정보
         if st.checkbox("🔧 디버그 정보 표시"):
+            current_state = st.session_state.get('oauth_state')
             st.json({
                 "client_id_set": bool(client_id),
                 "client_secret_set": bool(client_secret),
                 "auth_url_length": len(auth_url),
                 "auth_url_preview": auth_url[:100] + "..." if len(auth_url) > 100 else auth_url,
-                "oauth_state": st.session_state.get('oauth_state'),
+                "oauth_state": current_state,
+                "oauth_state_preview": current_state[:10] + "..." if current_state else "None",
                 "session_state": {
                     "login_completed": st.session_state.get('login_completed', False),
                     "google_user": bool(st.session_state.get('google_user')),
-                    "user_authenticated": st.session_state.get('user_authenticated', False)
+                    "user_authenticated": st.session_state.get('user_authenticated', False),
+                    "auth_checked": st.session_state.get('auth_checked', False)
                 }
             })
+            
+            # State 재생성 버튼
+            if st.button("🔄 State 재생성"):
+                import secrets
+                new_state = secrets.token_urlsafe(32)
+                st.session_state.oauth_state = new_state
+                st.success(f"✅ 새로운 state 생성됨: {new_state[:10]}...")
+                st.rerun()
 
 # 인증 체크 실행
 if not check_authentication():
