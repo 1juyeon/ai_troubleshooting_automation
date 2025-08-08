@@ -194,7 +194,7 @@ class EnhancedGoogleAuth:
             
             with col1:
                 if user.get('picture'):
-                    st.image(user['picture'], width=50)
+                    st.image(user['picture'], width=50, use_column_width=True)
                 else:
                     st.markdown("""
                     <div style="text-align: center;">
