@@ -52,17 +52,6 @@ class EnhancedGoogleAuth:
         
         final_url = f"{auth_url}?{query_string}"
         
-        # 상세 디버깅 정보 출력
-        print("=" * 50)
-        print("🔧 OAuth 디버깅 정보:")
-        print(f"🔧 base_url: {self.base_url}")
-        print(f"🔧 redirect_uri: '{self.redirect_uri}'")
-        print(f"🔧 redirect_uri 길이: {len(self.redirect_uri)}")
-        print(f"🔧 redirect_uri 끝 문자: '{self.redirect_uri[-1]}'")
-        print(f"🔧 client_id: {self.client_id[:20]}...")
-        print(f"🔧 전체 OAuth URL: {final_url}")
-        print("=" * 50)
-        
         return final_url
     
     def _generate_state(self) -> str:
@@ -179,7 +168,7 @@ class EnhancedGoogleAuth:
         if auth_url:
             st.markdown(f"""
             <div style="text-align: center; margin: 20px 0;">
-                <a href="{auth_url}" target="_self">
+                <a href="{auth_url}" target="_blank" rel="noopener noreferrer">
                     <button style="
                         background: linear-gradient(45deg, #4285f4, #34a853);
                         color: white;
