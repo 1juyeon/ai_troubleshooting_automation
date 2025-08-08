@@ -33,113 +33,43 @@ class EnhancedGoogleAuth:
         # 리디렉션 URI 정확히 설정 (실제 앱 URL)
         self.redirect_uri = "https://privkeeperp-response.streamlit.app"
         
-        # 세션 파일 경로 설정
-        self.session_file = "user_session.json"
-        
         # 세션 초기화 (새로고침 시에도 유지)
         self._init_session_state()
     
-    def _get_session_file_path(self) -> str:
-        """세션 파일 경로 반환"""
-        return os.path.join(os.getcwd(), self.session_file)
-    
-    def _save_session_to_file(self, session_data: Dict[str, Any]) -> bool:
-        """세션 데이터를 파일에 저장"""
-        try:
-            file_path = self._get_session_file_path()
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(session_data, f, ensure_ascii=False, indent=2)
-            return True
-        except Exception as e:
-            print(f"❌ 세션 파일 저장 실패: {e}")
-            return False
-    
-    def _load_session_from_file(self) -> Optional[Dict[str, Any]]:
-        """파일에서 세션 데이터 로드"""
-        try:
-            file_path = self._get_session_file_path()
-            if not os.path.exists(file_path):
-                return None
-            
-            with open(file_path, 'r', encoding='utf-8') as f:
-                session_data = json.load(f)
-            
-            # 세션 데이터 유효성 검증
-            if not self._validate_session_data(session_data):
-                return None
-                
-            return session_data
-        except Exception as e:
-            print(f"❌ 세션 파일 로드 실패: {e}")
-            return None
-    
-    def _validate_session_data(self, session_data: Dict[str, Any]) -> bool:
-        """세션 데이터 유효성 검증"""
-        required_keys = ['google_user', 'google_access_token', 'login_timestamp']
-        
-        for key in required_keys:
-            if key not in session_data or not session_data[key]:
-                return False
-        
-        # 로그인 시간 확인 (24시간 이내)
-        try:
-            login_time = datetime.datetime.fromisoformat(session_data['login_timestamp'])
-            if (datetime.datetime.now() - login_time).total_seconds() > 86400:  # 24시간
-                return False
-        except:
-            return False
-        
-        return True
-    
-    def _clear_session_file(self) -> bool:
-        """세션 파일 삭제"""
-        try:
-            file_path = self._get_session_file_path()
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            return True
-        except Exception as e:
-            print(f"❌ 세션 파일 삭제 실패: {e}")
-            return False
-    
     def _init_session_state(self):
-        """세션 상태 초기화 - 강화된 방식 (파일 기반)"""
+        """세션 상태 초기화 - session_state 활용"""
         # OAuth 관련 세션 상태 초기화
         if 'google_auth_initialized' not in st.session_state:
             st.session_state.google_auth_initialized = True
         
-        # 파일에서 세션 복원 시도
-        session_data = self._load_session_from_file()
+        # OAuth 인증 데이터 세션 키들
+        oauth_keys = [
+            'google_user', 
+            'google_access_token', 
+            'google_refresh_token', 
+            'oauth_state',
+            'last_token_refresh',
+            'auth_completed',
+            'login_timestamp',
+            'session_persistent'
+        ]
         
-        if session_data:
-            # 파일에서 세션 데이터 복원
-            for key, value in session_data.items():
-                st.session_state[key] = value
-            print("✅ 파일에서 세션 복원 완료")
-        else:
-            # 기본 세션 상태 초기화
-            session_keys = [
-                'google_user', 
-                'google_access_token', 
-                'google_refresh_token', 
-                'oauth_state',
-                'last_token_refresh',
-                'auth_completed',
-                'session_persistent',
-                'login_timestamp'
-            ]
-            
-            for key in session_keys:
-                if key not in st.session_state:
-                    st.session_state[key] = None
-            
-            # 세션 지속성 플래그 설정
-            if 'session_persistent' not in st.session_state:
-                st.session_state.session_persistent = True
+        # 각 키가 없으면 초기화
+        for key in oauth_keys:
+            if key not in st.session_state:
+                st.session_state[key] = None
+        
+        # 세션 지속성 플래그 설정
+        if 'session_persistent' not in st.session_state:
+            st.session_state.session_persistent = True
+        
+        # 디버깅용 로그
+        if st.session_state.google_user:
+            print(f"✅ 세션에서 사용자 복원: {st.session_state.google_user.get('name', 'Unknown')}")
     
     def _save_auth_data(self, user_info: dict, access_token: str, refresh_token: str = None):
-        """인증 데이터를 세션에 저장 (파일 기반)"""
-        # Streamlit 세션에 저장
+        """인증 데이터를 session_state에 저장"""
+        # session_state에 저장 (새로고침 시에도 유지)
         st.session_state.google_user = user_info
         st.session_state.google_access_token = access_token
         if refresh_token:
@@ -151,21 +81,7 @@ class EnhancedGoogleAuth:
         st.session_state.login_timestamp = datetime.datetime.now().isoformat()
         st.session_state.session_persistent = True
         
-        # 파일에도 세션 데이터 저장
-        session_data = {
-            'google_user': user_info,
-            'google_access_token': access_token,
-            'google_refresh_token': refresh_token,
-            'last_token_refresh': st.session_state.last_token_refresh,
-            'auth_completed': True,
-            'login_timestamp': st.session_state.login_timestamp,
-            'session_persistent': True
-        }
-        
-        if self._save_session_to_file(session_data):
-            print("✅ 세션 파일 저장 완료")
-        else:
-            print("⚠️ 세션 파일 저장 실패 (Streamlit 세션은 유지됨)")
+        print(f"✅ session_state에 인증 데이터 저장: {user_info.get('name', 'Unknown')}")
     
     def get_auth_url(self) -> str:
         """Google OAuth2 인증 URL 생성"""
@@ -263,7 +179,7 @@ class EnhancedGoogleAuth:
             return False
     
     def render_login_button(self):
-        """향상된 로그인 버튼 렌더링 - Streamlit 기본 버튼 사용"""
+        """향상된 로그인 버튼 렌더링 - session_state 활용"""
         if not self.client_id:
             st.error("❌ Google OAuth가 설정되지 않았습니다.")
             st.info("관리자가 OAuth 설정을 완료하면 Google 계정으로 로그인할 수 있습니다.")
@@ -286,7 +202,7 @@ class EnhancedGoogleAuth:
                         user_info = self.get_user_info(access_token)
                         
                         if user_info:
-                            # 세션에 사용자 정보 저장
+                            # session_state에 사용자 정보 저장
                             self._save_auth_data(user_info, access_token, refresh_token)
                             
                             st.success(f"✅ {user_info.get('name', '사용자')}님 환영합니다!")
@@ -307,10 +223,12 @@ class EnhancedGoogleAuth:
         if auth_url:
             # 버튼 클릭 시 현재 창에서 리디렉션
             if st.button("🔐 Google 계정으로 로그인", type="primary", use_container_width=True):
+                # JavaScript를 사용하여 현재 창에서 OAuth 진행
                 st.markdown(f"""
                 <script>
                 // 현재 창에서 OAuth URL로 이동 (새 창 방지)
-                window.location.replace("{auth_url}");
+                // window.location.replace 대신 window.location.href 사용
+                window.location.href = "{auth_url}";
                 </script>
                 """, unsafe_allow_html=True)
         else:
@@ -373,8 +291,8 @@ class EnhancedGoogleAuth:
             return False
     
     def logout(self):
-        """로그아웃 - 세션 데이터 정리 (파일 기반)"""
-        # Streamlit 세션 정리
+        """로그아웃 - session_state 데이터 정리"""
+        # session_state에서 OAuth 관련 데이터 제거
         keys_to_remove = [
             'google_user', 
             'google_access_token', 
@@ -390,12 +308,6 @@ class EnhancedGoogleAuth:
             if key in st.session_state:
                 del st.session_state[key]
         
-        # 세션 파일 삭제
-        if self._clear_session_file():
-            print("✅ 세션 파일 삭제 완료")
-        else:
-            print("⚠️ 세션 파일 삭제 실패")
-        
         # URL 파라미터도 정리
         try:
             st.query_params.clear()
@@ -404,23 +316,18 @@ class EnhancedGoogleAuth:
         
         # 세션 지속성 플래그 재설정
         st.session_state.session_persistent = True
+        
+        print("✅ session_state에서 로그아웃 완료")
     
     def is_authenticated(self) -> bool:
-        """인증 상태 확인 - 강화된 방식 (파일 기반)"""
+        """인증 상태 확인 - session_state 활용"""
         # 세션 지속성 확인
         if 'session_persistent' not in st.session_state:
             st.session_state.session_persistent = True
         
-        # 기본 세션 상태 확인
+        # session_state에서 인증 데이터 확인
         if 'google_user' not in st.session_state or not st.session_state.google_user:
-            # 파일에서 세션 복원 시도
-            session_data = self._load_session_from_file()
-            if session_data:
-                for key, value in session_data.items():
-                    st.session_state[key] = value
-                print("✅ 파일에서 세션 복원 완료")
-            else:
-                return False
+            return False
         
         if 'google_access_token' not in st.session_state or not st.session_state.google_access_token:
             return False
@@ -501,7 +408,7 @@ class EnhancedGoogleAuth:
                 # 새로운 리프레시 토큰이 있다면 업데이트
                 new_refresh_token = token_data.get('refresh_token', refresh_token)
                 
-                # 세션에 저장
+                # session_state에 저장
                 self._save_auth_data(
                     st.session_state.google_user, 
                     new_access_token, 

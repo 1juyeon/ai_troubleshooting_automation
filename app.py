@@ -21,22 +21,36 @@ st.set_page_config(
     layout="wide"
 )
 
-# 세션 상태 초기화 - 강화된 방식
+# 세션 상태 초기화 - session_state 활용
 def init_session_state():
-    """세션 상태 초기화"""
-    session_keys = {
+    """세션 상태 초기화 - session_state 활용"""
+    # OAuth 인증 관련 세션 키들
+    oauth_keys = {
+        'auth_checked': False,
+        'login_success': False,
+        'user_authenticated': False
+    }
+    
+    # 분석 결과 관련 세션 키들
+    analysis_keys = {
         'analysis_result': None,
         'inquiry_data': None,
         'history_search_results': None,
         'history_search_performed': False,
         'analysis_completed': False,
-        'page_initialized': True,
-        'auth_checked': False
+        'page_initialized': True
     }
     
-    for key, default_value in session_keys.items():
+    # 모든 세션 키 초기화
+    all_keys = {**oauth_keys, **analysis_keys}
+    
+    for key, default_value in all_keys.items():
         if key not in st.session_state:
             st.session_state[key] = default_value
+    
+    # 디버깅용 로그
+    if st.session_state.get('user_authenticated'):
+        print("✅ 세션에서 인증 상태 복원됨")
 
 # 세션 상태 초기화
 init_session_state()
@@ -98,17 +112,22 @@ with st.sidebar:
     
     # Google OAuth 로그인 (OAuth가 설정된 경우에만 표시)
     if google_auth.client_id:
-        # 인증 상태 확인 - 강화된 방식
+        # 인증 상태 확인 - session_state 활용
         if not st.session_state.get('auth_checked', False):
             st.session_state.auth_checked = True
         
+        # 인증 상태 확인
         is_auth = google_auth.is_authenticated()
+        
+        # 세션에 인증 상태 저장
+        st.session_state.user_authenticated = is_auth
         
         if not is_auth:
             st.markdown("### Google 계정으로 로그인")
             # 로그인 버튼 렌더링
             login_success = google_auth.render_login_button()
             if login_success:
+                st.session_state.login_success = True
                 st.rerun()
             st.markdown("---")
         else:
