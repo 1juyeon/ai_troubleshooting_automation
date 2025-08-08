@@ -34,7 +34,9 @@ def init_session_state():
         'google_auth_initialized': False,
         'session_persistent': True,
         'login_completed': False,
-        'oauth_state': None
+        'oauth_state': None,
+        'last_token_refresh': None,
+        'token_expires_at': None
     }
     
     # 분석 결과 관련 세션 키들
@@ -54,26 +56,132 @@ def init_session_state():
         if key not in st.session_state:
             st.session_state[key] = default_value
     
+    # 세션 상태 강화 함수
+    def ensure_session_persistence():
+        """세션 지속성 보장"""
+        # 중요한 세션 키들이 존재하는지 확인
+        critical_keys = [
+            'google_user', 'google_access_token', 'google_refresh_token',
+            'login_completed', 'user_authenticated', 'auth_checked'
+        ]
+        
+        for key in critical_keys:
+            if key not in st.session_state:
+                st.session_state[key] = None
+        
+        # 세션 상태가 일관성 있게 설정되어 있는지 확인
+        if (st.session_state.get('google_user') and 
+            st.session_state.get('google_access_token') and
+            st.session_state.get('login_completed')):
+            st.session_state.user_authenticated = True
+            st.session_state.auth_checked = True
+            st.session_state.login_success = True
+    
+    # 세션 지속성 보장
+    ensure_session_persistence()
+    
+    # 토큰 갱신 로직 추가
+    def refresh_access_token():
+        """액세스 토큰 갱신"""
+        try:
+            refresh_token = st.session_state.get('google_refresh_token')
+            if not refresh_token:
+                return False
+            
+            client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
+            client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
+            
+            if not client_id or not client_secret:
+                return False
+            
+            token_url = "https://oauth2.googleapis.com/token"
+            data = {
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'refresh_token': refresh_token,
+                'grant_type': 'refresh_token'
+            }
+            
+            response = requests.post(token_url, data=data)
+            
+            if response.status_code == 200:
+                token_data = response.json()
+                new_access_token = token_data.get('access_token')
+                new_expires_in = token_data.get('expires_in', 3600)
+                
+                if new_access_token:
+                    st.session_state.google_access_token = new_access_token
+                    st.session_state.last_token_refresh = datetime.datetime.now().isoformat()
+                    st.session_state.token_expires_at = (
+                        datetime.datetime.now() + datetime.timedelta(seconds=new_expires_in)
+                    ).isoformat()
+                    return True
+            
+            return False
+        except Exception as e:
+            st.error(f"토큰 갱신 실패: {e}")
+            return False
+    
     # OAuth 인증 상태 확인 및 복원 (더 강력한 검증)
     if (st.session_state.get('google_user') and 
         st.session_state.get('login_completed') and 
         st.session_state.get('google_access_token')):
         
-        st.session_state.user_authenticated = True
-        st.session_state.auth_checked = True
-        st.success("✅ 세션에서 인증 상태 복원됨")
-        st.info(f"✅ 사용자: {st.session_state.get('google_user', {}).get('email', 'Unknown')}")
+        # 토큰 만료 확인 및 갱신
+        token_expires_at = st.session_state.get('token_expires_at')
+        if token_expires_at:
+            try:
+                expires_at = datetime.datetime.fromisoformat(token_expires_at)
+                if datetime.datetime.now() > expires_at:
+                    st.info("🔄 토큰이 만료되었습니다. 갱신을 시도합니다...")
+                    if refresh_access_token():
+                        st.success("✅ 토큰이 성공적으로 갱신되었습니다.")
+                    else:
+                        st.warning("⚠️ 토큰 갱신에 실패했습니다. 다시 로그인해주세요.")
+                        # 세션 상태 초기화
+                        for key in ['google_user', 'google_access_token', 'google_refresh_token', 
+                                   'login_completed', 'user_authenticated', 'auth_checked']:
+                            st.session_state[key] = None
+                        return
+            except:
+                pass
         
-        # UI에 세션 복원 정보 표시
-        with st.expander("🔍 세션 복원 정보", expanded=False):
-            st.json({
-                "user_email": st.session_state.get('google_user', {}).get('email', 'Unknown'),
-                "user_authenticated": st.session_state.user_authenticated,
-                "auth_checked": st.session_state.auth_checked,
-                "login_completed": st.session_state.get('login_completed', False),
-                "access_token_exists": bool(st.session_state.get('google_access_token')),
-                "refresh_token_exists": bool(st.session_state.get('google_refresh_token'))
-            })
+        # 토큰 유효성 검증
+        try:
+            user_info_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+            headers = {'Authorization': f'Bearer {st.session_state.google_access_token}'}
+            user_response = requests.get(user_info_url, headers=headers)
+            
+            if user_response.status_code == 200:
+                st.session_state.user_authenticated = True
+                st.session_state.auth_checked = True
+                st.success("✅ 세션에서 인증 상태 복원됨")
+                st.info(f"✅ 사용자: {st.session_state.get('google_user', {}).get('email', 'Unknown')}")
+                
+                # UI에 세션 복원 정보 표시
+                with st.expander("🔍 세션 복원 정보", expanded=False):
+                    st.json({
+                        "user_email": st.session_state.get('google_user', {}).get('email', 'Unknown'),
+                        "user_authenticated": st.session_state.user_authenticated,
+                        "auth_checked": st.session_state.auth_checked,
+                        "login_completed": st.session_state.get('login_completed', False),
+                        "access_token_exists": bool(st.session_state.get('google_access_token')),
+                        "refresh_token_exists": bool(st.session_state.get('google_refresh_token')),
+                        "token_expires_at": st.session_state.get('token_expires_at', 'Unknown'),
+                        "last_token_refresh": st.session_state.get('last_token_refresh', 'Unknown')
+                    })
+            else:
+                st.warning("⚠️ 토큰이 유효하지 않습니다. 다시 로그인해주세요.")
+                # 세션 상태 초기화
+                for key in ['google_user', 'google_access_token', 'google_refresh_token', 
+                           'login_completed', 'user_authenticated', 'auth_checked']:
+                    st.session_state[key] = None
+        except Exception as e:
+            st.error(f"토큰 검증 실패: {e}")
+            # 세션 상태 초기화
+            for key in ['google_user', 'google_access_token', 'google_refresh_token', 
+                       'login_completed', 'user_authenticated', 'auth_checked']:
+                st.session_state[key] = None
     else:
         # 인증되지 않은 경우 상태 초기화
         st.session_state.user_authenticated = False
@@ -88,11 +196,94 @@ def init_session_state():
                 "auth_checked": st.session_state.auth_checked,
                 "login_completed": st.session_state.login_completed,
                 "google_user_exists": bool(st.session_state.get('google_user')),
-                "access_token_exists": bool(st.session_state.get('google_access_token'))
+                "access_token_exists": bool(st.session_state.get('google_access_token')),
+                "refresh_token_exists": bool(st.session_state.get('google_refresh_token'))
             })
 
 # 세션 상태 초기화
 init_session_state()
+
+def ensure_authentication_state():
+    """인증 상태 보장"""
+    # 세션 상태가 일관성 있게 설정되어 있는지 확인
+    if (st.session_state.get('google_user') and 
+        st.session_state.get('google_access_token') and
+        st.session_state.get('login_completed')):
+        
+        # 토큰 만료 확인
+        token_expires_at = st.session_state.get('token_expires_at')
+        if token_expires_at:
+            try:
+                expires_at = datetime.datetime.fromisoformat(token_expires_at)
+                if datetime.datetime.now() > expires_at:
+                    # 토큰 갱신 시도
+                    refresh_token = st.session_state.get('google_refresh_token')
+                    if refresh_token:
+                        client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
+                        client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
+                        
+                        if client_id and client_secret:
+                            token_url = "https://oauth2.googleapis.com/token"
+                            data = {
+                                'client_id': client_id,
+                                'client_secret': client_secret,
+                                'refresh_token': refresh_token,
+                                'grant_type': 'refresh_token'
+                            }
+                            
+                            try:
+                                response = requests.post(token_url, data=data)
+                                if response.status_code == 200:
+                                    token_data = response.json()
+                                    new_access_token = token_data.get('access_token')
+                                    new_expires_in = token_data.get('expires_in', 3600)
+                                    
+                                    if new_access_token:
+                                        st.session_state.google_access_token = new_access_token
+                                        st.session_state.last_token_refresh = datetime.datetime.now().isoformat()
+                                        st.session_state.token_expires_at = (
+                                            datetime.datetime.now() + datetime.timedelta(seconds=new_expires_in)
+                                        ).isoformat()
+                                        return True
+                            except:
+                                pass
+                    
+                    # 토큰 갱신 실패 시 세션 초기화
+                    for key in ['google_user', 'google_access_token', 'google_refresh_token', 
+                               'login_completed', 'user_authenticated', 'auth_checked']:
+                        st.session_state[key] = None
+                    return False
+            except:
+                pass
+        
+        # 토큰 유효성 검증
+        try:
+            user_info_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+            headers = {'Authorization': f'Bearer {st.session_state.google_access_token}'}
+            user_response = requests.get(user_info_url, headers=headers)
+            
+            if user_response.status_code == 200:
+                st.session_state.user_authenticated = True
+                st.session_state.auth_checked = True
+                st.session_state.login_success = True
+                return True
+            else:
+                # 토큰이 유효하지 않으면 세션 초기화
+                for key in ['google_user', 'google_access_token', 'google_refresh_token', 
+                           'login_completed', 'user_authenticated', 'auth_checked']:
+                    st.session_state[key] = None
+                return False
+        except:
+            # 검증 실패 시 세션 초기화
+            for key in ['google_user', 'google_access_token', 'google_refresh_token', 
+                       'login_completed', 'user_authenticated', 'auth_checked']:
+                st.session_state[key] = None
+            return False
+    
+    return False
+
+# 인증 상태 보장
+ensure_authentication_state()
 
 def get_auth_url():
     """Google OAuth2 인증 URL 생성"""
@@ -155,6 +346,7 @@ def handle_oauth_callback(code, state):
         token_data = response.json()
         access_token = token_data.get('access_token')
         refresh_token = token_data.get('refresh_token')
+        expires_in = token_data.get('expires_in', 3600)
         
         if not access_token:
             st.error("❌ 액세스 토큰을 받지 못했습니다.")
@@ -176,6 +368,14 @@ def handle_oauth_callback(code, state):
         st.session_state.google_access_token = access_token
         if refresh_token:
             st.session_state.google_refresh_token = refresh_token
+        
+        # 토큰 만료 시간 설정
+        st.session_state.last_token_refresh = datetime.datetime.now().isoformat()
+        st.session_state.token_expires_at = (
+            datetime.datetime.now() + datetime.timedelta(seconds=expires_in)
+        ).isoformat()
+        
+        # 인증 상태 업데이트
         st.session_state.login_completed = True
         st.session_state.user_authenticated = True
         st.session_state.auth_checked = True
@@ -194,7 +394,9 @@ def handle_oauth_callback(code, state):
                 "auth_checked": st.session_state.auth_checked,
                 "login_success": st.session_state.login_success,
                 "access_token_exists": bool(st.session_state.google_access_token),
-                "refresh_token_exists": bool(st.session_state.google_refresh_token)
+                "refresh_token_exists": bool(st.session_state.google_refresh_token),
+                "token_expires_at": st.session_state.token_expires_at,
+                "last_token_refresh": st.session_state.last_token_refresh
             })
         
         # URL 파라미터 정리
@@ -217,21 +419,107 @@ def check_authentication():
             "login_completed": st.session_state.get('login_completed', False),
             "google_user_exists": bool(st.session_state.get('google_user')),
             "google_access_token_exists": bool(st.session_state.get('google_access_token')),
+            "google_refresh_token_exists": bool(st.session_state.get('google_refresh_token')),
             "user_authenticated": st.session_state.get('user_authenticated', False),
             "auth_checked": st.session_state.get('auth_checked', False),
-            "oauth_state": st.session_state.get('oauth_state', 'None')[:20] + "..." if st.session_state.get('oauth_state') else 'None'
+            "oauth_state": st.session_state.get('oauth_state', 'None')[:20] + "..." if st.session_state.get('oauth_state') else 'None',
+            "token_expires_at": st.session_state.get('token_expires_at', 'Unknown'),
+            "last_token_refresh": st.session_state.get('last_token_refresh', 'Unknown')
         })
+    
+    # 토큰 갱신 함수
+    def refresh_access_token():
+        """액세스 토큰 갱신"""
+        try:
+            refresh_token = st.session_state.get('google_refresh_token')
+            if not refresh_token:
+                return False
+            
+            client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
+            client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
+            
+            if not client_id or not client_secret:
+                return False
+            
+            token_url = "https://oauth2.googleapis.com/token"
+            data = {
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'refresh_token': refresh_token,
+                'grant_type': 'refresh_token'
+            }
+            
+            response = requests.post(token_url, data=data)
+            
+            if response.status_code == 200:
+                token_data = response.json()
+                new_access_token = token_data.get('access_token')
+                new_expires_in = token_data.get('expires_in', 3600)
+                
+                if new_access_token:
+                    st.session_state.google_access_token = new_access_token
+                    st.session_state.last_token_refresh = datetime.datetime.now().isoformat()
+                    st.session_state.token_expires_at = (
+                        datetime.datetime.now() + datetime.timedelta(seconds=new_expires_in)
+                    ).isoformat()
+                    return True
+            
+            return False
+        except Exception as e:
+            st.error(f"토큰 갱신 실패: {e}")
+            return False
     
     # 기존 인증 상태 확인 (더 강력한 검증)
     if (st.session_state.get('login_completed', False) and 
         st.session_state.get('google_user') and 
         st.session_state.get('google_access_token')):
         
-        # 세션 상태 강제 업데이트
-        st.session_state.user_authenticated = True
-        st.session_state.auth_checked = True
-        st.success("✅ 기존 인증 상태 확인됨")
-        return True
+        # 토큰 만료 확인 및 갱신
+        token_expires_at = st.session_state.get('token_expires_at')
+        if token_expires_at:
+            try:
+                expires_at = datetime.datetime.fromisoformat(token_expires_at)
+                if datetime.datetime.now() > expires_at:
+                    st.info("🔄 토큰이 만료되었습니다. 갱신을 시도합니다...")
+                    if refresh_access_token():
+                        st.success("✅ 토큰이 성공적으로 갱신되었습니다.")
+                    else:
+                        st.warning("⚠️ 토큰 갱신에 실패했습니다. 다시 로그인해주세요.")
+                        # 세션 상태 초기화
+                        for key in ['google_user', 'google_access_token', 'google_refresh_token', 
+                                   'login_completed', 'user_authenticated', 'auth_checked']:
+                            st.session_state[key] = None
+                        return False
+            except:
+                pass
+        
+        # 토큰 유효성 검증
+        try:
+            user_info_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+            headers = {'Authorization': f'Bearer {st.session_state.google_access_token}'}
+            user_response = requests.get(user_info_url, headers=headers)
+            
+            if user_response.status_code == 200:
+                # 세션 상태 강제 업데이트
+                st.session_state.user_authenticated = True
+                st.session_state.auth_checked = True
+                st.session_state.login_success = True
+                st.success("✅ 기존 인증 상태 확인됨")
+                return True
+            else:
+                st.warning("⚠️ 토큰이 유효하지 않습니다. 다시 로그인해주세요.")
+                # 세션 상태 초기화
+                for key in ['google_user', 'google_access_token', 'google_refresh_token', 
+                           'login_completed', 'user_authenticated', 'auth_checked']:
+                    st.session_state[key] = None
+                return False
+        except Exception as e:
+            st.error(f"토큰 검증 실패: {e}")
+            # 세션 상태 초기화
+            for key in ['google_user', 'google_access_token', 'google_refresh_token', 
+                       'login_completed', 'user_authenticated', 'auth_checked']:
+                st.session_state[key] = None
+            return False
     
     # OAuth 콜백 처리 (URL 파라미터에 code가 있는 경우)
     code = st.query_params.get("code", None)
@@ -406,6 +694,62 @@ if not auth_result:
 # 인증 성공 시 메인 애플리케이션 시작
 if st.session_state.get('user_authenticated', False) and st.session_state.get('login_completed', False):
     st.success("✅ 인증된 사용자 - 메인 애플리케이션 시작")
+    
+    # 토큰 갱신 함수
+    def auto_refresh_token():
+        """자동 토큰 갱신"""
+        try:
+            refresh_token = st.session_state.get('google_refresh_token')
+            if not refresh_token:
+                return False
+            
+            client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
+            client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
+            
+            if not client_id or not client_secret:
+                return False
+            
+            token_url = "https://oauth2.googleapis.com/token"
+            data = {
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'refresh_token': refresh_token,
+                'grant_type': 'refresh_token'
+            }
+            
+            response = requests.post(token_url, data=data)
+            
+            if response.status_code == 200:
+                token_data = response.json()
+                new_access_token = token_data.get('access_token')
+                new_expires_in = token_data.get('expires_in', 3600)
+                
+                if new_access_token:
+                    st.session_state.google_access_token = new_access_token
+                    st.session_state.last_token_refresh = datetime.datetime.now().isoformat()
+                    st.session_state.token_expires_at = (
+                        datetime.datetime.now() + datetime.timedelta(seconds=new_expires_in)
+                    ).isoformat()
+                    return True
+            
+            return False
+        except Exception as e:
+            return False
+    
+    # 토큰 만료 확인 및 자동 갱신
+    token_expires_at = st.session_state.get('token_expires_at')
+    if token_expires_at:
+        try:
+            expires_at = datetime.datetime.fromisoformat(token_expires_at)
+            # 만료 10분 전에 자동 갱신
+            if datetime.datetime.now() > (expires_at - datetime.timedelta(minutes=10)):
+                if auto_refresh_token():
+                    st.info("🔄 토큰이 자동으로 갱신되었습니다.")
+                else:
+                    st.warning("⚠️ 토큰 자동 갱신에 실패했습니다.")
+        except:
+            pass
+    
     # 추가 세션 상태 확인
     if not st.session_state.get('google_user'):
         st.error("❌ 사용자 정보가 없습니다. 다시 로그인해주세요.")
@@ -1078,7 +1422,7 @@ with tab3:
         st.dataframe(st.session_state.history_search_results, use_container_width=True, hide_index=True)
     
     # 벡터 DB 통계
-    st.markdown("### 🔍 벡터 검색 통계")
+    st.markdown("### 📊 벡터 검색 통계")
     try:
         vector_stats = vector_search.get_statistics()
         
