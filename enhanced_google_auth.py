@@ -30,7 +30,7 @@ class EnhancedGoogleAuth:
             self.base_url = "https://privkeeperp-response.streamlit.app"
         
         # 리디렉션 URI 정확히 설정 (실제 앱 URL)
-        self.redirect_uri = f"{self.base_url}/"
+        self.redirect_uri = "https://privkeeperp-response.streamlit.app/"
         
     def get_auth_url(self) -> str:
         """Google OAuth2 인증 URL 생성"""
@@ -52,10 +52,16 @@ class EnhancedGoogleAuth:
         
         final_url = f"{auth_url}?{query_string}"
         
-        # 디버깅: OAuth URL 출력
-        print(f"🔧 디버깅: OAuth URL = {final_url}")
-        print(f"🔧 디버깅: redirect_uri = {self.redirect_uri}")
-        print(f"🔧 디버깅: client_id = {self.client_id[:20]}...")
+        # 상세 디버깅 정보 출력
+        print("=" * 50)
+        print("🔧 OAuth 디버깅 정보:")
+        print(f"🔧 base_url: {self.base_url}")
+        print(f"🔧 redirect_uri: '{self.redirect_uri}'")
+        print(f"🔧 redirect_uri 길이: {len(self.redirect_uri)}")
+        print(f"🔧 redirect_uri 끝 문자: '{self.redirect_uri[-1]}'")
+        print(f"🔧 client_id: {self.client_id[:20]}...")
+        print(f"🔧 전체 OAuth URL: {final_url}")
+        print("=" * 50)
         
         return final_url
     
