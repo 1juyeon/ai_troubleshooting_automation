@@ -40,6 +40,8 @@ if 'google_access_token' not in st.session_state:
     st.session_state.google_access_token = None
 if 'google_refresh_token' not in st.session_state:
     st.session_state.google_refresh_token = None
+if 'oauth_state' not in st.session_state:
+    st.session_state.oauth_state = None
 
 # 컴포넌트 초기화
 @st.cache_resource
@@ -288,7 +290,10 @@ with tab1:
                         # 다중 사용자 데이터베이스에 저장
                         if google_auth.is_authenticated():
                             user_email = google_auth.get_user_email()
-                            multi_user_db.save_analysis(user_email, analysis_result, st.session_state.inquiry_data)
+                            # inquiry_data에 사용자 이메일 추가
+                            inquiry_data_with_email = st.session_state.inquiry_data.copy()
+                            inquiry_data_with_email['user_email'] = user_email
+                            multi_user_db.save_analysis(analysis_result, inquiry_data_with_email)
                         
                         # 기존 데이터베이스에도 저장 (호환성 유지)
                         history_db.save_analysis(analysis_result, st.session_state.inquiry_data)

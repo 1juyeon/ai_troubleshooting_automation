@@ -172,13 +172,29 @@ class EnhancedGoogleAuth:
         # 로그인 버튼 표시
         auth_url = self.get_auth_url()
         if auth_url:
-            if st.link_button(
-                "🔐 Google 계정으로 로그인",
-                url=auth_url,
-                type="primary",
-                use_container_width=True
-            ):
-                pass  # 버튼 클릭 시 같은 탭에서 열림
+            st.markdown(f"""
+            <div style="text-align: center; margin: 20px 0;">
+                <button onclick="window.location.href='{auth_url}'" style="
+                    background: linear-gradient(45deg, #4285f4, #34a853);
+                    color: white;
+                    padding: 15px 30px;
+                    border: none;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 12px;
+                    box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3);
+                    transition: all 0.3s ease;
+                    width: 100%;
+                ">
+                    <img src="https://developers.google.com/identity/images/g-logo.png" width="24" height="24" style="filter: brightness(0) invert(1);">
+                    🔐 Google 계정으로 로그인
+                </button>
+            </div>
+            """, unsafe_allow_html=True)
         else:
             st.error("❌ OAuth 설정이 올바르지 않습니다.")
         
@@ -259,15 +275,14 @@ class EnhancedGoogleAuth:
     
     def is_authenticated(self) -> bool:
         """인증 상태 확인"""
-        if 'google_user' not in st.session_state:
+        # 사용자 정보와 액세스 토큰이 모두 있어야 인증된 것으로 간주
+        if 'google_user' not in st.session_state or not st.session_state.google_user:
             return False
         
-        # 토큰 유효성 검증 (새로고침 시에는 검증 건너뛰기)
-        access_token = st.session_state.get('google_access_token')
-        if not access_token:
+        if 'google_access_token' not in st.session_state or not st.session_state.google_access_token:
             return False
             
-        # 토큰이 있으면 일단 인증된 것으로 간주 (새로고침 시 안정성)
+        # 새로고침 시에도 안정적으로 유지
         return True
     
     def get_user_email(self) -> str:
