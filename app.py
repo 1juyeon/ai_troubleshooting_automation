@@ -33,7 +33,8 @@ def init_session_state():
         'user_authenticated': False,
         'google_auth_initialized': False,
         'session_persistent': True,
-        'login_completed': False
+        'login_completed': False,
+        'oauth_state': None  # oauth_state 추가
     }
     
     # 분석 결과 관련 세션 키들
@@ -178,6 +179,7 @@ def handle_oauth_callback(code, state):
         st.session_state.login_completed = True
         st.session_state.user_authenticated = True
         st.session_state.auth_checked = True
+        st.session_state.login_success = True
         
         # UI에 성공 정보 표시
         st.success(f"✅ 사용자 정보 저장됨: {user_info.get('email', 'Unknown')}")
@@ -190,6 +192,7 @@ def handle_oauth_callback(code, state):
                 "login_completed": st.session_state.login_completed,
                 "user_authenticated": st.session_state.user_authenticated,
                 "auth_checked": st.session_state.auth_checked,
+                "login_success": st.session_state.login_success,
                 "access_token_exists": bool(st.session_state.google_access_token),
                 "refresh_token_exists": bool(st.session_state.google_refresh_token)
             })
@@ -251,14 +254,15 @@ def check_authentication():
                 st.success("✅ 로그인 성공!")
                 # URL 파라미터 정리
                 st.query_params.clear()
-                # 세션 상태 강제 업데이트
+                # 세션 상태 강제 업데이트 (더 안정적으로)
                 st.session_state.user_authenticated = True
                 st.session_state.auth_checked = True
                 st.session_state.login_completed = True
+                st.session_state.login_success = True
                 st.success("✅ 세션 상태 업데이트 완료")
                 # 성공 후 페이지 새로고침 (안정적인 방식)
                 st.info("🔄 인증 완료! 페이지를 새로고침하여 메인 애플리케이션에 접근하세요.")
-                st.stop()
+                st.rerun()  # rerun으로 변경하여 세션 상태가 안정적으로 저장되도록 함
             else:
                 st.error("❌ 로그인 처리에 실패했습니다.")
                 st.stop()
@@ -280,12 +284,14 @@ def render_login_page():
     
     # 현재 로그인 상태 표시
     st.info("📊 현재 로그인 상태")
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("인증 완료", "✅" if st.session_state.get('user_authenticated', False) else "❌")
     with col2:
         st.metric("로그인 완료", "✅" if st.session_state.get('login_completed', False) else "❌")
     with col3:
+        st.metric("로그인 성공", "✅" if st.session_state.get('login_success', False) else "❌")
+    with col4:
         st.metric("사용자 정보", "✅" if st.session_state.get('google_user') else "❌")
     
     # OAuth 설정 확인
@@ -385,6 +391,7 @@ def render_login_page():
                     "google_user": bool(st.session_state.get('google_user')),
                     "user_authenticated": st.session_state.get('user_authenticated', False),
                     "auth_checked": st.session_state.get('auth_checked', False),
+                    "login_success": st.session_state.get('login_success', False),
                     "google_user_email": st.session_state.get('google_user', {}).get('email', 'None') if st.session_state.get('google_user') else 'None',
                     "google_access_token": bool(st.session_state.get('google_access_token')),
                     "google_refresh_token": bool(st.session_state.get('google_refresh_token'))
@@ -412,6 +419,7 @@ with st.expander("🔍 인증 결과 (클라우드용)", expanded=False):
         "user_authenticated": st.session_state.get('user_authenticated', False),
         "login_completed": st.session_state.get('login_completed', False),
         "auth_checked": st.session_state.get('auth_checked', False),
+        "login_success": st.session_state.get('login_success', False),
         "google_user_exists": bool(st.session_state.get('google_user')),
         "google_access_token_exists": bool(st.session_state.get('google_access_token'))
     })
@@ -422,7 +430,7 @@ if not auth_result:
     st.stop()
 
 # 인증 성공 시 메인 애플리케이션 시작
-if st.session_state.get('user_authenticated', False):
+if st.session_state.get('user_authenticated', False) and st.session_state.get('login_completed', False):
     st.success("✅ 인증된 사용자 - 메인 애플리케이션 시작")
     # 추가 세션 상태 확인
     if not st.session_state.get('google_user'):
