@@ -1,97 +1,167 @@
 import streamlit as st
-import requests
-from urllib.parse import urlencode
+import os
+import json
+from datetime import datetime
 
-def debug_oauth_setup():
-    """OAuth 설정 디버깅 도구"""
+def debug_oauth_session():
+    """OAuth 세션 상태 디버깅"""
+    st.markdown("## 🔍 OAuth 세션 디버깅")
     
-    st.markdown("## 🔧 OAuth 설정 디버깅")
+    # 현재 세션 상태 확인
+    oauth_keys = [
+        'google_user', 
+        'google_access_token', 
+        'google_refresh_token', 
+        'oauth_state',
+        'last_token_refresh',
+        'auth_completed',
+        'login_timestamp',
+        'session_persistent',
+        'auth_checked',
+        'login_success',
+        'user_authenticated',
+        'google_auth_initialized'
+    ]
     
-    # 1. 클라이언트 ID 확인
-    client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
-    client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
-    api_key = st.secrets.get("GOOGLE_API_KEY", "")
+    st.markdown("### 📊 세션 상태")
     
-    st.markdown("### 1. Secrets 설정 확인")
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if client_id:
-            st.success("✅ 클라이언트 ID 설정됨")
-            st.code(client_id[:20] + "...", language="text")
+    for key in oauth_keys:
+        value = st.session_state.get(key, "Not set")
+        if key in ['google_access_token', 'google_refresh_token'] and value:
+            # 토큰은 일부만 표시
+            display_value = f"{value[:10]}...{value[-10:]}" if len(value) > 20 else "***"
         else:
-            st.error("❌ 클라이언트 ID 미설정")
-    
-    with col2:
-        if client_secret:
-            st.success("✅ 클라이언트 보안 비밀번호 설정됨")
-            st.code(client_secret[:10] + "...", language="text")
-        else:
-            st.error("❌ 클라이언트 보안 비밀번호 미설정")
-    
-    with col3:
-        if api_key:
-            st.success("✅ API 키 설정됨")
-            st.code(api_key[:10] + "...", language="text")
-        else:
-            st.error("❌ API 키 미설정")
-    
-    # 2. OAuth URL 생성 테스트
-    st.markdown("### 2. OAuth URL 생성 테스트")
-    
-    if client_id:
-        redirect_uri = "https://aitroubleshootingautomation-fxxn77xinek2wohl5qhpw8.streamlit.app/"
+            display_value = str(value)
         
-        params = {
-            'client_id': client_id,
-            'redirect_uri': redirect_uri,
-            'scope': 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
-            'response_type': 'code',
-            'access_type': 'offline',
-            'prompt': 'consent'
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            st.write(f"**{key}:**")
+        with col2:
+            st.code(display_value)
+    
+    # 환경 변수 확인
+    st.markdown("### 🔧 환경 설정")
+    
+    env_vars = {
+        'GOOGLE_CLIENT_ID': os.getenv('GOOGLE_CLIENT_ID', 'Not set'),
+        'GOOGLE_CLIENT_SECRET': os.getenv('GOOGLE_CLIENT_SECRET', 'Not set'),
+        'GOOGLE_API_KEY': os.getenv('GOOGLE_API_KEY', 'Not set')
+    }
+    
+    for key, value in env_vars.items():
+        if 'SECRET' in key or 'KEY' in key:
+            display_value = f"{value[:10]}..." if value != 'Not set' else 'Not set'
+        else:
+            display_value = value
+        
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            st.write(f"**{key}:**")
+        with col2:
+            st.code(display_value)
+    
+    # Streamlit secrets 확인
+    st.markdown("### 🔐 Streamlit Secrets")
+    
+    try:
+        secrets = {
+            'GOOGLE_CLIENT_ID': st.secrets.get('GOOGLE_CLIENT_ID', 'Not set'),
+            'GOOGLE_CLIENT_SECRET': st.secrets.get('GOOGLE_CLIENT_SECRET', 'Not set')
         }
         
-        auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
-        query_string = urlencode(params)
-        full_auth_url = f"{auth_url}?{query_string}"
-        
-        st.success("✅ OAuth URL 생성됨")
-        st.code(full_auth_url, language="text")
-        
-        # URL 테스트 버튼
-        if st.button("🔗 OAuth URL 테스트"):
-            st.markdown(f"[OAuth URL 테스트]({full_auth_url})")
+        for key, value in secrets.items():
+            if 'SECRET' in key:
+                display_value = f"{value[:10]}..." if value != 'Not set' else 'Not set'
+            else:
+                display_value = value
+            
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                st.write(f"**{key}:**")
+            with col2:
+                st.code(display_value)
+    except Exception as e:
+        st.error(f"Secrets 접근 오류: {e}")
     
-    # 3. 문제 해결 가이드
-    st.markdown("### 3. 403 오류 해결 체크리스트")
+    # 세션 정리 버튼
+    st.markdown("### 🧹 세션 정리")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🗑️ OAuth 세션 정리"):
+            for key in oauth_keys:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.success("✅ OAuth 세션이 정리되었습니다!")
+            st.rerun()
+    
+    with col2:
+        if st.button("🔄 페이지 새로고침"):
+            st.rerun()
+
+def check_oauth_configuration():
+    """OAuth 설정 상태 확인"""
+    st.markdown("## ⚙️ OAuth 설정 확인")
+    
+    # 클라이언트 ID 확인
+    client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
+    client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
+    
+    if not client_id:
+        st.error("❌ Google Client ID가 설정되지 않았습니다.")
+        st.info("""
+        **설정 방법:**
+        1. Streamlit Cloud의 앱 설정에서 Secrets 추가
+        2. 또는 로컬에서 `.streamlit/secrets.toml` 파일 생성
+        3. Google Cloud Console에서 OAuth 2.0 클라이언트 ID 생성
+        """)
+        return False
+    
+    if not client_secret:
+        st.error("❌ Google Client Secret이 설정되지 않았습니다.")
+        return False
+    
+    st.success("✅ OAuth 설정이 완료되었습니다!")
+    
+    # 리디렉션 URI 확인
+    st.markdown("### 🔗 리디렉션 URI 설정")
+    
+    # 현재 환경 확인
+    try:
+        current_url = st.get_option("server.baseUrlPath")
+        if current_url and current_url != "":
+            redirect_uri = "http://localhost:8501"
+            environment = "로컬 개발 환경"
+        else:
+            redirect_uri = "https://privkeeperp-response.streamlit.app"
+            environment = "Streamlit Cloud"
+    except:
+        redirect_uri = "https://privkeeperp-response.streamlit.app"
+        environment = "Streamlit Cloud (기본값)"
+    
+    st.info(f"**현재 환경:** {environment}")
+    st.info(f"**리디렉션 URI:** {redirect_uri}")
     
     st.markdown("""
-    #### Google Cloud Console에서 확인:
-    1. **OAuth 동의 화면** → **"저장 후 계속"** 클릭했는지 확인
-    2. **테스트 사용자**에 본인 이메일이 정확히 등록되어 있는지 확인
-    3. **범위 (Scopes)** 최소 1개 이상 추가했는지 확인:
-       - `https://www.googleapis.com/auth/userinfo.email`
-       - `https://www.googleapis.com/auth/userinfo.profile`
-    
-    #### 리디렉션 URI 확인:
-    - Google Cloud Console: `https://aitroubleshootingautomation-fxxn77xinek2wohl5qhpw8.streamlit.app/`
-    - 앱 URL과 정확히 일치하는지 확인
-    
-    #### 앱 재배포:
-    - Streamlit Cloud에서 **"Deploy"** 버튼 클릭
-    - 배포 완료 후 다시 테스트
+    **Google Cloud Console 설정:**
+    1. [Google Cloud Console](https://console.cloud.google.com/) 접속
+    2. API 및 서비스 → 사용자 인증 정보
+    3. OAuth 2.0 클라이언트 ID 선택
+    4. 승인된 리디렉션 URI에 위 URI 추가
     """)
     
-    # 4. 수동 테스트
-    st.markdown("### 4. 수동 테스트")
-    
-    if st.button("🔄 앱 재배포 안내"):
-        st.info("""
-        1. Streamlit Cloud에서 앱 관리 페이지로 이동
-        2. "Deploy" 버튼 클릭
-        3. 배포 완료 후 앱 URL 접속
-        4. 사이드바에서 "Google 계정으로 로그인" 버튼 클릭
-        """)
+    return True
 
 if __name__ == "__main__":
-    debug_oauth_setup()
+    st.set_page_config(page_title="OAuth 디버깅", page_icon="🔍")
+    
+    st.title("🔍 OAuth 디버깅 도구")
+    
+    tab1, tab2 = st.tabs(["📊 세션 디버깅", "⚙️ 설정 확인"])
+    
+    with tab1:
+        debug_oauth_session()
+    
+    with tab2:
+        check_oauth_configuration()

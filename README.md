@@ -1,116 +1,163 @@
 # PrivKeeper P 장애 대응 자동화 시스템
 
-Gemini AI 기반 고객 문의 자동 분석 및 응답 도구입니다.
+Gemini AI 기반 고객 문의 자동 분석 및 응답 도구
 
-## 🎯 주요 기능
+## 🚀 최근 업데이트
 
-- **자동 문제 분류**: Gemini AI를 사용한 고객 문의 자동 분류
-- **시나리오 기반 대응**: JSON/Excel 기반 시나리오 DB 활용
-- **유사 사례 검색**: ChromaDB 벡터 검색을 통한 유사 사례 제공
-- **자동 응답 생성**: 구조화된 고객 응답 이메일 초안 생성
-- **웹 기반 인터페이스**: Streamlit을 통한 직관적인 UI
+### OAuth 인증 개선 (2024년 12월)
 
-## 🏗️ 시스템 구조
+**해결된 문제:**
+- ✅ **새 창 방지**: Google 로그인 시 새 창이 열리는 문제 해결
+- ✅ **세션 지속성**: 페이지 새로고침 시에도 로그인 상태 유지
+- ✅ **자동 토큰 갱신**: 액세스 토큰 만료 시 자동 갱신
+- ✅ **사용자 경험 개선**: 로그인 상태 실시간 표시
 
-```
-streamlit_pratice/
-├── app.py                 # 메인 Streamlit 애플리케이션
-├── classify_issue.py      # 문제 유형 자동 분류 모듈
-├── scenario_db.py         # 시나리오 데이터베이스 모듈
-├── vector_search.py       # ChromaDB 벡터 검색 모듈
-├── gpt_handler.py         # Gemini API 핸들러
-├── requirements.txt       # Python 패키지 의존성
-├── README.md             # 프로젝트 문서
-├── 프롬프트.txt           # AI 프롬프트 템플릿
-├── PK P DB.json          # 시나리오 데이터 (JSON)
-├── 수정된_대응_시나리오표.xlsx  # 시나리오 데이터 (Excel)
-└── privkeeper-p-d85579598b32.json  # Gemini API 인증 키
-```
+**기술적 개선사항:**
+- JavaScript 기반 로그인 버튼으로 새 창 방지
+- `session_state` 활용하여 세션 데이터 안정적 유지
+- 자동 토큰 갱신 및 인증 상태 복원 기능
+- 환경별 OAuth URL 자동 설정
 
-## 🚀 설치 및 실행
+## 🔧 주요 기능
 
-### 1. 필수 요구사항
+### 1. AI 기반 문제 분류
+- 고객 문의 자동 분석
+- 문제 유형 자동 분류
+- 신뢰도 점수 제공
 
-- Python 3.8 이상
-- Google Cloud 프로젝트 설정
-- Gemini API 키
+### 2. 시나리오 기반 응답
+- 사전 정의된 시나리오 매칭
+- 조건별 해결책 제시
+- 현장 출동 필요성 판단
 
-### 2. 패키지 설치
+### 3. 벡터 검색
+- 유사 사례 자동 검색
+- ChromaDB 기반 벡터 데이터베이스
+- 실시간 유사도 계산
 
+### 4. Gemini AI 응답 생성
+- 고객 응답 이메일 자동 생성
+- 조치 흐름 제시
+- 요약 및 상세 분석
+
+### 5. 다중 사용자 지원
+- Google OAuth 인증
+- 사용자별 이력 관리
+- 권한 기반 접근 제어
+
+## 🛠️ 기술 스택
+
+- **AI 모델**: Google Gemini 1.5 Pro
+- **웹 프레임워크**: Streamlit
+- **벡터 데이터베이스**: ChromaDB
+- **인증**: Google OAuth 2.0
+- **데이터 저장**: SQLite + JSON
+- **프로그래밍 언어**: Python
+
+## 📋 설치 및 실행
+
+### 1. 의존성 설치
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. 환경 설정
+### 2. 환경 변수 설정
+```bash
+export GOOGLE_API_KEY="your-api-key"
+```
 
-1. Google Cloud 프로젝트에서 Gemini API 활성화
-2. 서비스 계정 키 파일 (`privkeeper-p-d85579598b32.json`)을 프로젝트 루트에 배치
-3. 필요한 데이터 파일들이 올바른 위치에 있는지 확인
+### 3. OAuth 설정
+Google Cloud Console에서 OAuth 2.0 클라이언트 ID 생성 후 `.streamlit/secrets.toml`에 설정:
 
-### 4. 애플리케이션 실행
+```toml
+GOOGLE_CLIENT_ID = "your-client-id"
+GOOGLE_CLIENT_SECRET = "your-client-secret"
+GOOGLE_API_KEY = "your-api-key"
+```
 
+### 4. 앱 실행
 ```bash
 streamlit run app.py
 ```
 
-## 📋 사용 방법
+## 🔐 OAuth 설정 가이드
 
-### 1. 고객 문의 입력
-- 고객사 정보와 문의 내용을 상세히 입력
-- 시스템이 자동으로 문제 유형을 분류합니다
+자세한 OAuth 설정 방법은 [oauth_setup_guide.md](oauth_setup_guide.md)를 참조하세요.
 
-### 2. AI 분석
-- Gemini AI가 자동으로 증상 분석, 원인 추정, 조치 방향 제시
-- 유사 사례 검색을 통한 참고 정보 제공
-- 고객 응답 이메일 초안 자동 생성
+### 주요 설정 사항:
+1. Google Cloud Console에서 OAuth 2.0 클라이언트 ID 생성
+2. 승인된 리디렉션 URI 설정
+3. OAuth 동의 화면 구성
+4. Streamlit Secrets 설정
+5. 앱 재배포
 
-### 3. 검토 및 발송
-- 엔지니어가 AI 분석 결과 검토
-- 필요시 수정 후 고객에게 응답
+## 📊 사용 방법
 
-## 🔧 기술 스택
+### 1. 로그인
+- 사이드바에서 "Google 계정으로 로그인" 클릭
+- Google 계정으로 인증
 
-- **AI 모델**: Google Gemini 1.5 Pro
-- **벡터 검색**: ChromaDB
-- **웹 프레임워크**: Streamlit
-- **데이터 소스**: JSON + Excel
-- **언어**: Python 3.8+
+### 2. 고객 문의 입력
+- 고객 정보 및 문의 내용 입력
+- 시스템이 자동으로 문제 유형 분류
 
-## 📊 주요 모듈
+### 3. AI 분석
+- "AI 분석 요청" 버튼 클릭
+- Gemini AI가 자동으로 분석 수행
 
-### classify_issue.py
-- Gemini API를 사용한 문제 유형 자동 분류
-- 키워드 기반 백업 분류 로직
-- 7-10개 문제 유형 지원
+### 4. 결과 확인
+- AI 분석 결과 탭에서 상세 결과 확인
+- 이메일 초안 복사 및 발송
 
-### scenario_db.py
-- JSON/Excel 기반 시나리오 데이터 로딩
-- 문제 유형별 조건과 해결책 조회
-- 매뉴얼 참조 정보 제공
+## 🔍 문제 해결
 
-### vector_search.py
-- ChromaDB를 사용한 유사 사례 검색
-- 벡터 기반 유사도 계산
-- 프롬프트용 사례 포맷팅
+### OAuth 관련 문제
+- **새 창 방지**: JavaScript 기반 로그인 버튼 사용
+- **세션 지속성**: `session_state` 활용하여 세션 데이터 유지
+- **토큰 갱신**: 자동 토큰 갱신 기능 구현
 
-### gpt_handler.py
-- Gemini API 호출 및 응답 생성
-- 프롬프트 템플릿 조립
-- 응답 구조화 및 파싱
+### 디버깅 도구
+OAuth 상태 확인을 위해 다음 URL 접속:
+```
+https://privkeeperp-response.streamlit.app/oauth_debug
+```
 
-## ⚠️ 주의사항
+## 📁 프로젝트 구조
 
-- AI 분석 결과는 참고용이며, 최종 검토 후 발송
-- 민감한 정보는 입력하지 않도록 주의
-- 긴급한 경우 즉시 담당 엔지니어에게 연락
-- API 키 파일은 절대 GitHub에 업로드하지 마세요
+```
+streamlit_pratice/
+├── app.py                      # 메인 애플리케이션
+├── enhanced_google_auth.py     # OAuth 인증 모듈
+├── classify_issue.py           # 문제 분류 모듈
+├── scenario_db.py              # 시나리오 데이터베이스
+├── vector_search.py            # 벡터 검색 모듈
+├── gpt_handler.py              # Gemini AI 핸들러
+├── database.py                 # 데이터베이스 모듈
+├── multi_user_database.py      # 다중 사용자 DB
+├── oauth_debug.py              # OAuth 디버깅 도구
+├── requirements.txt            # 의존성 목록
+├── oauth_setup_guide.md       # OAuth 설정 가이드
+└── README.md                  # 프로젝트 문서
+```
 
-## 📞 지원 연락처
+## 🤝 기여
 
-- 기술지원: 02-678-1234
-- 이메일: support@privkeeper.com
-- 긴급상황: 010-3456-7890
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📞 지원
+
+- **기술지원**: 02-678-1234
+- **이메일**: support@privkeeper.com
+- **긴급상황**: 010-3456-7890
 
 ## 📄 라이선스
 
-©2024 PrivKeeper P 장애 대응 자동화 시스템
+이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 `LICENSE` 파일을 참조하세요.
+
+---
+
+© 2024 PrivKeeper P 장애 대응 자동화 시스템

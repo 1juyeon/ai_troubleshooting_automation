@@ -28,7 +28,9 @@ def init_session_state():
     oauth_keys = {
         'auth_checked': False,
         'login_success': False,
-        'user_authenticated': False
+        'user_authenticated': False,
+        'google_auth_initialized': False,
+        'session_persistent': True
     }
     
     # 분석 결과 관련 세션 키들
@@ -41,12 +43,18 @@ def init_session_state():
         'page_initialized': True
     }
     
-    # 모든 세션 키 초기화
+    # 모든 세션 키 초기화 (기존 값 보존)
     all_keys = {**oauth_keys, **analysis_keys}
     
     for key, default_value in all_keys.items():
         if key not in st.session_state:
             st.session_state[key] = default_value
+    
+    # OAuth 인증 상태 확인 및 복원
+    if 'google_user' in st.session_state and st.session_state.google_user:
+        st.session_state.user_authenticated = True
+        st.session_state.auth_checked = True
+        print("✅ 세션에서 인증 상태 복원됨")
     
     # 디버깅용 로그
     if st.session_state.get('user_authenticated'):
@@ -116,7 +124,7 @@ with st.sidebar:
         if not st.session_state.get('auth_checked', False):
             st.session_state.auth_checked = True
         
-        # 인증 상태 확인
+        # 인증 상태 확인 (EnhancedGoogleAuth에서 관리)
         is_auth = google_auth.is_authenticated()
         
         # 세션에 인증 상태 저장

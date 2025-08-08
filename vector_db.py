@@ -113,53 +113,6 @@ class VectorDB:
             print(f"❌ 문서 추가 실패: {e}")
             return False
     
-    def add_initial_sample_data(self):
-        """초기 샘플 데이터 추가"""
-        sample_documents = [
-            {
-                'customer_input': 'PrivKeeper P에서 비밀번호 변경을 시도했으나 인증 실패 오류가 발생하여 변경이 되지 않습니다.',
-                'issue_type': '현재 비밀번호가 맞지 않습니다',
-                'summary': '비밀번호 변경 시 인증 실패 문제',
-                'action_flow': '1. 현재 비밀번호 확인 2. 대소문자 구분 확인 3. 특수문자 포함 여부 확인',
-                'customer_name': 'ABC 주식회사',
-                'timestamp': '2024-01-15T10:30:00'
-            },
-            {
-                'customer_input': 'VMS와의 통신이 실패하여 카메라 영상을 볼 수 없습니다.',
-                'issue_type': 'VMS와의 통신에 실패했습니다',
-                'summary': 'VMS 통신 실패로 인한 영상 확인 불가',
-                'action_flow': '1. 네트워크 연결 상태 확인 2. VMS 서버 상태 확인 3. 방화벽 설정 확인',
-                'customer_name': 'XYZ 기업',
-                'timestamp': '2024-01-16T14:20:00'
-            },
-            {
-                'customer_input': 'Ping 테스트에 실패하여 네트워크 연결이 안 됩니다.',
-                'issue_type': 'Ping 테스트에 실패했습니다',
-                'summary': '네트워크 연결 문제로 인한 Ping 실패',
-                'action_flow': '1. 물리적 네트워크 연결 확인 2. IP 주소 설정 확인 3. 라우터 설정 확인',
-                'customer_name': 'DEF 시스템',
-                'timestamp': '2024-01-17T09:15:00'
-            },
-            {
-                'customer_input': 'Onvif 응답이 없어서 카메라 설정이 안 됩니다.',
-                'issue_type': 'Onvif 응답이 없습니다',
-                'summary': 'Onvif 프로토콜 응답 없음',
-                'action_flow': '1. 카메라 Onvif 설정 확인 2. 포트 설정 확인 3. 인증 정보 확인',
-                'customer_name': 'GHI 테크',
-                'timestamp': '2024-01-18T16:45:00'
-            },
-            {
-                'customer_input': 'CCTV 로그인이 차단되어 접속이 안 됩니다.',
-                'issue_type': '로그인 차단 상태입니다(CCTV)',
-                'summary': 'CCTV 로그인 차단으로 인한 접속 불가',
-                'action_flow': '1. 계정 잠금 상태 확인 2. 관리자에게 계정 잠금 해제 요청 3. 비밀번호 재설정',
-                'customer_name': 'JKL 보안',
-                'timestamp': '2024-01-19T11:30:00'
-            }
-        ]
-        
-        return self.add_documents(sample_documents)
-    
     def _save_data(self):
         """데이터 저장"""
         try:
@@ -294,8 +247,4 @@ class VectorSearch:
     
     def get_statistics(self) -> Dict[str, Any]:
         """통계 조회"""
-        return self.vector_db.get_statistics()
-    
-    def add_initial_sample_data(self):
-        """초기 샘플 데이터 추가"""
-        return self.vector_db.add_initial_sample_data() 
+        return self.vector_db.get_statistics() 

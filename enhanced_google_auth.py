@@ -18,20 +18,23 @@ class EnhancedGoogleAuth:
         
         # Streamlit Cloud URL 자동 감지
         try:
-            # Streamlit Cloud에서 실행 중인지 확인
-            if st.get_option("server.baseUrlPath"):
+            # 현재 실행 환경 확인
+            import streamlit as st
+            current_url = st.get_option("server.baseUrlPath")
+            
+            if current_url and current_url != "":
                 # 로컬 개발 환경
                 self.base_url = "http://localhost:8501"
+                self.redirect_uri = "http://localhost:8501"
             else:
                 # Streamlit Cloud 환경 - 실제 앱 URL 확인
                 # 현재 사용 중인 앱의 URL을 정확히 설정
                 self.base_url = "https://privkeeperp-response.streamlit.app"
+                self.redirect_uri = "https://privkeeperp-response.streamlit.app"
         except:
             # 기본값으로 현재 앱 URL 사용
             self.base_url = "https://privkeeperp-response.streamlit.app"
-        
-        # 리디렉션 URI 정확히 설정 (실제 앱 URL)
-        self.redirect_uri = "https://privkeeperp-response.streamlit.app"
+            self.redirect_uri = "https://privkeeperp-response.streamlit.app"
         
         # 세션 초기화 (새로고침 시에도 유지)
         self._init_session_state()
@@ -51,21 +54,39 @@ class EnhancedGoogleAuth:
             'last_token_refresh',
             'auth_completed',
             'login_timestamp',
-            'session_persistent'
+            'session_persistent',
+            'auth_checked',
+            'login_success',
+            'user_authenticated'
         ]
         
-        # 각 키가 없으면 초기화
+        # 각 키가 없으면 초기화 (기존 값 보존)
         for key in oauth_keys:
             if key not in st.session_state:
                 st.session_state[key] = None
         
-        # 세션 지속성 플래그 설정
+        # 세션 지속성 플래그 설정 (기존 값 유지)
         if 'session_persistent' not in st.session_state:
             st.session_state.session_persistent = True
+        
+        # 인증 상태 확인 플래그
+        if 'auth_checked' not in st.session_state:
+            st.session_state.auth_checked = False
+        
+        # 로그인 성공 플래그
+        if 'login_success' not in st.session_state:
+            st.session_state.login_success = False
+        
+        # 사용자 인증 상태 플래그
+        if 'user_authenticated' not in st.session_state:
+            st.session_state.user_authenticated = False
         
         # 디버깅용 로그
         if st.session_state.google_user:
             print(f"✅ 세션에서 사용자 복원: {st.session_state.google_user.get('name', 'Unknown')}")
+            # 인증 상태 업데이트
+            st.session_state.user_authenticated = True
+            st.session_state.auth_checked = True
     
     def _save_auth_data(self, user_info: dict, access_token: str, refresh_token: str = None):
         """인증 데이터를 session_state에 저장"""
@@ -218,19 +239,46 @@ class EnhancedGoogleAuth:
                 else:
                     st.error("❌ 인증 토큰 교환에 실패했습니다.")
         
-        # Streamlit 기본 버튼 사용 - 새 창 방지
+        # 새 창 방지를 위한 JavaScript 기반 로그인 버튼
         auth_url = self.get_auth_url()
         if auth_url:
-            # 버튼 클릭 시 현재 창에서 리디렉션
-            if st.button("🔐 Google 계정으로 로그인", type="primary", use_container_width=True):
-                # JavaScript를 사용하여 현재 창에서 OAuth 진행
-                st.markdown(f"""
-                <script>
-                // 현재 창에서 OAuth URL로 이동 (새 창 방지)
-                // window.location.replace 대신 window.location.href 사용
-                window.location.href = "{auth_url}";
-                </script>
-                """, unsafe_allow_html=True)
+            # HTML과 JavaScript를 사용하여 새 창 방지
+            st.markdown(f"""
+            <div style="margin: 10px 0;">
+                <button 
+                    onclick="window.location.href='{auth_url}'; return false;"
+                    style="
+                        background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        width: 100%;
+                        transition: all 0.3s ease;
+                    "
+                    onmouseover="this.style.transform='scale(1.02)'"
+                    onmouseout="this.style.transform='scale(1)'"
+                >
+                    🔐 Google 계정으로 로그인
+                </button>
+            </div>
+            <script>
+            // 새 창 방지를 위한 추가 처리
+            document.addEventListener('DOMContentLoaded', function() {{
+                const loginButton = document.querySelector('button[onclick*="window.location.href"]');
+                if (loginButton) {{
+                    loginButton.addEventListener('click', function(e) {{
+                        e.preventDefault();
+                        // 현재 창에서 OAuth URL로 이동
+                        window.location.href = '{auth_url}';
+                    }});
+                }}
+            }});
+            </script>
+            """, unsafe_allow_html=True)
         else:
             st.error("❌ OAuth 설정이 올바르지 않습니다.")
         
@@ -302,7 +350,10 @@ class EnhancedGoogleAuth:
             'google_auth_initialized',
             'auth_completed',
             'session_persistent',
-            'login_timestamp'
+            'login_timestamp',
+            'auth_checked',
+            'login_success',
+            'user_authenticated'
         ]
         for key in keys_to_remove:
             if key in st.session_state:
@@ -327,9 +378,13 @@ class EnhancedGoogleAuth:
         
         # session_state에서 인증 데이터 확인
         if 'google_user' not in st.session_state or not st.session_state.google_user:
+            # 인증 상태 업데이트
+            st.session_state.user_authenticated = False
             return False
         
         if 'google_access_token' not in st.session_state or not st.session_state.google_access_token:
+            # 인증 상태 업데이트
+            st.session_state.user_authenticated = False
             return False
         
         # 로그인 타임스탬프 확인 (24시간 이내 로그인)
@@ -338,6 +393,7 @@ class EnhancedGoogleAuth:
                 login_time = datetime.datetime.fromisoformat(st.session_state.login_timestamp)
                 if (datetime.datetime.now() - login_time).total_seconds() > 86400:  # 24시간
                     self.logout()
+                    st.session_state.user_authenticated = False
                     return False
             except:
                 pass
@@ -350,24 +406,30 @@ class EnhancedGoogleAuth:
                 # 토큰이 만료된 경우 리프레시 토큰으로 갱신 시도
                 if self._should_refresh_token():
                     if self._refresh_token_silently():
+                        st.session_state.user_authenticated = True
                         return True
                     else:
                         # 갱신 실패 시 로그아웃
                         self.logout()
+                        st.session_state.user_authenticated = False
                         return False
                 else:
                     # 갱신 시도하지 않고 로그아웃
                     self.logout()
+                    st.session_state.user_authenticated = False
                     return False
             else:
                 # 토큰이 유효하면 마지막 갱신 시간 업데이트
                 st.session_state.last_token_refresh = datetime.datetime.now().isoformat()
+                st.session_state.user_authenticated = True
+                st.session_state.auth_checked = True
                 return True
                 
         except Exception as e:
             # 오류 발생 시 로그아웃
             print(f"❌ 토큰 검증 중 오류: {e}")
             self.logout()
+            st.session_state.user_authenticated = False
             return False
     
     def _should_refresh_token(self) -> bool:
