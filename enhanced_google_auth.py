@@ -293,22 +293,8 @@ class EnhancedGoogleAuth:
             if st.session_state.get('debug_mode', False):
                 st.info(f"🔍 디버그: 인증 URL 생성됨 - {auth_url[:50]}...")
             
-            # 방법 1: 새 창에서 OAuth + 원래 창 처리
+            # 방법 1: 순수 HTML 링크 (React 오류 방지)
             st.markdown(f"""
-            <script>
-            function openOAuthAndHandle() {{
-                var authWindow = window.open("{auth_url}", "google_oauth", "width=500,height=600,scrollbars=yes,resizable=yes");
-                
-                // 새 창이 닫힐 때 체크
-                var checkClosed = setInterval(function() {{
-                    if (authWindow.closed) {{
-                        clearInterval(checkClosed);
-                        // 원래 창 새로고침 (로그인 상태 확인)
-                        window.location.reload();
-                    }}
-                }}, 1000);
-            }}
-            </script>
             <style>
             .google-login-btn {{
                 background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
@@ -333,9 +319,9 @@ class EnhancedGoogleAuth:
             }}
             </style>
             <div style="margin: 10px 0;">
-                <button onclick="openOAuthAndHandle()" class="google-login-btn">
-                    🔐 Google 계정으로 로그인 (새 창 + 자동 새로고침)
-                </button>
+                <a href="{auth_url}" target="_blank" class="google-login-btn">
+                    🔐 Google 계정으로 로그인 (새 창)
+                </a>
             </div>
             """, unsafe_allow_html=True)
             
@@ -365,7 +351,7 @@ class EnhancedGoogleAuth:
                 </a>
                 """, unsafe_allow_html=True)
             
-            # 방법 3: 직접 링크 (순수 HTML)
+            # 방법 3: 추가 링크 (백업)
             st.markdown(f"""
             <div style="margin: 10px 0;">
                 <a href="{auth_url}" target="_blank" style="
@@ -385,7 +371,7 @@ class EnhancedGoogleAuth:
                     display: block;
                     text-align: center;
                 ">
-                    🔐 Google 계정으로 로그인 (새 창)
+                    🔐 Google 계정으로 로그인 (백업 링크)
                 </a>
             </div>
             """, unsafe_allow_html=True)
