@@ -293,14 +293,8 @@ class EnhancedGoogleAuth:
             if st.session_state.get('debug_mode', False):
                 st.info(f"🔍 디버그: 인증 URL 생성됨 - {auth_url[:50]}...")
             
-            # 방법 1: JavaScript를 사용한 강제 리다이렉트
+            # 방법 1: 순수 CSS 버튼 (React 오류 방지)
             st.markdown(f"""
-            <script>
-            function redirectToGoogle() {{
-                window.location.href = "{auth_url}";
-                return false;
-            }}
-            </script>
             <style>
             .google-login-btn {{
                 background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
@@ -315,6 +309,9 @@ class EnhancedGoogleAuth:
                 transition: all 0.3s ease;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                 margin-bottom: 10px;
+                text-decoration: none;
+                display: block;
+                text-align: center;
             }}
             .google-login-btn:hover {{
                 transform: scale(1.02);
@@ -322,52 +319,30 @@ class EnhancedGoogleAuth:
             }}
             </style>
             <div style="margin: 10px 0;">
-                <button onclick="redirectToGoogle()" class="google-login-btn">
-                    🔐 Google 계정으로 로그인 (JavaScript)
-                </button>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # 방법 2: 직접 링크 (백업)
-            st.markdown(f"""
-            <style>
-            .google-login-btn-red {{
-                background: linear-gradient(90deg, #ff6b6b 0%, #ee5a24 100%);
-                color: white;
-                border: none;
-                padding: 12px 24px;
-                border-radius: 8px;
-                font-size: 16px;
-                font-weight: bold;
-                cursor: pointer;
-                width: 100%;
-                transition: all 0.3s ease;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                margin-bottom: 10px;
-                text-decoration: none;
-                display: block;
-            }}
-            .google-login-btn-red:hover {{
-                transform: scale(1.02);
-                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            }}
-            </style>
-            <div style="margin: 10px 0;">
-                <a href="{auth_url}" target="_self" style="text-decoration: none;">
-                    <button class="google-login-btn-red">
-                        🔐 Google 계정으로 로그인 (직접 링크)
-                    </button>
+                <a href="{auth_url}" target="_self" class="google-login-btn">
+                    🔐 Google 계정으로 로그인 (CSS 링크)
                 </a>
             </div>
             """, unsafe_allow_html=True)
             
-            # 방법 3: Streamlit 버튼 + JavaScript (추가 백업)
+            # 방법 2: Streamlit 버튼 (가장 안정적)
             if st.button("🔐 Google 계정으로 로그인 (Streamlit 버튼)", use_container_width=True, type="primary"):
+                # JavaScript를 사용한 리다이렉트
                 st.markdown(f"""
                 <script>
                 window.location.href = "{auth_url}";
                 </script>
                 """, unsafe_allow_html=True)
+                st.rerun()
+            
+            # 방법 3: 추가 Streamlit 버튼 (백업)
+            if st.button("🔐 Google 계정으로 로그인 (백업)", use_container_width=True):
+                st.markdown(f"""
+                <script>
+                window.open("{auth_url}", "_self");
+                </script>
+                """, unsafe_allow_html=True)
+                st.rerun()
             
             # 추가 디버깅 정보
             if st.session_state.get('debug_mode', False):
