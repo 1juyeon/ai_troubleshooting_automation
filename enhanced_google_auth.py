@@ -293,19 +293,17 @@ class EnhancedGoogleAuth:
             if st.session_state.get('debug_mode', False):
                 st.info(f"🔍 디버그: 인증 URL 생성됨 - {auth_url[:50]}...")
             
-            # 방법 1: 새 창에서 OAuth + 원래 창 닫기
+            # 방법 1: 새 창에서 OAuth + 원래 창 처리
             st.markdown(f"""
             <script>
-            function openOAuthAndClose() {{
+            function openOAuthAndHandle() {{
                 var authWindow = window.open("{auth_url}", "google_oauth", "width=500,height=600,scrollbars=yes,resizable=yes");
                 
                 // 새 창이 닫힐 때 체크
                 var checkClosed = setInterval(function() {{
                     if (authWindow.closed) {{
                         clearInterval(checkClosed);
-                        // 원래 창도 닫기
-                        window.close();
-                        // 또는 페이지 새로고침
+                        // 원래 창 새로고침 (로그인 상태 확인)
                         window.location.reload();
                     }}
                 }}, 1000);
@@ -335,8 +333,8 @@ class EnhancedGoogleAuth:
             }}
             </style>
             <div style="margin: 10px 0;">
-                <button onclick="openOAuthAndClose()" class="google-login-btn">
-                    🔐 Google 계정으로 로그인 (새 창 + 자동 닫기)
+                <button onclick="openOAuthAndHandle()" class="google-login-btn">
+                    🔐 Google 계정으로 로그인 (새 창 + 자동 새로고침)
                 </button>
             </div>
             """, unsafe_allow_html=True)
