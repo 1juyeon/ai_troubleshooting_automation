@@ -8,6 +8,7 @@ from urllib.parse import urlencode
 from typing import Dict, Any
 import base64
 import pickle
+import streamlit.components.v1 as components
 
 # 커스텀 모듈 import
 from classify_issue import IssueClassifier
@@ -25,9 +26,9 @@ st.set_page_config(
     layout="wide"
 )
 
-# 쿠키 기반 세션 유지 함수들
-def save_auth_to_cookie(auth_data: Dict[str, Any]):
-    """인증 데이터를 쿠키에 저장"""
+# 강화된 세션 유지 함수들
+def save_auth_to_persistent_storage(auth_data: Dict[str, Any]):
+    """인증 데이터를 영구 저장소에 저장"""
     try:
         # 민감한 데이터는 제외하고 저장
         safe_data = {
@@ -40,32 +41,71 @@ def save_auth_to_cookie(auth_data: Dict[str, Any]):
         # 데이터를 base64로 인코딩
         encoded_data = base64.b64encode(pickle.dumps(safe_data)).decode()
         
-        # 쿠키 설정 (30일 유효)
+        # Streamlit의 내장 쿠키 기능 사용
         st.session_state.auth_cookie = encoded_data
+        
+        # 추가로 파일 시스템에 백업 저장 (선택사항)
+        try:
+            backup_file = "user_data/auth_backup.json"
+            os.makedirs("user_data", exist_ok=True)
+            with open(backup_file, 'w', encoding='utf-8') as f:
+                json.dump(safe_data, f, ensure_ascii=False, indent=2)
+        except:
+            pass  # 백업 실패는 무시
+        
         return True
     except Exception as e:
-        st.error(f"쿠키 저장 실패: {e}")
+        st.error(f"인증 데이터 저장 실패: {e}")
         return False
 
-def load_auth_from_cookie():
-    """쿠키에서 인증 데이터 로드"""
+def load_auth_from_persistent_storage():
+    """영구 저장소에서 인증 데이터 로드"""
     try:
+        # 1. session_state에서 먼저 확인
         if 'auth_cookie' in st.session_state:
             encoded_data = st.session_state.auth_cookie
-            auth_data = pickle.loads(base64.b64decode(encoded_data))
-            
-            # 쿠키 데이터 유효성 검증
-            if auth_data.get('login_completed') and auth_data.get('user_email'):
-                return auth_data
+            try:
+                auth_data = pickle.loads(base64.b64decode(encoded_data))
+                if auth_data.get('login_completed') and auth_data.get('user_email'):
+                    return auth_data
+            except:
+                pass
+        
+        # 2. 파일 시스템에서 백업 확인
+        try:
+            backup_file = "user_data/auth_backup.json"
+            if os.path.exists(backup_file):
+                with open(backup_file, 'r', encoding='utf-8') as f:
+                    auth_data = json.load(f)
+                    if auth_data.get('login_completed') and auth_data.get('user_email'):
+                        # session_state에도 복원
+                        encoded_data = base64.b64encode(pickle.dumps(auth_data)).decode()
+                        st.session_state.auth_cookie = encoded_data
+                        return auth_data
+        except:
+            pass
+        
         return None
     except Exception as e:
-        st.error(f"쿠키 로드 실패: {e}")
+        st.error(f"인증 데이터 로드 실패: {e}")
         return None
 
-def clear_auth_cookie():
-    """인증 쿠키 삭제"""
-    if 'auth_cookie' in st.session_state:
-        del st.session_state.auth_cookie
+def clear_persistent_storage():
+    """영구 저장소에서 인증 데이터 삭제"""
+    try:
+        # session_state에서 삭제
+        if 'auth_cookie' in st.session_state:
+            del st.session_state.auth_cookie
+        
+        # 파일 시스템에서도 삭제
+        try:
+            backup_file = "user_data/auth_backup.json"
+            if os.path.exists(backup_file):
+                os.remove(backup_file)
+        except:
+            pass
+    except Exception as e:
+        st.error(f"인증 데이터 삭제 실패: {e}")
 
 # 세션 상태 초기화 - session_state 활용
 def init_session_state():
@@ -100,9 +140,9 @@ def init_session_state():
         if key not in st.session_state:
             st.session_state[key] = default_value
     
-    # 쿠키에서 인증 데이터 복원 시도
-    cookie_auth = load_auth_from_cookie()
-    if cookie_auth:
+    # 영구 저장소에서 인증 데이터 복원 시도
+    persistent_auth = load_auth_from_persistent_storage()
+    if persistent_auth:
         st.session_state.login_completed = True
         st.session_state.user_authenticated = True
         st.session_state.auth_checked = True
@@ -111,12 +151,12 @@ def init_session_state():
         # 사용자 정보 복원
         if not st.session_state.get('google_user'):
             st.session_state.google_user = {
-                'email': cookie_auth.get('user_email'),
-                'name': cookie_auth.get('user_name')
+                'email': persistent_auth.get('user_email'),
+                'name': persistent_auth.get('user_name')
             }
         
-        st.success("✅ 쿠키에서 인증 상태 복원됨")
-        st.info(f"✅ 사용자: {cookie_auth.get('user_email', 'Unknown')}")
+        st.success("✅ 영구 저장소에서 인증 상태 복원됨")
+        st.info(f"✅ 사용자: {persistent_auth.get('user_email', 'Unknown')}")
     
     # 세션 상태 강화 함수
     def ensure_session_persistence():
@@ -443,15 +483,15 @@ def handle_oauth_callback(code, state):
         st.session_state.auth_checked = True
         st.session_state.login_success = True
         
-        # 쿠키에 인증 정보 저장 (새로고침 시 세션 유지를 위해)
+        # 영구 저장소에 인증 정보 저장 (새로고침 시 세션 유지를 위해)
         auth_data = {
             'email': user_info.get('email'),
             'name': user_info.get('name'),
             'login_completed': True,
             'login_timestamp': datetime.datetime.now().isoformat()
         }
-        if save_auth_to_cookie(auth_data):
-            st.success("✅ 쿠키에 인증 정보 저장됨 (새로고침 시 세션 유지)")
+        if save_auth_to_persistent_storage(auth_data):
+            st.success("✅ 영구 저장소에 인증 정보 저장됨 (새로고침 시 세션 유지)")
         
         # UI에 성공 정보 표시
         st.success(f"✅ 사용자 정보 저장됨: {user_info.get('email', 'Unknown')}")
@@ -498,7 +538,7 @@ def check_authentication():
             "token_expires_at": st.session_state.get('token_expires_at', 'Unknown'),
             "last_token_refresh": st.session_state.get('last_token_refresh', 'Unknown'),
             "auth_cookie_exists": bool(st.session_state.get('auth_cookie')),
-            "cookie_restored": bool(load_auth_from_cookie())
+            "persistent_storage_restored": bool(load_auth_from_persistent_storage())
         })
     
     # 토큰 갱신 함수
@@ -780,8 +820,8 @@ if st.session_state.get('user_authenticated', False) and st.session_state.get('l
                        'login_completed', 'user_authenticated', 'auth_checked', 'login_success']:
                 st.session_state[key] = None
             
-            # 쿠키 삭제
-            clear_auth_cookie()
+            # 영구 저장소에서도 삭제
+            clear_persistent_storage()
             
             st.success("✅ 로그아웃되었습니다.")
             st.rerun()
