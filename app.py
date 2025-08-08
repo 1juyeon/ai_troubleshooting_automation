@@ -170,7 +170,7 @@ def handle_oauth_callback(code, state):
         
         user_info = user_response.json()
         
-        # 세션에 사용자 정보 저장
+        # 세션에 사용자 정보 저장 (강제 업데이트)
         st.session_state.google_user = user_info
         st.session_state.google_access_token = access_token
         if refresh_token:
@@ -196,6 +196,9 @@ def handle_oauth_callback(code, state):
         
         # URL 파라미터 정리
         st.query_params.clear()
+        
+        # 세션 상태가 안정적으로 저장되도록 잠시 대기
+        st.info("🔄 페이지를 새로고침하여 인증 상태를 확인합니다...")
         return True
         
     except Exception as e:
@@ -253,8 +256,9 @@ def check_authentication():
                 st.session_state.auth_checked = True
                 st.session_state.login_completed = True
                 st.success("✅ 세션 상태 업데이트 완료")
-                # 성공 후 페이지 새로고침
-                st.rerun()
+                # 성공 후 페이지 새로고침 (안정적인 방식)
+                st.info("🔄 인증 완료! 페이지를 새로고침하여 메인 애플리케이션에 접근하세요.")
+                st.stop()
             else:
                 st.error("❌ 로그인 처리에 실패했습니다.")
                 st.stop()
@@ -300,48 +304,64 @@ def render_login_page():
     # 로그인 버튼 표시
     auth_url = get_auth_url()
     if auth_url:
+        # CSS 스타일 정의
+        st.markdown("""
+        <style>
+        .login-button {
+            background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        .login-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .new-window-button {
+            background: linear-gradient(90deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        .new-window-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
         col1, col2 = st.columns(2)
         
         with col1:
             st.markdown(f"""
-            <a href="{auth_url}" style="
-                background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
-                color: white;
-                border: none;
-                padding: 15px 30px;
-                border-radius: 8px;
-                font-size: 18px;
-                font-weight: bold;
-                cursor: pointer;
-                width: 100%;
-                transition: all 0.3s ease;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                text-decoration: none;
-                display: inline-block;
-                text-align: center;
-            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <a href="{auth_url}" class="login-button">
                 🔐 Google 계정으로 로그인
             </a>
             """, unsafe_allow_html=True)
         
         with col2:
             st.markdown(f"""
-            <a href="{auth_url}" target="_blank" style="
-                background: linear-gradient(90deg, #ff6b6b 0%, #ee5a24 100%);
-                color: white;
-                border: none;
-                padding: 15px 30px;
-                border-radius: 8px;
-                font-size: 18px;
-                font-weight: bold;
-                cursor: pointer;
-                width: 100%;
-                transition: all 0.3s ease;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                text-decoration: none;
-                display: inline-block;
-                text-align: center;
-            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <a href="{auth_url}" target="_blank" class="new-window-button">
                 🔗 새 창에서 로그인
             </a>
             """, unsafe_allow_html=True)
