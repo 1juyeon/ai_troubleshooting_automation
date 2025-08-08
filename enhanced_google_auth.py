@@ -37,7 +37,7 @@ class EnhancedGoogleAuth:
         self._init_session_state()
     
     def _init_session_state(self):
-        """세션 상태 초기화 - 새로고침 시에도 안정적으로 유지"""
+        """세션 상태 초기화 - 브라우저 스토리지 활용"""
         # OAuth 관련 세션 상태 초기화
         if 'google_auth_initialized' not in st.session_state:
             st.session_state.google_auth_initialized = True
@@ -59,6 +59,9 @@ class EnhancedGoogleAuth:
         # 영구 데이터 저장소 초기화
         if 'auth_persistent_data' not in st.session_state:
             st.session_state.auth_persistent_data = {}
+        
+        # 브라우저 스토리지에서 데이터 복구 시도
+        self._restore_from_storage()
     
     def _save_auth_data(self, user_info: dict, access_token: str, refresh_token: str = None):
         """인증 데이터를 영구 저장소에 저장"""
@@ -74,6 +77,54 @@ class EnhancedGoogleAuth:
             'refresh_token': refresh_token,
             'timestamp': datetime.datetime.now().isoformat()
         }
+        
+        # 브라우저 스토리지에도 저장
+        self._save_to_storage(user_info, access_token, refresh_token)
+    
+    def _save_to_storage(self, user_info: dict, access_token: str, refresh_token: str = None):
+        """브라우저 로컬 스토리지에 인증 데이터 저장"""
+        try:
+            import json
+            storage_data = {
+                'user_info': user_info,
+                'access_token': access_token,
+                'refresh_token': refresh_token,
+                'timestamp': datetime.datetime.now().isoformat()
+            }
+            
+            # JavaScript를 통해 로컬 스토리지에 저장
+            st.markdown(f"""
+            <script>
+            localStorage.setItem('google_auth_data', '{json.dumps(storage_data)}');
+            </script>
+            """, unsafe_allow_html=True)
+        except Exception as e:
+            print(f"❌ 스토리지 저장 실패: {e}")
+    
+    def _restore_from_storage(self):
+        """브라우저 로컬 스토리지에서 인증 데이터 복구"""
+        try:
+            # JavaScript를 통해 로컬 스토리지에서 데이터 가져오기
+            st.markdown("""
+            <script>
+            const authData = localStorage.getItem('google_auth_data');
+            if (authData) {
+                const data = JSON.parse(authData);
+                // 데이터를 페이지에 전달
+                window.googleAuthData = data;
+            }
+            </script>
+            """, unsafe_allow_html=True)
+            
+            # 여기서는 JavaScript 결과를 직접 가져올 수 없으므로
+            # 세션 상태에서 복구 시도
+            if self._load_auth_data():
+                return True
+                
+        except Exception as e:
+            print(f"❌ 스토리지 복구 실패: {e}")
+        
+        return False
     
     def _load_auth_data(self) -> bool:
         """영구 저장소에서 인증 데이터 로드"""
@@ -187,7 +238,7 @@ class EnhancedGoogleAuth:
             return False
     
     def render_login_button(self):
-        """향상된 로그인 버튼 렌더링 - 강제 같은 탭 네비게이션"""
+        """향상된 로그인 버튼 렌더링 - 팝업 윈도우 방식"""
         if not self.client_id:
             st.error("❌ Google OAuth가 설정되지 않았습니다.")
             st.info("관리자가 OAuth 설정을 완료하면 Google 계정으로 로그인할 수 있습니다.")
@@ -225,12 +276,12 @@ class EnhancedGoogleAuth:
                 else:
                     st.error("❌ 인증 토큰 교환에 실패했습니다.")
         
-        # 강제 같은 탭 네비게이션을 위한 JavaScript 사용
+        # 팝업 윈도우 방식으로 로그인
         auth_url = self.get_auth_url()
         if auth_url:
             st.markdown(f"""
             <div style="text-align: center; margin: 20px 0;">
-                <button onclick="window.location.replace('{auth_url}')" style="
+                <button onclick="openOAuthPopup('{auth_url}')" style="
                     background: linear-gradient(45deg, #4285f4, #34a853);
                     color: white;
                     padding: 15px 30px;
@@ -250,6 +301,21 @@ class EnhancedGoogleAuth:
                     🔐 Google 계정으로 로그인
                 </button>
             </div>
+            
+            <script>
+            function openOAuthPopup(url) {{
+                const popup = window.open(url, 'oauth_popup', 'width=500,height=600,scrollbars=yes,resizable=yes');
+                
+                // 팝업 윈도우 모니터링
+                const checkClosed = setInterval(() => {{
+                    if (popup.closed) {{
+                        clearInterval(checkClosed);
+                        // 팝업이 닫히면 페이지 새로고침
+                        window.location.reload();
+                    }}
+                }}, 1000);
+            }}
+            </script>
             """, unsafe_allow_html=True)
         else:
             st.error("❌ OAuth 설정이 올바르지 않습니다.")
@@ -330,6 +396,13 @@ class EnhancedGoogleAuth:
             st.query_params.clear()
         except:
             pass
+        
+        # 브라우저 스토리지에서도 제거
+        st.markdown("""
+        <script>
+        localStorage.removeItem('google_auth_data');
+        </script>
+        """, unsafe_allow_html=True)
     
     def is_authenticated(self) -> bool:
         """인증 상태 확인 - 강화된 세션 지속성"""
