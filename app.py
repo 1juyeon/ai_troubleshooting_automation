@@ -84,7 +84,7 @@ def get_auth_url():
         state = secrets.token_urlsafe(32)
         st.session_state.oauth_state = state
         
-        redirect_uri = "https://privkeeperp-response.streamlit.app"
+        redirect_uri = "https://privkeeperp-response.streamlit.app/"
         
         params = {
             'client_id': client_id,
@@ -110,11 +110,12 @@ def handle_oauth_callback(code, state):
     try:
         client_id = st.secrets.get("GOOGLE_CLIENT_ID", "")
         client_secret = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
-        redirect_uri = "https://privkeeperp-response.streamlit.app"
+        redirect_uri = "https://privkeeperp-response.streamlit.app/"
         
         # state 검증
-        if state != st.session_state.get('oauth_state'):
-            st.error("❌ OAuth state 검증 실패")
+        stored_state = st.session_state.get('oauth_state')
+        if state != stored_state:
+            st.error(f"❌ OAuth state 검증 실패 - 받은 state: {state}, 저장된 state: {stored_state}")
             return False
         
         # 토큰 교환
@@ -183,9 +184,12 @@ def check_authentication():
     state = st.query_params.get("state", None)
     
     if code and state:
+        st.info(f"🔐 OAuth 콜백 감지됨 - Code: {code[:10]}..., State: {state[:10]}...")
         with st.spinner("🔐 로그인 처리 중..."):
             if handle_oauth_callback(code, state):
                 st.success("✅ 로그인 성공!")
+                # URL 파라미터 정리 후 페이지 새로고침
+                st.query_params.clear()
                 st.rerun()
             else:
                 st.error("❌ 로그인 처리에 실패했습니다.")
@@ -225,7 +229,7 @@ def render_login_page():
         
         with col1:
             st.markdown(f"""
-            <a href="{auth_url}" target="_blank" style="
+            <a href="{auth_url}" style="
                 background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
                 color: white;
                 border: none;
@@ -251,9 +255,8 @@ def render_login_page():
                 <h4>📋 로그인 방법</h4>
                 <ol style="margin: 0; padding-left: 20px;">
                     <li>위 버튼을 클릭하세요</li>
-                    <li>새 창에서 Google 로그인을 완료하세요</li>
-                    <li>로그인 완료 후 새 창을 닫으세요</li>
-                    <li>이 페이지를 새로고침하세요</li>
+                    <li>Google 로그인 페이지에서 로그인을 완료하세요</li>
+                    <li>로그인 완료 후 자동으로 이 페이지로 돌아옵니다</li>
                 </ol>
             </div>
             """, unsafe_allow_html=True)
@@ -265,6 +268,7 @@ def render_login_page():
                 "client_secret_set": bool(client_secret),
                 "auth_url_length": len(auth_url),
                 "auth_url_preview": auth_url[:100] + "..." if len(auth_url) > 100 else auth_url,
+                "oauth_state": st.session_state.get('oauth_state'),
                 "session_state": {
                     "login_completed": st.session_state.get('login_completed', False),
                     "google_user": bool(st.session_state.get('google_user')),
