@@ -73,17 +73,8 @@ def init_components():
     scenario_db = ScenarioDB()
     vector_search = VectorSearchWrapper()
     
-    # Google OAuth2 인증
-    google_auth = EnhancedGoogleAuth()
-    
-    # OAuth2 인증을 통한 API 키 설정
-    api_key = None
-    if google_auth.is_authenticated() and google_auth.client_id:
-        # OAuth 사용자의 경우 환경변수에서 API 키 사용
-        api_key = os.getenv("GOOGLE_API_KEY")
-    else:
-        # OAuth가 설정되지 않은 경우 환경변수에서 API 키 사용
-        api_key = os.getenv("GOOGLE_API_KEY")
+    # API 키 설정
+    api_key = os.getenv("GOOGLE_API_KEY")
     
     gpt_handler = GPTHandler(api_key=api_key)
     
@@ -109,10 +100,13 @@ def init_components():
     except Exception as e:
         print(f"⚠️ 초기 데이터 추가 실패: {e}")
     
-    return classifier, scenario_db, vector_search, gpt_handler, history_db, multi_user_db, google_auth
+    return classifier, scenario_db, vector_search, gpt_handler, history_db, multi_user_db
 
-# 컴포넌트 초기화
-classifier, scenario_db, vector_search, gpt_handler, history_db, multi_user_db, google_auth = init_components()
+# 컴포넌트 초기화 (OAuth 제외)
+classifier, scenario_db, vector_search, gpt_handler, history_db, multi_user_db = init_components()
+
+# Google OAuth2 인증 (캐시하지 않음)
+google_auth = EnhancedGoogleAuth()
 
 # 사이드바
 with st.sidebar:
