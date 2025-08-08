@@ -169,31 +169,34 @@ class EnhancedGoogleAuth:
                 else:
                     st.error("❌ 인증 토큰 교환에 실패했습니다.")
         
-        # 로그인 버튼 표시
+        # 로그인 버튼 표시 - 폼 기반으로 변경하여 같은 탭에서 열리도록 함
         auth_url = self.get_auth_url()
         if auth_url:
+            # 폼을 사용하여 같은 탭에서 열리도록 함
             st.markdown(f"""
-            <div style="text-align: center; margin: 20px 0;">
-                <button onclick="window.location.href='{auth_url}'" style="
-                    background: linear-gradient(45deg, #4285f4, #34a853);
-                    color: white;
-                    padding: 15px 30px;
-                    border: none;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    font-weight: bold;
-                    cursor: pointer;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 12px;
-                    box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3);
-                    transition: all 0.3s ease;
-                    width: 100%;
-                ">
-                    <img src="https://developers.google.com/identity/images/g-logo.png" width="24" height="24" style="filter: brightness(0) invert(1);">
-                    🔐 Google 계정으로 로그인
-                </button>
-            </div>
+            <form action="{auth_url}" method="get" target="_self">
+                <div style="text-align: center; margin: 20px 0;">
+                    <button type="submit" style="
+                        background: linear-gradient(45deg, #4285f4, #34a853);
+                        color: white;
+                        padding: 15px 30px;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 12px;
+                        box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3);
+                        transition: all 0.3s ease;
+                        width: 100%;
+                    ">
+                        <img src="https://developers.google.com/identity/images/g-logo.png" width="24" height="24" style="filter: brightness(0) invert(1);">
+                        🔐 Google 계정으로 로그인
+                    </button>
+                </div>
+            </form>
             """, unsafe_allow_html=True)
         else:
             st.error("❌ OAuth 설정이 올바르지 않습니다.")
@@ -237,9 +240,9 @@ class EnhancedGoogleAuth:
     
     def refresh_token(self):
         """리프레시 토큰을 사용하여 액세스 토큰 갱신"""
-        if 'google_refresh_token' not in st.session_state:
+        if 'google_refresh_token' not in st.session_state or not st.session_state.google_refresh_token:
             st.error("❌ 리프레시 토큰이 없습니다.")
-            return
+            return False
         
         refresh_token = st.session_state.google_refresh_token
         token_url = "https://oauth2.googleapis.com/token"
@@ -259,12 +262,17 @@ class EnhancedGoogleAuth:
             new_access_token = token_data.get('access_token')
             if new_access_token and self.validate_token(new_access_token):
                 st.session_state.google_access_token = new_access_token
-                st.success("✅ 토큰이 성공적으로 갱신되었습니다!")
+                # 새로운 리프레시 토큰이 있다면 업데이트
+                if 'refresh_token' in token_data:
+                    st.session_state.google_refresh_token = token_data['refresh_token']
+                return True
             else:
                 st.error("❌ 토큰 갱신에 실패했습니다.")
+                return False
                 
         except Exception as e:
             st.error(f"❌ 토큰 갱신 중 오류: {e}")
+            return False
     
     def logout(self):
         """로그아웃"""
@@ -274,15 +282,30 @@ class EnhancedGoogleAuth:
                 del st.session_state[key]
     
     def is_authenticated(self) -> bool:
-        """인증 상태 확인"""
+        """인증 상태 확인 - 세션 지속성 개선"""
         # 사용자 정보와 액세스 토큰이 모두 있어야 인증된 것으로 간주
         if 'google_user' not in st.session_state or not st.session_state.google_user:
             return False
         
         if 'google_access_token' not in st.session_state or not st.session_state.google_access_token:
             return False
+        
+        # 토큰 유효성 검증 (새로고침 시에도 안정적으로 유지)
+        access_token = st.session_state.google_access_token
+        if not self.validate_token(access_token):
+            # 토큰이 만료된 경우 리프레시 토큰으로 갱신 시도
+            if 'google_refresh_token' in st.session_state and st.session_state.google_refresh_token:
+                try:
+                    self.refresh_token()
+                    # 갱신 후 다시 검증
+                    if 'google_access_token' in st.session_state and self.validate_token(st.session_state.google_access_token):
+                        return True
+                except:
+                    pass
+            # 갱신 실패 시 로그아웃
+            self.logout()
+            return False
             
-        # 새로고침 시에도 안정적으로 유지
         return True
     
     def get_user_email(self) -> str:

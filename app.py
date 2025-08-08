@@ -289,14 +289,25 @@ with tab1:
                         
                         # 다중 사용자 데이터베이스에 저장
                         if google_auth.is_authenticated():
-                            user_email = google_auth.get_user_email()
-                            # inquiry_data에 사용자 이메일 추가
-                            inquiry_data_with_email = st.session_state.inquiry_data.copy()
-                            inquiry_data_with_email['user_email'] = user_email
-                            multi_user_db.save_analysis(analysis_result, inquiry_data_with_email)
+                            try:
+                                user_email = google_auth.get_user_email()
+                                # inquiry_data에 사용자 이메일 추가
+                                inquiry_data_with_email = st.session_state.inquiry_data.copy()
+                                inquiry_data_with_email['user_email'] = user_email
+                                save_result = multi_user_db.save_analysis(analysis_result, inquiry_data_with_email)
+                                if save_result.get('success'):
+                                    st.success(f"✅ 분석 결과가 저장되었습니다. (사용자: {save_result.get('user_name', 'Unknown')})")
+                                else:
+                                    st.warning(f"⚠️ 분석 결과 저장 중 경고: {save_result.get('error', 'Unknown error')}")
+                            except Exception as e:
+                                st.error(f"❌ 다중 사용자 저장 중 오류: {e}")
+                                st.info("기존 데이터베이스에만 저장됩니다.")
                         
                         # 기존 데이터베이스에도 저장 (호환성 유지)
-                        history_db.save_analysis(analysis_result, st.session_state.inquiry_data)
+                        try:
+                            history_db.save_analysis(analysis_result, st.session_state.inquiry_data)
+                        except Exception as e:
+                            st.error(f"❌ 기존 데이터베이스 저장 중 오류: {e}")
                         
                         st.session_state.analysis_completed = True
                         st.success("🎉 AI 분석이 완료되었습니다!")
