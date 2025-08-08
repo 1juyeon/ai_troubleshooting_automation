@@ -4,6 +4,7 @@ import requests
 import json
 from typing import Dict, Any, Optional
 from urllib.parse import urlencode, parse_qs, urlparse
+import datetime
 
 class EnhancedGoogleAuth:
     def __init__(self):
@@ -32,6 +33,26 @@ class EnhancedGoogleAuth:
         # 리디렉션 URI 정확히 설정 (실제 앱 URL)
         self.redirect_uri = "https://privkeeperp-response.streamlit.app"
         
+        # 세션 초기화 (새로고침 시에도 유지)
+        self._init_session_state()
+    
+    def _init_session_state(self):
+        """세션 상태 초기화 - 새로고침 시에도 안정적으로 유지"""
+        # OAuth 관련 세션 상태 초기화
+        if 'google_auth_initialized' not in st.session_state:
+            st.session_state.google_auth_initialized = True
+            
+        if 'google_user' not in st.session_state:
+            st.session_state.google_user = None
+        if 'google_access_token' not in st.session_state:
+            st.session_state.google_access_token = None
+        if 'google_refresh_token' not in st.session_state:
+            st.session_state.google_refresh_token = None
+        if 'oauth_state' not in st.session_state:
+            st.session_state.oauth_state = None
+        if 'last_token_refresh' not in st.session_state:
+            st.session_state.last_token_refresh = None
+    
     def get_auth_url(self) -> str:
         """Google OAuth2 인증 URL 생성"""
         if not self.client_id:
@@ -128,7 +149,7 @@ class EnhancedGoogleAuth:
             return False
     
     def render_login_button(self):
-        """향상된 로그인 버튼 렌더링"""
+        """향상된 로그인 버튼 렌더링 - Streamlit 네이티브 컴포넌트 사용"""
         if not self.client_id:
             st.error("❌ Google OAuth가 설정되지 않았습니다.")
             st.info("관리자가 OAuth 설정을 완료하면 Google 계정으로 로그인할 수 있습니다.")
@@ -169,35 +190,12 @@ class EnhancedGoogleAuth:
                 else:
                     st.error("❌ 인증 토큰 교환에 실패했습니다.")
         
-        # 로그인 버튼 표시 - 폼 기반으로 변경하여 같은 탭에서 열리도록 함
+        # Streamlit 네이티브 버튼 사용
         auth_url = self.get_auth_url()
         if auth_url:
-            # 폼을 사용하여 같은 탭에서 열리도록 함
-            st.markdown(f"""
-            <form action="{auth_url}" method="get" target="_self">
-                <div style="text-align: center; margin: 20px 0;">
-                    <button type="submit" style="
-                        background: linear-gradient(45deg, #4285f4, #34a853);
-                        color: white;
-                        padding: 15px 30px;
-                        border: none;
-                        border-radius: 8px;
-                        font-size: 16px;
-                        font-weight: bold;
-                        cursor: pointer;
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 12px;
-                        box-shadow: 0 4px 8px rgba(66, 133, 244, 0.3);
-                        transition: all 0.3s ease;
-                        width: 100%;
-                    ">
-                        <img src="https://developers.google.com/identity/images/g-logo.png" width="24" height="24" style="filter: brightness(0) invert(1);">
-                        🔐 Google 계정으로 로그인
-                    </button>
-                </div>
-            </form>
-            """, unsafe_allow_html=True)
+            # 직접 링크 버튼 사용 (새 탭 방지)
+            if st.link_button("🔐 Google 계정으로 로그인", auth_url, use_container_width=True):
+                st.rerun()
         else:
             st.error("❌ OAuth 설정이 올바르지 않습니다.")
         
@@ -239,32 +237,15 @@ class EnhancedGoogleAuth:
                     st.rerun()
     
     def refresh_token(self):
-        """리프레시 토큰을 사용하여 액세스 토큰 갱신"""
+        """리프레시 토큰을 사용하여 액세스 토큰 갱신 (사용자 인터페이스용)"""
         if 'google_refresh_token' not in st.session_state or not st.session_state.google_refresh_token:
             st.error("❌ 리프레시 토큰이 없습니다.")
             return False
         
-        refresh_token = st.session_state.google_refresh_token
-        token_url = "https://oauth2.googleapis.com/token"
-        
-        data = {
-            'client_id': self.client_id,
-            'client_secret': self.client_secret,
-            'refresh_token': refresh_token,
-            'grant_type': 'refresh_token'
-        }
-        
         try:
-            response = requests.post(token_url, data=data, timeout=10)
-            response.raise_for_status()
-            token_data = response.json()
-            
-            new_access_token = token_data.get('access_token')
-            if new_access_token and self.validate_token(new_access_token):
-                st.session_state.google_access_token = new_access_token
-                # 새로운 리프레시 토큰이 있다면 업데이트
-                if 'refresh_token' in token_data:
-                    st.session_state.google_refresh_token = token_data['refresh_token']
+            success = self._refresh_token_silently()
+            if success:
+                st.success("✅ 토큰이 성공적으로 갱신되었습니다!")
                 return True
             else:
                 st.error("❌ 토큰 갱신에 실패했습니다.")
@@ -275,38 +256,111 @@ class EnhancedGoogleAuth:
             return False
     
     def logout(self):
-        """로그아웃"""
-        keys_to_remove = ['google_user', 'google_access_token', 'google_refresh_token', 'oauth_state']
+        """로그아웃 - 모든 세션 데이터 정리"""
+        keys_to_remove = [
+            'google_user', 
+            'google_access_token', 
+            'google_refresh_token', 
+            'oauth_state',
+            'last_token_refresh',
+            'google_auth_initialized'
+        ]
         for key in keys_to_remove:
             if key in st.session_state:
                 del st.session_state[key]
+        
+        # URL 파라미터도 정리
+        try:
+            st.query_params.clear()
+        except:
+            pass
     
     def is_authenticated(self) -> bool:
-        """인증 상태 확인 - 세션 지속성 개선"""
-        # 사용자 정보와 액세스 토큰이 모두 있어야 인증된 것으로 간주
+        """인증 상태 확인 - 강화된 세션 지속성"""
+        # 기본 세션 상태 확인
         if 'google_user' not in st.session_state or not st.session_state.google_user:
             return False
         
         if 'google_access_token' not in st.session_state or not st.session_state.google_access_token:
             return False
         
-        # 토큰 유효성 검증 (새로고침 시에도 안정적으로 유지)
+        # 토큰 유효성 검증 (더 안정적인 방식)
         access_token = st.session_state.google_access_token
-        if not self.validate_token(access_token):
-            # 토큰이 만료된 경우 리프레시 토큰으로 갱신 시도
-            if 'google_refresh_token' in st.session_state and st.session_state.google_refresh_token:
-                try:
-                    self.refresh_token()
-                    # 갱신 후 다시 검증
-                    if 'google_access_token' in st.session_state and self.validate_token(st.session_state.google_access_token):
+        try:
+            # 토큰 유효성 검증
+            if not self.validate_token(access_token):
+                # 토큰이 만료된 경우 리프레시 토큰으로 갱신 시도
+                if self._should_refresh_token():
+                    if self._refresh_token_silently():
                         return True
-                except:
-                    pass
-            # 갱신 실패 시 로그아웃
+                    else:
+                        # 갱신 실패 시 로그아웃
+                        self.logout()
+                        return False
+                else:
+                    # 갱신 시도하지 않고 로그아웃
+                    self.logout()
+                    return False
+            else:
+                # 토큰이 유효하면 마지막 갱신 시간 업데이트
+                st.session_state.last_token_refresh = datetime.datetime.now().isoformat()
+                return True
+                
+        except Exception as e:
+            # 오류 발생 시 로그아웃
+            print(f"❌ 토큰 검증 중 오류: {e}")
             self.logout()
             return False
-            
+    
+    def _should_refresh_token(self) -> bool:
+        """토큰 갱신이 필요한지 확인"""
+        if 'google_refresh_token' not in st.session_state or not st.session_state.google_refresh_token:
+            return False
+        
+        # 마지막 갱신 시간 확인 (5분 이내에 갱신하지 않도록)
+        if 'last_token_refresh' in st.session_state and st.session_state.last_token_refresh:
+            try:
+                last_refresh = datetime.datetime.fromisoformat(st.session_state.last_token_refresh)
+                if (datetime.datetime.now() - last_refresh).total_seconds() < 300:  # 5분
+                    return False
+            except:
+                pass
+        
         return True
+    
+    def _refresh_token_silently(self) -> bool:
+        """조용히 토큰 갱신 (오류 메시지 없이)"""
+        try:
+            refresh_token = st.session_state.google_refresh_token
+            token_url = "https://oauth2.googleapis.com/token"
+            
+            data = {
+                'client_id': self.client_id,
+                'client_secret': self.client_secret,
+                'refresh_token': refresh_token,
+                'grant_type': 'refresh_token'
+            }
+            
+            response = requests.post(token_url, data=data, timeout=10)
+            response.raise_for_status()
+            token_data = response.json()
+            
+            new_access_token = token_data.get('access_token')
+            if new_access_token and self.validate_token(new_access_token):
+                st.session_state.google_access_token = new_access_token
+                st.session_state.last_token_refresh = datetime.datetime.now().isoformat()
+                
+                # 새로운 리프레시 토큰이 있다면 업데이트
+                if 'refresh_token' in token_data:
+                    st.session_state.google_refresh_token = token_data['refresh_token']
+                
+                return True
+            else:
+                return False
+                
+        except Exception as e:
+            print(f"❌ 조용한 토큰 갱신 실패: {e}")
+            return False
     
     def get_user_email(self) -> str:
         """사용자 이메일 가져오기"""

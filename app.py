@@ -33,15 +33,7 @@ if 'history_search_performed' not in st.session_state:
 if 'analysis_completed' not in st.session_state:
     st.session_state.analysis_completed = False
 
-# OAuth 세션 상태 유지 (새로고침 시에도 유지)
-if 'google_user' not in st.session_state:
-    st.session_state.google_user = None
-if 'google_access_token' not in st.session_state:
-    st.session_state.google_access_token = None
-if 'google_refresh_token' not in st.session_state:
-    st.session_state.google_refresh_token = None
-if 'oauth_state' not in st.session_state:
-    st.session_state.oauth_state = None
+# OAuth 세션 상태는 EnhancedGoogleAuth 클래스에서 자동으로 초기화됨
 
 # 컴포넌트 초기화
 @st.cache_resource
