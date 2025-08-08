@@ -325,24 +325,56 @@ class EnhancedGoogleAuth:
             </div>
             """, unsafe_allow_html=True)
             
-            # 방법 2: Streamlit 버튼 (가장 안정적)
-            if st.button("🔐 Google 계정으로 로그인 (Streamlit 버튼)", use_container_width=True, type="primary"):
-                # JavaScript를 사용한 리다이렉트
+            # 방법 2: Streamlit 버튼 (URL 표시)
+            if st.button("🔐 Google 계정으로 로그인 (URL 표시)", use_container_width=True, type="primary"):
+                st.info("아래 URL을 복사해서 새 브라우저 탭에서 열어주세요:")
+                st.code(auth_url, language="text")
                 st.markdown(f"""
-                <script>
-                window.location.href = "{auth_url}";
-                </script>
+                <a href="{auth_url}" target="_blank" style="
+                    background: linear-gradient(90deg, #4285f4 0%, #34a853 100%);
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    width: 100%;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    margin: 10px 0;
+                    text-decoration: none;
+                    display: block;
+                    text-align: center;
+                ">
+                    🔐 Google 계정으로 로그인 (새 창에서 열기)
+                </a>
                 """, unsafe_allow_html=True)
-                st.rerun()
             
-            # 방법 3: 추가 Streamlit 버튼 (백업)
-            if st.button("🔐 Google 계정으로 로그인 (백업)", use_container_width=True):
-                st.markdown(f"""
-                <script>
-                window.open("{auth_url}", "_self");
-                </script>
-                """, unsafe_allow_html=True)
-                st.rerun()
+            # 방법 3: 직접 링크 (순수 HTML)
+            st.markdown(f"""
+            <div style="margin: 10px 0;">
+                <a href="{auth_url}" target="_blank" style="
+                    background: linear-gradient(90deg, #34a853 0%, #4285f4 100%);
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    width: 100%;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    margin-bottom: 10px;
+                    text-decoration: none;
+                    display: block;
+                    text-align: center;
+                ">
+                    🔐 Google 계정으로 로그인 (새 창)
+                </a>
+            </div>
+            """, unsafe_allow_html=True)
             
             # 추가 디버깅 정보
             if st.session_state.get('debug_mode', False):
