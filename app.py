@@ -63,6 +63,12 @@ def init_session_state():
         st.session_state.last_api_key = st.session_state.current_api_key
     if 'selected_model' not in st.session_state:
         st.session_state.selected_model = "Gemini 1.5 Pro"
+    if 'contact_name' not in st.session_state:
+        st.session_state.contact_name = "홍길동"
+    if 'role' not in st.session_state:
+        st.session_state.role = "영업"
+    if 'ai_model' not in st.session_state:
+        st.session_state.ai_model = "Gemini 1.5 Pro"
 
 # 세션 상태 초기화
 init_session_state()
@@ -123,6 +129,45 @@ def init_components():
 # 메인 애플리케이션 시작
 st.success("✅ 애플리케이션 시작")
 
+# 사이드바 설정
+with st.sidebar:
+    st.markdown("## 👤 담당자 정보")
+    
+    # 담당자명 입력
+    contact_name = st.text_input(
+        "담당자명",
+        value="홍길동",
+        placeholder="담당자명을 입력하세요"
+    )
+    
+    # 역할 선택
+    role = st.selectbox(
+        "역할",
+        options=["영업", "엔지니어", "개발자", "관리자"],
+        index=0
+    )
+    
+    st.markdown("---")
+    
+    st.markdown("## ⚙️ 시스템 설정")
+    
+    # AI 모델 선택
+    ai_model = st.selectbox(
+        "AI 모델",
+        options=[
+            "Gemini 1.5 Pro",
+            "Gemini 1.5 Flash", 
+            "Gemini 2.0 Pro",
+            "Gemini 2.0 Flash"
+        ],
+        index=0
+    )
+    
+    # 세션 상태에 저장
+    st.session_state.contact_name = contact_name
+    st.session_state.role = role
+    st.session_state.ai_model = ai_model
+
 # 컴포넌트 초기화
 components = init_components()
 
@@ -182,15 +227,6 @@ with tab1:
         with col4:
             os_info = st.text_input("운영체제", placeholder="Windows 11")
             error_code = st.text_input("오류 코드", placeholder="ERR_001")
-    
-    # 담당자 정보
-    st.markdown("## 👤 담당자 정보")
-    user_name = st.text_input("담당자명", placeholder="홍길동", value=st.session_state.user_name)
-    user_role = st.selectbox("역할", ["영업", "엔지니어", "개발자"], index=["영업", "엔지니어", "개발자"].index(st.session_state.user_role))
-    
-    # 세션 상태에 사용자 정보 저장
-    st.session_state.user_name = user_name
-    st.session_state.user_role = user_role
     
     # 제출 버튼
     if st.button("🚀 AI 분석 요청", type="primary", use_container_width=True):
@@ -701,7 +737,7 @@ with tab4:
         col24, col25, col26 = st.columns(3)
         
         with col24:
-            st.write("**AI 모델:** Gemini 1.5 Pro")
+            st.write(f"**AI 모델:** {st.session_state.get('ai_model', 'Gemini 1.5 Pro')}")
             st.write("**벡터 DB:** ChromaDB")
         
         with col25:
@@ -763,7 +799,7 @@ with tab5:
 
     st.markdown("### 🔧 기술 스택")
 
-    st.markdown("- **AI 모델:** Google Gemini 1.5 Pro")
+    st.markdown(f"- **AI 모델:** Google {st.session_state.get('ai_model', 'Gemini 1.5 Pro')}")
     st.markdown("- **벡터 검색:** ChromaDB")
     st.markdown("- **웹 프레임워크:** Streamlit")
     st.markdown("- **데이터 소스:** JSON + Excel")
