@@ -1,5 +1,6 @@
 import google.generativeai as genai
 import os
+import streamlit as st
 from typing import Dict, Any, Optional
 import json
 
@@ -10,15 +11,23 @@ class GPTHandler:
         self.prompt_template = self._load_prompt_template()
         
         try:
-            # API 키 설정 (환경변수 우선, 파라미터 차선)
+            # API 키 설정 (st.secrets 우선, 파라미터 차선, 환경변수 마지막)
             if api_key:
                 self.api_key = api_key
             else:
-                self.api_key = os.getenv("GOOGLE_API_KEY")
+                # st.secrets에서 먼저 시도
+                try:
+                    self.api_key = st.secrets["GEMINI_API_KEY"]
+                    print("✅ Gemini API 키를 Streamlit Secrets에서 로드했습니다.")
+                except:
+                    # 환경변수로 폴백
+                    self.api_key = os.getenv("GOOGLE_API_KEY")
+                    if self.api_key:
+                        print("✅ Gemini API 키를 환경변수에서 로드했습니다.")
             
             if not self.api_key:
-                print("⚠️ Google API 키가 설정되지 않았습니다.")
-                print("환경변수 GOOGLE_API_KEY를 설정하거나 API 키를 직접 입력해주세요.")
+                print("⚠️ Gemini API 키가 설정되지 않았습니다.")
+                print("Streamlit Cloud Secrets 또는 환경변수 GOOGLE_API_KEY를 설정해주세요.")
                 self.model = None
                 return
             
@@ -27,7 +36,7 @@ class GPTHandler:
             # gemini-1.5-pro 모델 사용
             self.model = genai.GenerativeModel('gemini-1.5-pro')
             
-            print("✅ Gemini API 초기화 성공 (환경변수 방식, gemini-1.5-pro)")
+            print("✅ Gemini API 초기화 성공 (gemini-1.5-pro)")
             
         except Exception as e:
             print(f"❌ Gemini API 초기화 실패: {e}")
@@ -371,7 +380,7 @@ class GPTHandler:
 
 # 사용 예시
 if __name__ == "__main__":
-    handler = GeminiHandler()
+    handler = GPTHandler()
     
     # 테스트 데이터
     test_data = {

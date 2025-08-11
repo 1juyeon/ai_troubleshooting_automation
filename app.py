@@ -68,8 +68,18 @@ def save_auth_to_persistent_storage(auth_data: Dict[str, Any]):
             
             with open(backup_file, 'w', encoding='utf-8') as f:
                 json.dump(backup_data, f, ensure_ascii=False, indent=2)
-        except:
-            pass  # 백업 실패는 무시
+        except Exception as e:
+            st.error(f"JSON 백업 저장 실패: {e}")
+        
+        # 실제 토큰 데이터를 별도 pickle 파일에 저장
+        try:
+            token_file = "user_data/auth_tokens.pkl"
+            os.makedirs("user_data", exist_ok=True)
+            
+            with open(token_file, 'wb') as f:
+                pickle.dump(safe_data, f)
+        except Exception as e:
+            st.error(f"토큰 파일 저장 실패: {e}")
         
         return True
     except Exception as e:
@@ -95,21 +105,46 @@ def load_auth_from_persistent_storage():
                     if 'last_token_refresh' in auth_data:
                         st.session_state.last_token_refresh = auth_data['last_token_refresh']
                     return auth_data
-            except:
+            except Exception as e:
+                st.error(f"세션 쿠키 복원 실패: {e}")
                 pass
         
-        # 2. 파일 시스템에서 백업 확인
+        # 2. 파일 시스템에서 실제 토큰 데이터 확인 (pickle 형식)
+        try:
+            token_file = "user_data/auth_tokens.pkl"
+            if os.path.exists(token_file):
+                with open(token_file, 'rb') as f:
+                    auth_data = pickle.load(f)
+                    if auth_data.get('login_completed') and auth_data.get('user_email'):
+                        # session_state에 복원
+                        if 'access_token' in auth_data:
+                            st.session_state.google_access_token = auth_data['access_token']
+                        if 'refresh_token' in auth_data:
+                            st.session_state.google_refresh_token = auth_data['refresh_token']
+                        if 'token_expires_at' in auth_data:
+                            st.session_state.token_expires_at = auth_data['token_expires_at']
+                        if 'last_token_refresh' in auth_data:
+                            st.session_state.last_token_refresh = auth_data['last_token_refresh']
+                        
+                        # session_state 쿠키도 업데이트
+                        encoded_data = base64.b64encode(pickle.dumps(auth_data)).decode()
+                        st.session_state.auth_cookie = encoded_data
+                        return auth_data
+        except Exception as e:
+            st.error(f"토큰 파일 복원 실패: {e}")
+            pass
+        
+        # 3. JSON 백업 파일 확인 (토큰 정보는 없지만 사용자 정보는 있음)
         try:
             backup_file = "user_data/auth_backup.json"
             if os.path.exists(backup_file):
                 with open(backup_file, 'r', encoding='utf-8') as f:
                     auth_data = json.load(f)
                     if auth_data.get('login_completed') and auth_data.get('user_email'):
-                        # session_state에도 복원
-                        encoded_data = base64.b64encode(pickle.dumps(auth_data)).decode()
-                        st.session_state.auth_cookie = encoded_data
+                        # 사용자 정보만 복원 (토큰은 없음)
                         return auth_data
-        except:
+        except Exception as e:
+            st.error(f"백업 파일 복원 실패: {e}")
             pass
         
         return None
@@ -129,8 +164,16 @@ def clear_persistent_storage():
             backup_file = "user_data/auth_backup.json"
             if os.path.exists(backup_file):
                 os.remove(backup_file)
-        except:
-            pass
+        except Exception as e:
+            st.error(f"백업 파일 삭제 실패: {e}")
+        
+        # 토큰 파일도 삭제
+        try:
+            token_file = "user_data/auth_tokens.pkl"
+            if os.path.exists(token_file):
+                os.remove(token_file)
+        except Exception as e:
+            st.error(f"토큰 파일 삭제 실패: {e}")
     except Exception as e:
         st.error(f"인증 데이터 삭제 실패: {e}")
 
@@ -183,15 +226,21 @@ def init_session_state():
             }
         
         # 토큰 정보가 복원되었는지 확인하고 인증 상태 강화
-        if (st.session_state.get('google_access_token') and 
-            st.session_state.get('google_user')):
-            
+        access_token_exists = bool(st.session_state.get('google_access_token'))
+        refresh_token_exists = bool(st.session_state.get('google_refresh_token'))
+        user_exists = bool(st.session_state.get('google_user'))
+        
+        # 디버깅 정보 표시
+        st.info(f"🔍 토큰 복원 상태: access_token={access_token_exists}, refresh_token={refresh_token_exists}, user={user_exists}")
+        
+        if access_token_exists and user_exists:
             # 토큰 만료 확인
             token_expires_at = st.session_state.get('token_expires_at')
             if token_expires_at:
                 try:
                     expires_at = datetime.datetime.fromisoformat(token_expires_at)
                     if datetime.datetime.now() > expires_at:
+                        st.warning("⚠️ 토큰이 만료되었습니다. 갱신을 시도합니다...")
                         # 토큰 갱신 시도
                         refresh_token = st.session_state.get('google_refresh_token')
                         if refresh_token:
@@ -221,10 +270,12 @@ def init_session_state():
                                                 datetime.datetime.now() + datetime.timedelta(seconds=new_expires_in)
                                             ).isoformat()
                                             st.success("✅ 토큰이 자동으로 갱신되었습니다.")
-                                except:
-                                    st.warning("⚠️ 토큰 갱신에 실패했습니다.")
-                except:
-                    pass
+                                            # 갱신된 토큰을 저장소에 다시 저장
+                                            save_auth_to_persistent_storage(persistent_auth)
+                                except Exception as e:
+                                    st.error(f"⚠️ 토큰 갱신에 실패했습니다: {e}")
+                except Exception as e:
+                    st.error(f"⚠️ 토큰 만료 확인 실패: {e}")
             
             # 토큰 유효성 검증
             try:
@@ -239,19 +290,19 @@ def init_session_state():
                     st.success("✅ 영구 저장소에서 인증 상태 복원됨")
                     st.info(f"✅ 사용자: {persistent_auth.get('user_email', 'Unknown')}")
                 else:
-                    st.warning("⚠️ 저장된 토큰이 유효하지 않습니다. 다시 로그인해주세요.")
+                    st.warning(f"⚠️ 저장된 토큰이 유효하지 않습니다. (HTTP {user_response.status_code}) 다시 로그인해주세요.")
                     # 세션 상태 초기화
                     for key in ['google_user', 'google_access_token', 'google_refresh_token', 
                                'login_completed', 'user_authenticated', 'auth_checked']:
                         st.session_state[key] = None
-            except:
-                st.warning("⚠️ 토큰 검증에 실패했습니다. 다시 로그인해주세요.")
+            except Exception as e:
+                st.error(f"⚠️ 토큰 검증에 실패했습니다: {e}")
                 # 세션 상태 초기화
                 for key in ['google_user', 'google_access_token', 'google_refresh_token', 
                            'login_completed', 'user_authenticated', 'auth_checked']:
                     st.session_state[key] = None
         else:
-            st.warning("⚠️ 토큰 정보가 복원되지 않았습니다. 다시 로그인해주세요.")
+            st.warning(f"⚠️ 토큰 정보가 복원되지 않았습니다. (access_token: {access_token_exists}, user: {user_exists}) 다시 로그인해주세요.")
             # 세션 상태 초기화
             for key in ['google_user', 'google_access_token', 'google_refresh_token', 
                        'login_completed', 'user_authenticated', 'auth_checked']:
@@ -343,9 +394,9 @@ def init_session_state():
                         for key in ['google_user', 'google_access_token', 'google_refresh_token', 
                                    'login_completed', 'user_authenticated', 'auth_checked']:
                             st.session_state[key] = None
-                        return
-            except:
-                pass
+                        return False
+            except Exception as e:
+                st.error(f"토큰 만료 확인 실패: {e}")
         
         # 토큰 유효성 검증
         try:
@@ -638,6 +689,10 @@ def check_authentication():
     # UI에 디버그 정보 표시 (클라우드 환경에서 확인 가능)
     with st.expander("🔍 디버그 정보 (클라우드용)", expanded=False):
         st.write("### 현재 세션 상태")
+        
+        # 토큰 복원 시도
+        restored_auth = load_auth_from_persistent_storage()
+        
         st.json({
             "login_completed": st.session_state.get('login_completed', False),
             "google_user_exists": bool(st.session_state.get('google_user')),
@@ -649,9 +704,28 @@ def check_authentication():
             "token_expires_at": st.session_state.get('token_expires_at', 'Unknown'),
             "last_token_refresh": st.session_state.get('last_token_refresh', 'Unknown'),
             "auth_cookie_exists": bool(st.session_state.get('auth_cookie')),
-            "persistent_storage_restored": bool(load_auth_from_persistent_storage()),
+            "persistent_storage_restored": bool(restored_auth),
             "token_restored_from_storage": bool(st.session_state.get('google_access_token') and st.session_state.get('google_refresh_token')),
-            "session_restoration_status": "✅ 완료" if (st.session_state.get('google_access_token') and st.session_state.get('google_user')) else "❌ 실패"
+            "session_restoration_status": "✅ 완료" if (st.session_state.get('google_access_token') and st.session_state.get('google_user')) else "❌ 실패",
+            "restored_auth_data": {
+                "user_email": restored_auth.get('user_email') if restored_auth else None,
+                "has_access_token": 'access_token' in (restored_auth or {}),
+                "has_refresh_token": 'refresh_token' in (restored_auth or {}),
+                "has_token_expires_at": 'token_expires_at' in (restored_auth or {})
+            } if restored_auth else None
+        })
+        
+        # 추가 디버깅 정보
+        st.write("### 인증 체크 결과")
+        st.json({
+            "auth_result": bool(st.session_state.get('user_authenticated', False)),
+            "user_authenticated": st.session_state.get('user_authenticated', False),
+            "login_completed": st.session_state.get('login_completed', False),
+            "auth_checked": st.session_state.get('auth_checked', False),
+            "login_success": st.session_state.get('login_success', False),
+            "google_user_exists": bool(st.session_state.get('google_user')),
+            "google_access_token_exists": bool(st.session_state.get('google_access_token')),
+            "google_refresh_token_exists": bool(st.session_state.get('google_refresh_token'))
         })
     
     # 토큰 갱신 함수
@@ -717,8 +791,8 @@ def check_authentication():
                                    'login_completed', 'user_authenticated', 'auth_checked']:
                             st.session_state[key] = None
                         return False
-            except:
-                pass
+            except Exception as e:
+                st.error(f"토큰 만료 확인 실패: {e}")
         
         # 토큰 유효성 검증
         try:
@@ -734,7 +808,7 @@ def check_authentication():
                 st.success("✅ 기존 인증 상태 확인됨")
                 return True
             else:
-                st.warning("⚠️ 토큰이 유효하지 않습니다. 다시 로그인해주세요.")
+                st.warning(f"⚠️ 토큰이 유효하지 않습니다. (HTTP {user_response.status_code}) 다시 로그인해주세요.")
                 # 세션 상태 초기화
                 for key in ['google_user', 'google_access_token', 'google_refresh_token', 
                            'login_completed', 'user_authenticated', 'auth_checked']:
@@ -1011,38 +1085,49 @@ else:
 @st.cache_resource
 def init_components():
     """컴포넌트 초기화"""
-    classifier = IssueClassifier()
-    scenario_db = ScenarioDB()
-    vector_search = VectorSearchWrapper()
-    
-    # API 키 설정
-    api_key = os.getenv("GOOGLE_API_KEY")
-    
-    gpt_handler = GPTHandler(api_key=api_key)
-    
-    # API 키 상태 확인
-    if not api_key:
-        st.error("❌ Google API 키가 설정되지 않았습니다.")
-        st.info("관리자가 API 키를 설정하면 AI 분석이 가능합니다.")
-        st.stop()
-    
-    # 기존 데이터베이스 (호환성 유지)
-    history_db = HistoryDB()
-    
-    # 다중 사용자 데이터베이스
-    multi_user_db = MultiUserHistoryDB()
-    
-    # 벡터 DB에 초기 샘플 데이터 추가 (데이터가 없을 경우)
     try:
-        stats = vector_search.get_statistics()
-        if stats.get('total_documents', 0) == 0:
-            print("📝 벡터 DB에 초기 샘플 데이터를 추가합니다...")
-            vector_search.add_initial_sample_data()
-            print("✅ 초기 샘플 데이터 추가 완료")
+        classifier = IssueClassifier()
+        scenario_db = ScenarioDB()
+        vector_search = VectorSearchWrapper()
+        
+        # API 키 설정 (st.secrets 우선, 환경변수 폴백)
+        api_key = ""
+        try:
+            api_key = st.secrets["GEMINI_API_KEY"]
+            print("✅ Gemini API 키를 Streamlit Secrets에서 로드했습니다.")
+        except:
+            api_key = os.getenv("GOOGLE_API_KEY")
+            if api_key:
+                print("✅ Gemini API 키를 환경변수에서 로드했습니다.")
+        
+        gpt_handler = GPTHandler(api_key=api_key)
+        
+        # API 키 상태 확인
+        if not api_key:
+            st.error("❌ Gemini API 키가 설정되지 않았습니다.")
+            st.info("관리자가 Streamlit Cloud Secrets 또는 환경변수 GOOGLE_API_KEY를 설정하면 AI 분석이 가능합니다.")
+            st.stop()
+        
+        # 기존 데이터베이스 (호환성 유지)
+        history_db = HistoryDB()
+        
+        # 다중 사용자 데이터베이스
+        multi_user_db = MultiUserHistoryDB()
+        
+        # 벡터 DB에 초기 샘플 데이터 추가 (데이터가 없을 경우)
+        try:
+            stats = vector_search.get_statistics()
+            if stats.get('total_documents', 0) == 0:
+                print("📝 벡터 DB에 초기 샘플 데이터를 추가합니다...")
+                vector_search.add_initial_sample_data()
+                print("✅ 초기 샘플 데이터 추가 완료")
+        except Exception as e:
+            print(f"⚠️ 초기 데이터 추가 실패: {e}")
+        
+        return classifier, scenario_db, vector_search, gpt_handler, history_db, multi_user_db
     except Exception as e:
-        print(f"⚠️ 초기 데이터 추가 실패: {e}")
-    
-    return classifier, scenario_db, vector_search, gpt_handler, history_db, multi_user_db
+        st.error(f"컴포넌트 초기화 중 오류: {e}")
+        return None
 
 # 컴포넌트 초기화 (OAuth 제외)
 classifier, scenario_db, vector_search, gpt_handler, history_db, multi_user_db = init_components()

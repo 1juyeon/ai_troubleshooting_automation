@@ -61,21 +61,36 @@ Gemini AI 기반 고객 문의 자동 분석 및 응답 도구
 pip install -r requirements.txt
 ```
 
-### 2. 환경 변수 설정
+### 2. 환경 변수 설정 (선택사항)
+로컬 개발 시 환경변수로 설정할 수 있습니다:
 ```bash
 export GOOGLE_API_KEY="your-api-key"
 ```
 
-### 3. OAuth 설정
+### 3. Streamlit Secrets 설정 (권장)
+`.streamlit/secrets.toml` 파일을 생성하고 API 키를 설정하세요:
+
+```toml
+# Gemini API 키 (필수)
+GEMINI_API_KEY = "your-actual-gemini-api-key"
+
+# Google OAuth 설정 (필요시)
+GOOGLE_CLIENT_ID = "your-oauth-client-id"
+GOOGLE_CLIENT_SECRET = "your-oauth-client-secret"
+
+# 기존 호환성 유지 (선택사항)
+GOOGLE_API_KEY = "your-google-api-key"
+```
+
+### 4. OAuth 설정
 Google Cloud Console에서 OAuth 2.0 클라이언트 ID 생성 후 `.streamlit/secrets.toml`에 설정:
 
 ```toml
 GOOGLE_CLIENT_ID = "your-client-id"
 GOOGLE_CLIENT_SECRET = "your-client-secret"
-GOOGLE_API_KEY = "your-api-key"
 ```
 
-### 4. 앱 실행
+### 5. 앱 실행
 ```bash
 streamlit run app.py
 ```
