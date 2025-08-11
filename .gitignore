@@ -151,10 +151,6 @@ __pycache__/
 # User data
 user_data/
 
-# OAuth tokens
-token.pickle
-*.pickle
-
 # API keys and sensitive data
 *.json
 !requirements.txt
