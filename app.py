@@ -341,7 +341,7 @@ with tab1:
                         st.error(f"❌ 데이터 저장 중 오류: {e}")
                     
                     st.session_state.analysis_completed = True
-                    st.success("🎉 AI 분석이 완료되었습니다!")
+                    st.success("🎉 AI 분석이 완료되었습니다! AI 분석 결과 페이지로 이동해 상세한 결과를 확인하세요.")
                     
                 except Exception as e:
                     st.error(f"❌ 분석 중 오류 발생: {e}")
@@ -531,13 +531,6 @@ with tab2:
 with tab3:
     st.markdown("## 📊 분석 이력 관리")
     
-    # 이력 보기 모드 선택
-    history_mode = st.radio(
-        "이력 보기 모드",
-        ["👤 내 이력", "🌐 전체 이력"],
-        horizontal=True
-    )
-    
     # 필터링 옵션
     col15, col16, col17, col18 = st.columns(4)
     
@@ -554,10 +547,7 @@ with tab3:
                        "PK P 계정 로그인 안됨", "PK P 웹 접속 안됨", "기타"])
     
     with col18:
-        if history_mode == "👤 내 이력":
-            filter_user = st.text_input("담당자명", value=st.session_state.contact_name, disabled=True)
-        else:
-            filter_user = st.text_input("담당자 필터", placeholder="담당자명 입력")
+        filter_user = st.text_input("담당자 필터", placeholder="담당자명 입력")
     
     # 검색 버튼
     search_clicked = st.button("🔍 이력 검색", type="primary")
@@ -572,27 +562,14 @@ with tab3:
                 if filter_date_to:
                     date_to_with_time = f"{filter_date_to.isoformat()}T23:59:59"
                 
-                # 다중 사용자 데이터베이스에서 이력 조회
-                if history_mode == "👤 내 이력":
-                    # 사용자별 이력 조회
-                    history_result = components['multi_user_db'].get_user_history(
-                        user_name=st.session_state.contact_name,
-                        user_role=st.session_state.role,
-                        limit=50,
-                        issue_type=filter_type if filter_type != "전체" else None,
-                        date_from=filter_date_from.isoformat() if filter_date_from else None,
-                        date_to=date_to_with_time,
-                        keyword=filter_user if filter_user else None
-                    )
-                else:
-                    # 전체 이력 조회
-                    history_result = components['multi_user_db'].get_global_history(
-                        limit=50,
-                        issue_type=filter_type if filter_type != "전체" else None,
-                        date_from=filter_date_from.isoformat() if filter_date_from else None,
-                        date_to=date_to_with_time,
-                        user_name=filter_user if filter_user else None
-                    )
+                # 전체 이력 조회
+                history_result = components['multi_user_db'].get_global_history(
+                    limit=50,
+                    issue_type=filter_type if filter_type != "전체" else None,
+                    date_from=filter_date_from.isoformat() if filter_date_from else None,
+                    date_to=date_to_with_time,
+                    user_name=filter_user if filter_user else None
+                )
                 
                 if history_result.get('success') and history_result.get('data'):
                     history_data = history_result['data']
@@ -600,17 +577,26 @@ with tab3:
                     # 데이터프레임 생성
                     df_data = []
                     for i, entry in enumerate(history_data, 1):
+                        # 날짜를 분단위까지 표시하고 최신순으로 정렬
+                        timestamp = entry.get('timestamp', '')
+                        if timestamp:
+                            try:
+                                # ISO 형식의 타임스탬프를 파싱하여 원하는 형식으로 변환
+                                dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                                formatted_date = dt.strftime('%Y-%m-%d %H:%M')
+                            except:
+                                formatted_date = timestamp[:16] if len(timestamp) >= 16 else timestamp
+                        else:
+                            formatted_date = ""
+                        
                         df_data.append({
                             "번호": i,
-                            "날짜": entry.get('timestamp', '')[:10] if entry.get('timestamp') else "",
+                            "날짜": formatted_date,
                             "고객사명": entry.get('customer_name', ''),
                             "문의유형": entry.get('issue_type', ''),
                             "우선순위": entry.get('priority', ''),
                             "담당자": entry.get('user_name', ''),
-                            "역할": entry.get('user_role', ''),
-                            "분류방법": entry.get('classification_method', ''),
-                            "신뢰도": entry.get('confidence', ''),
-                            "응답유형": entry.get('response_type', '')
+                            "역할": entry.get('user_role', '')
                         })
                     
                     df = pd.DataFrame(df_data)
@@ -623,10 +609,7 @@ with tab3:
                     st.dataframe(df, use_container_width=True, hide_index=True)
                     
                     # 통계 정보
-                    if history_mode == "👤 내 이력":
-                        stats = components['multi_user_db'].get_statistics(user_name=st.session_state.contact_name, user_role=st.session_state.role)
-                    else:
-                        stats = components['multi_user_db'].get_statistics()
+                    stats = components['multi_user_db'].get_statistics()
                     
                     col19, col20, col21, col22 = st.columns(4)
                     
@@ -634,19 +617,13 @@ with tab3:
                         st.metric("총 문의 건수", stats.get('total_analyses', 0))
                     
                     with col20:
-                        if history_mode == "🌐 전체 이력":
-                            st.metric("총 사용자 수", stats.get('total_users', 0))
-                        else:
-                            st.metric("내 분석 건수", stats.get('total_analyses', 0))
+                        st.metric("총 사용자 수", stats.get('total_users', 0))
                     
                     with col21:
                         st.metric("문제 유형 수", len(stats.get('issue_types', [])))
                     
                     with col22:
-                        if history_mode == "🌐 전체 이력":
-                            st.metric("응답 유형 수", len(stats.get('response_types', [])))
-                        else:
-                            st.metric("응답 유형 수", len(stats.get('response_types', [])))
+                        st.metric("응답 유형 수", len(stats.get('response_types', [])))
                     
                     # 문제 유형별 분포
                     if stats.get('issue_types'):
@@ -674,30 +651,6 @@ with tab3:
         st.markdown("### 📊 이전 검색 결과")
         # 인덱스 숨기기로 중복 번호 제거
         st.dataframe(st.session_state.history_search_results, use_container_width=True, hide_index=True)
-    
-    # 벡터 DB 통계
-    st.markdown("### 📊 벡터 검색 통계")
-    try:
-        vector_stats = components['vector_search'].get_statistics()
-        
-        col23, col24, col25 = st.columns(3)
-        
-        with col23:
-            st.metric("총 문서 수", vector_stats.get('total_documents', 0))
-        
-        with col24:
-            st.metric("벡터 차원", vector_stats.get('vector_dimensions', 0))
-        
-        with col25:
-            st.metric("문제 유형 수", len(vector_stats.get('issue_types', [])))
-        
-        if vector_stats.get('issue_types'):
-            st.write("**등록된 문제 유형:**")
-            for issue_type in vector_stats['issue_types']:
-                st.write(f"- {issue_type}")
-                
-    except Exception as e:
-        st.error(f"벡터 DB 통계 조회 실패: {e}")
 
 # 탭 4: 시스템 상태
 with tab4:
