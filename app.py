@@ -307,9 +307,9 @@ with tab1:
                         'issue_type': issue_type,
                         'scenarios': scenarios,
                         'best_scenario': best_scenario,
-                        'similar_cases': similar_cases,
-                        'gemini_result': gemini_result,
-                        'timestamp': datetime.now(tz.gettz('Asia/Seoul')).isoformat()
+                                                   'similar_cases': similar_cases,
+                           'gemini_result': gemini_result,
+                           'timestamp': datetime.datetime.now(tz.gettz('Asia/Seoul')).isoformat()
                     }
                     
                     st.session_state.analysis_result = analysis_result

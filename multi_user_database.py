@@ -78,7 +78,7 @@ class MultiUserHistoryDB:
                 'user_id': user_id,
                 'user_name': user_name,
                 'user_role': user_role,
-                'timestamp': inquiry_data.get('timestamp', datetime.now(tz.gettz('Asia/Seoul')).isoformat()),
+                                   'timestamp': inquiry_data.get('timestamp', datetime.datetime.now(tz.gettz('Asia/Seoul')).isoformat()),
                 'customer_name': inquiry_data.get('customer_name', ''),
                 'customer_contact': inquiry_data.get('customer_contact', ''),
                 'customer_manager': inquiry_data.get('customer_manager', ''),
