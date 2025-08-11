@@ -2,16 +2,13 @@ import numpy as np
 import json
 import pickle
 from typing import List, Dict, Any, Optional
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 import os
+import re
 
 class VectorDB:
     def __init__(self, data_dir: str = "vector_data"):
-        """벡터 DB 초기화 (FAISS 기반)"""
+        """벡터 DB 초기화 (간단한 텍스트 유사도 기반)"""
         self.data_dir = data_dir
-        self.vectorizer = None
-        self.vectors = None
         self.documents = []
         self.metadata = []
         
@@ -26,17 +23,6 @@ class VectorDB:
     def _load_existing_data(self):
         """기존 데이터 로드"""
         try:
-            # 벡터라이저 로드
-            vectorizer_path = os.path.join(self.data_dir, "vectorizer.pkl")
-            if os.path.exists(vectorizer_path):
-                with open(vectorizer_path, 'rb') as f:
-                    self.vectorizer = pickle.load(f)
-            
-            # 벡터 데이터 로드
-            vectors_path = os.path.join(self.data_dir, "vectors.npy")
-            if os.path.exists(vectors_path):
-                self.vectors = np.load(vectors_path)
-            
             # 문서 데이터 로드
             docs_path = os.path.join(self.data_dir, "documents.json")
             if os.path.exists(docs_path):
@@ -56,41 +42,29 @@ class VectorDB:
             self.documents = []
             self.metadata = []
     
+    def _simple_text_similarity(self, text1: str, text2: str) -> float:
+        """간단한 텍스트 유사도 계산 (단어 겹침 기반)"""
+        try:
+            # 텍스트를 단어로 분리하고 정규화
+            words1 = set(re.findall(r'\w+', text1.lower()))
+            words2 = set(re.findall(r'\w+', text2.lower()))
+            
+            if not words1 or not words2:
+                return 0.0
+            
+            # Jaccard 유사도 계산
+            intersection = len(words1.intersection(words2))
+            union = len(words1.union(words2))
+            
+            return intersection / union if union > 0 else 0.0
+            
+        except Exception as e:
+            print(f"⚠️ 유사도 계산 실패: {e}")
+            return 0.0
+    
     def add_documents(self, documents: List[Dict[str, Any]]):
         """문서 추가"""
         try:
-            # 새 문서 텍스트 추출
-            new_texts = []
-            for doc in documents:
-                # 문서 텍스트 구성
-                text_parts = []
-                if 'customer_input' in doc:
-                    text_parts.append(doc['customer_input'])
-                if 'issue_type' in doc:
-                    text_parts.append(doc['issue_type'])
-                if 'summary' in doc:
-                    text_parts.append(doc['summary'])
-                if 'action_flow' in doc:
-                    text_parts.append(doc['action_flow'])
-                
-                text = " ".join(text_parts)
-                new_texts.append(text)
-            
-            # 기존 문서와 새 문서 합치기
-            all_texts = [doc.get('text', '') for doc in self.documents] + new_texts
-            
-            # 벡터라이저 재훈련 또는 초기화
-            if self.vectorizer is None:
-                self.vectorizer = TfidfVectorizer(
-                    max_features=1000,
-                    stop_words=None,
-                    ngram_range=(1, 2)
-                )
-            
-            # 벡터 생성
-            all_vectors = self.vectorizer.fit_transform(all_texts)
-            self.vectors = all_vectors.toarray()
-            
             # 문서 및 메타데이터 업데이트
             self.documents.extend(documents)
             self.metadata.extend([
@@ -116,13 +90,6 @@ class VectorDB:
     def _save_data(self):
         """데이터 저장"""
         try:
-            # 벡터라이저 저장
-            with open(os.path.join(self.data_dir, "vectorizer.pkl"), 'wb') as f:
-                pickle.dump(self.vectorizer, f)
-            
-            # 벡터 저장
-            np.save(os.path.join(self.data_dir, "vectors.npy"), self.vectors)
-            
             # 문서 저장
             with open(os.path.join(self.data_dir, "documents.json"), 'w', encoding='utf-8') as f:
                 json.dump(self.documents, f, ensure_ascii=False, indent=2)
@@ -139,15 +106,27 @@ class VectorDB:
     def search(self, query: str, top_k: int = 5, threshold: float = 0.1) -> List[Dict[str, Any]]:
         """유사 문서 검색"""
         try:
-            if self.vectorizer is None or self.vectors is None or len(self.documents) == 0:
+            if len(self.documents) == 0:
                 print("⚠️ 벡터 DB가 비어있습니다.")
                 return []
             
-            # 쿼리 벡터화
-            query_vector = self.vectorizer.transform([query]).toarray()
-            
-            # 코사인 유사도 계산
-            similarities = cosine_similarity(query_vector, self.vectors)[0]
+            # 각 문서와의 유사도 계산
+            similarities = []
+            for doc in self.documents:
+                # 문서 텍스트 구성
+                text_parts = []
+                if 'customer_input' in doc:
+                    text_parts.append(doc['customer_input'])
+                if 'issue_type' in doc:
+                    text_parts.append(doc['issue_type'])
+                if 'summary' in doc:
+                    text_parts.append(doc['summary'])
+                if 'action_flow' in doc:
+                    text_parts.append(doc['action_flow'])
+                
+                doc_text = " ".join(text_parts)
+                similarity = self._simple_text_similarity(query, doc_text)
+                similarities.append(similarity)
             
             # 상위 k개 결과 추출
             top_indices = np.argsort(similarities)[::-1][:top_k]
@@ -174,7 +153,7 @@ class VectorDB:
         try:
             return {
                 'total_documents': len(self.documents),
-                'vector_dimensions': self.vectors.shape[1] if self.vectors is not None else 0,
+                'vector_dimensions': 0,  # 간단한 텍스트 유사도는 차원이 없음
                 'issue_types': list(set([doc.get('issue_type', '') for doc in self.documents])),
                 'data_dir': self.data_dir
             }
@@ -192,11 +171,9 @@ class VectorDB:
         try:
             self.documents = []
             self.metadata = []
-            self.vectors = None
-            self.vectorizer = None
             
             # 파일 삭제
-            for filename in ["vectorizer.pkl", "vectors.npy", "documents.json", "metadata.json"]:
+            for filename in ["documents.json", "metadata.json"]:
                 filepath = os.path.join(self.data_dir, filename)
                 if os.path.exists(filepath):
                     os.remove(filepath)
