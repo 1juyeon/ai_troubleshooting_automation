@@ -39,6 +39,30 @@ def init_session_state():
         st.session_state.user_name = ""
     if 'user_role' not in st.session_state:
         st.session_state.user_role = "영업"
+    if 'system_prompt' not in st.session_state:
+        st.session_state.system_prompt = """[고객 문의 내용]
+{customer_input}
+
+[문제 유형]
+{issue_type}
+
+[조건 1]
+{condition_1}
+
+[조건 2]
+{condition_2}
+
+위 정보를 바탕으로 고객에게 친절하고 전문적인 답변을 제공해주세요."""
+    if 'response_language' not in st.session_state:
+        st.session_state.response_language = "한국어"
+    if 'response_detail' not in st.session_state:
+        st.session_state.response_detail = "보통"
+    if 'current_api_key' not in st.session_state:
+        st.session_state.current_api_key = st.secrets.get("GEMINI_API_KEY", "") or os.getenv("GOOGLE_API_KEY", "")
+    if 'last_api_key' not in st.session_state:
+        st.session_state.last_api_key = st.session_state.current_api_key
+    if 'selected_model' not in st.session_state:
+        st.session_state.selected_model = "Gemini 1.5 Pro"
 
 # 세션 상태 초기화
 init_session_state()
@@ -52,12 +76,22 @@ def init_components():
         scenario_db = ScenarioDB()
         vector_search = VectorSearchWrapper()
         
-        # API 키 설정 (st.secrets 우선, 환경변수 폴백)
+        # API 키 설정 (사이드바 우선, st.secrets 차선, 환경변수 마지막)
         api_key = ""
-        try:
-            api_key = st.secrets["GEMINI_API_KEY"]
-            print("✅ Gemini API 키를 Streamlit Secrets에서 로드했습니다.")
-        except:
+        
+        # 1. 사이드바에서 설정한 API 키 우선 사용
+        if 'current_api_key' in st.session_state and st.session_state.current_api_key:
+            api_key = st.session_state.current_api_key
+            print("✅ Gemini API 키를 사이드바에서 로드했습니다.")
+        # 2. st.secrets에서 시도
+        elif not api_key:
+            try:
+                api_key = st.secrets["GEMINI_API_KEY"]
+                print("✅ Gemini API 키를 Streamlit Secrets에서 로드했습니다.")
+            except:
+                pass
+        # 3. 환경변수로 폴백
+        if not api_key:
             api_key = os.getenv("GOOGLE_API_KEY")
             if api_key:
                 print("✅ Gemini API 키를 환경변수에서 로드했습니다.")
@@ -67,7 +101,7 @@ def init_components():
         # API 키 상태 확인
         if not api_key:
             st.error("❌ Gemini API 키가 설정되지 않았습니다.")
-            st.info("관리자가 Streamlit Cloud Secrets 또는 환경변수 GOOGLE_API_KEY를 설정하면 AI 분석이 가능합니다.")
+            st.info("사이드바에서 API 키를 설정하거나, 관리자가 Streamlit Cloud Secrets 또는 환경변수 GOOGLE_API_KEY를 설정하면 AI 분석이 가능합니다.")
             st.stop()
         
         # 기존 데이터베이스 (호환성 유지)
