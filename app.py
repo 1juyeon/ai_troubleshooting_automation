@@ -187,7 +187,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(tab_names)
 
 # 분석 완료 알림 (전역적으로 표시)
 if st.session_state.analysis_result and st.session_state.analysis_completed:
-    st.success("✅ AI 분석이 완료되었습니다! AI 분석 결과 페이지로 이동해 상세한 결과를 확인하세요.")
+    # st.success("✅ AI 분석이 완료되었습니다! AI 분석 결과 페이지로 이동해 상세한 결과를 확인하세요.")
 
 # 탭 1: 고객 문의 입력
 with tab1:
@@ -577,15 +577,15 @@ with tab3:
                     # 데이터프레임 생성
                     df_data = []
                     for i, entry in enumerate(history_data, 1):
-                        # 날짜를 분단위까지 표시하고 최신순으로 정렬
+                        # 날짜를 초단위까지 표시하고 최신순으로 정렬
                         timestamp = entry.get('timestamp', '')
                         if timestamp:
                             try:
                                 # ISO 형식의 타임스탬프를 파싱하여 원하는 형식으로 변환
                                 dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                                formatted_date = dt.strftime('%Y-%m-%d %H:%M')
+                                formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
                             except:
-                                formatted_date = timestamp[:16] if len(timestamp) >= 16 else timestamp
+                                formatted_date = timestamp[:19] if len(timestamp) >= 19 else timestamp
                         else:
                             formatted_date = ""
                         
