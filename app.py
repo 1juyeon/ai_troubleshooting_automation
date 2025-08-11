@@ -124,7 +124,7 @@ def init_components():
         st.stop()
 
 # 메인 애플리케이션 시작
-st.success("✅ 애플리케이션 시작")
+#st.success("✅ 애플리케이션 시작")
 
 # 사이드바 설정
 with st.sidebar:
@@ -177,7 +177,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 환영 메시지
-st.success("✅ AI 분석 서비스를 이용할 수 있습니다!")
+#st.success("✅ AI 분석 서비스를 이용할 수 있습니다!")
 
 # 탭 생성
 tab_names = ["📝 고객 문의 입력", "🤖 AI 분석 결과", "📊 이력 관리", "🔍 시스템 상태", "📚 사용 가이드"]
@@ -578,14 +578,32 @@ with tab3:
                     df_data = []
                     for i, entry in enumerate(history_data, 1):
                         # 날짜를 초단위까지 표시하고 최신순으로 정렬
-                        timestamp = entry.get('timestamp', '')
+                        timestamp = entry.get('timestamp', '').strip()
                         if timestamp:
+                            formatted_date = ""
                             try:
                                 # ISO 형식의 타임스탬프를 파싱하여 원하는 형식으로 변환
                                 dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
                                 formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
                             except:
-                                formatted_date = timestamp[:19] if len(timestamp) >= 19 else timestamp
+                                try:
+                                    # 'T'를 공백으로 대체하여 파싱 시도
+                                    timestamp_with_space = timestamp.replace('T', ' ')
+                                    dt = datetime.strptime(timestamp_with_space, '%Y-%m-%d %H:%M:%S')
+                                    formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
+                                except:
+                                    try:
+                                        # 마이크로초가 포함된 경우 처리
+                                        dt = datetime.strptime(timestamp_with_space, '%Y-%m-%d %H:%M:%S.%f')
+                                        formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
+                                    except:
+                                        # 모든 파싱이 실패한 경우 원본 문자열에서 슬라이싱
+                                        if 'T' in timestamp:
+                                            # ISO 형식에서 'T' 제거하고 슬라이싱
+                                            clean_timestamp = timestamp.replace('T', ' ')
+                                            formatted_date = clean_timestamp[:19] if len(clean_timestamp) >= 19 else clean_timestamp
+                                        else:
+                                            formatted_date = timestamp[:19] if len(timestamp) >= 19 else timestamp
                         else:
                             formatted_date = ""
                         
