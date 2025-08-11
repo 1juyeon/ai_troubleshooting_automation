@@ -35,10 +35,7 @@ def init_session_state():
         st.session_state.history_search_performed = False
     if 'history_search_results' not in st.session_state:
         st.session_state.history_search_results = None
-    if 'user_name' not in st.session_state:
-        st.session_state.user_name = ""
-    if 'user_role' not in st.session_state:
-        st.session_state.user_role = "영업"
+
     if 'system_prompt' not in st.session_state:
         st.session_state.system_prompt = """[고객 문의 내용]
 {customer_input}
@@ -326,15 +323,15 @@ with tab1:
                         "error_code": error_code,
                         "priority": priority,
                         "contract_type": contract_type,
-                        "user_name": user_name,
-                        "user_role": user_role
+                        "user_name": st.session_state.contact_name,
+                        "user_role": st.session_state.role
                     }
                     
                     # 다중 사용자 데이터베이스에 저장
                     try:
                         # inquiry_data에 사용자 정보 추가
                         inquiry_data_with_user = st.session_state.inquiry_data.copy()
-                        inquiry_data_with_user['user_email'] = f"{user_name}_{user_role}@privkeeper.com"
+                        inquiry_data_with_user['user_email'] = f"{st.session_state.contact_name}_{st.session_state.role}@privkeeper.com"
                         save_result = components['multi_user_db'].save_analysis(analysis_result, inquiry_data_with_user)
                         if save_result.get('success'):
                             st.success("✅ 분석 결과가 저장되었습니다.")
@@ -558,7 +555,7 @@ with tab3:
     
     with col18:
         if history_mode == "👤 내 이력":
-            filter_user = st.text_input("담당자명", value=st.session_state.user_name, disabled=True)
+            filter_user = st.text_input("담당자명", value=st.session_state.contact_name, disabled=True)
         else:
             filter_user = st.text_input("담당자 필터", placeholder="담당자명 입력")
     
@@ -579,8 +576,8 @@ with tab3:
                 if history_mode == "👤 내 이력":
                     # 사용자별 이력 조회
                     history_result = components['multi_user_db'].get_user_history(
-                        user_name=st.session_state.user_name,
-                        user_role=st.session_state.user_role,
+                        user_name=st.session_state.contact_name,
+                        user_role=st.session_state.role,
                         limit=50,
                         issue_type=filter_type if filter_type != "전체" else None,
                         date_from=filter_date_from.isoformat() if filter_date_from else None,
@@ -627,7 +624,7 @@ with tab3:
                     
                     # 통계 정보
                     if history_mode == "👤 내 이력":
-                        stats = components['multi_user_db'].get_statistics(user_name=st.session_state.user_name, user_role=st.session_state.user_role)
+                        stats = components['multi_user_db'].get_statistics(user_name=st.session_state.contact_name, user_role=st.session_state.role)
                     else:
                         stats = components['multi_user_db'].get_statistics()
                     
