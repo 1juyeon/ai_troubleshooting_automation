@@ -3,6 +3,7 @@ import os
 import hashlib
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
+from dateutil import tz
 
 class MultiUserHistoryDB:
     def __init__(self, data_dir: str = "user_data"):
@@ -77,7 +78,7 @@ class MultiUserHistoryDB:
                 'user_id': user_id,
                 'user_name': user_name,
                 'user_role': user_role,
-                'timestamp': inquiry_data.get('timestamp', datetime.now().isoformat()),
+                'timestamp': inquiry_data.get('timestamp', datetime.now(tz.gettz('Asia/Seoul')).isoformat()),
                 'customer_name': inquiry_data.get('customer_name', ''),
                 'customer_contact': inquiry_data.get('customer_contact', ''),
                 'customer_manager': inquiry_data.get('customer_manager', ''),
