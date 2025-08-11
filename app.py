@@ -31,6 +31,14 @@ def init_session_state():
         st.session_state.analysis_completed = False
     if 'inquiry_data' not in st.session_state:
         st.session_state.inquiry_data = None
+    if 'history_search_performed' not in st.session_state:
+        st.session_state.history_search_performed = False
+    if 'history_search_results' not in st.session_state:
+        st.session_state.history_search_results = None
+    if 'user_name' not in st.session_state:
+        st.session_state.user_name = ""
+    if 'user_role' not in st.session_state:
+        st.session_state.user_role = "영업"
 
 # 세션 상태 초기화
 init_session_state()
@@ -143,8 +151,12 @@ with tab1:
     
     # 담당자 정보
     st.markdown("## 👤 담당자 정보")
-    user_name = st.text_input("담당자명", placeholder="홍길동")
-    user_role = st.selectbox("역할", ["영업", "엔지니어", "개발자"])
+    user_name = st.text_input("담당자명", placeholder="홍길동", value=st.session_state.user_name)
+    user_role = st.selectbox("역할", ["영업", "엔지니어", "개발자"], index=["영업", "엔지니어", "개발자"].index(st.session_state.user_role))
+    
+    # 세션 상태에 사용자 정보 저장
+    st.session_state.user_name = user_name
+    st.session_state.user_role = user_role
     
     # 제출 버튼
     if st.button("🚀 AI 분석 요청", type="primary", use_container_width=True):
@@ -476,7 +488,7 @@ with tab3:
     
     with col18:
         if history_mode == "👤 내 이력":
-            filter_user = st.text_input("담당자명", value=user_name, disabled=True)
+            filter_user = st.text_input("담당자명", value=st.session_state.user_name, disabled=True)
         else:
             filter_user = st.text_input("담당자 필터", placeholder="담당자명 입력")
     
@@ -497,8 +509,8 @@ with tab3:
                 if history_mode == "👤 내 이력":
                     # 사용자별 이력 조회
                     history_result = components['multi_user_db'].get_user_history(
-                        user_name=user_name,
-                        user_role=user_role,
+                        user_name=st.session_state.user_name,
+                        user_role=st.session_state.user_role,
                         limit=50,
                         issue_type=filter_type if filter_type != "전체" else None,
                         date_from=filter_date_from.isoformat() if filter_date_from else None,
@@ -545,7 +557,7 @@ with tab3:
                     
                     # 통계 정보
                     if history_mode == "👤 내 이력":
-                        stats = components['multi_user_db'].get_statistics(user_name=user_name, user_role=user_role)
+                        stats = components['multi_user_db'].get_statistics(user_name=st.session_state.user_name, user_role=st.session_state.user_role)
                     else:
                         stats = components['multi_user_db'].get_statistics()
                     
