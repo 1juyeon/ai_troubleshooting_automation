@@ -1,11 +1,13 @@
 import streamlit as st
 import datetime
+from datetime import timezone
 import pandas as pd
 import json
 import os
 import requests
 from typing import Dict, Any
 import pickle
+from dateutil import tz
 
 # 커스텀 모듈 import
 from classify_issue import IssueClassifier
@@ -307,7 +309,7 @@ with tab1:
                         'best_scenario': best_scenario,
                         'similar_cases': similar_cases,
                         'gemini_result': gemini_result,
-                        'timestamp': datetime.datetime.now().isoformat()
+                        'timestamp': datetime.datetime.now(timezone.utc).isoformat()
                     }
                     
                     st.session_state.analysis_result = analysis_result
@@ -584,18 +586,24 @@ with tab3:
                             try:
                                 # ISO 형식의 타임스탬프를 파싱하여 원하는 형식으로 변환
                                 dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                                formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
+                                # UTC 시간을 한국 시간(KST, UTC+9)으로 변환
+                                kst_dt = dt.astimezone(tz.gettz('Asia/Seoul'))
+                                formatted_date = kst_dt.strftime('%Y-%m-%d %H:%M:%S')
                             except:
                                 try:
                                     # 'T'를 공백으로 대체하여 파싱 시도
                                     timestamp_with_space = timestamp.replace('T', ' ')
                                     dt = datetime.strptime(timestamp_with_space, '%Y-%m-%d %H:%M:%S')
-                                    formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
+                                    # naive datetime을 KST로 가정하고 변환
+                                    kst_dt = dt.replace(tzinfo=tz.gettz('Asia/Seoul'))
+                                    formatted_date = kst_dt.strftime('%Y-%m-%d %H:%M:%S')
                                 except:
                                     try:
                                         # 마이크로초가 포함된 경우 처리
                                         dt = datetime.strptime(timestamp_with_space, '%Y-%m-%d %H:%M:%S.%f')
-                                        formatted_date = dt.strftime('%Y-%m-%d %H:%M:%S')
+                                        # naive datetime을 KST로 가정하고 변환
+                                        kst_dt = dt.replace(tzinfo=tz.gettz('Asia/Seoul'))
+                                        formatted_date = kst_dt.strftime('%Y-%m-%d %H:%M:%S')
                                     except:
                                         # 모든 파싱이 실패한 경우 원본 문자열에서 슬라이싱
                                         if 'T' in timestamp:
