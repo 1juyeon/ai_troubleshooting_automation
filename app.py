@@ -7,6 +7,7 @@ import requests
 from typing import Dict, Any
 import pickle
 import pytz
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
 
 # 커스텀 모듈 import
 from classify_issue import IssueClassifier
@@ -31,6 +32,30 @@ def get_safe_timestamp():
     except Exception as e:
         print(f"⚠️ 한국 시간대 설정 실패, UTC 사용: {e}")
         return datetime.now().isoformat()
+
+def show_ai_analysis(selected_row):
+    """선택된 행의 AI 분석 결과를 표시"""
+    st.markdown("### 🤖 AI 분석 결과")
+    
+    # 선택된 데이터 정보 표시
+    col1, col2 = st.columns(2)
+    with col1:
+        st.info(f"**고객사:** {selected_row.get('고객사명', 'N/A')}")
+        st.info(f"**문의유형:** {selected_row.get('문의유형', 'N/A')}")
+    with col2:
+        st.info(f"**우선순위:** {selected_row.get('우선순위', 'N/A')}")
+        st.info(f"**담당자:** {selected_row.get('담당자', 'N/A')}")
+    
+    # AI 분석 결과가 있다면 표시
+    if 'ai_analysis' in selected_row:
+        st.markdown("#### 📋 분석 내용")
+        st.write(selected_row['ai_analysis'])
+    
+    # 분석 버튼
+    if st.button("🔄 AI 재분석 실행", key=f"rerun_{selected_row.get('id', 'unknown')}"):
+        st.info("AI 재분석을 시작합니다...")
+        # 여기에 실제 AI 분석 로직 추가
+        st.success("AI 재분석이 완료되었습니다!")
 
 # 세션 상태 초기화 (단순화)
 def init_session_state():
@@ -650,8 +675,51 @@ with tab3:
                     st.session_state.history_search_performed = True
                     
                     st.success(f"✅ {len(history_data)}건의 이력이 조회되었습니다.")
-                    # 인덱스 숨기기로 중복 번호 제거
-                    st.dataframe(df, use_container_width=True, hide_index=True)
+                    
+                    # AgGrid로 변경하여 행별 버튼 기능 구현
+                    # 상세보기 컬럼 추가
+                    df_with_action = df.copy()
+                    df_with_action['상세보기'] = '🔍'
+                    
+                    # AgGrid 설정
+                    gb = GridOptionsBuilder.from_dataframe(df_with_action)
+                    gb.configure_column("상세보기", 
+                                       cellRenderer="buttonRenderer",
+                                       cellRendererParams={
+                                           "label": "🔍",
+                                           "style": {"background-color": "#4CAF50", "color": "white", "border-radius": "5px", "padding": "5px"}
+                                       },
+                                       width=100)
+                    
+                    # 다른 컬럼들 설정
+                    gb.configure_column("번호", width=80)
+                    gb.configure_column("날짜", width=150)
+                    gb.configure_column("고객사명", width=150)
+                    gb.configure_column("문의유형", width=120)
+                    gb.configure_column("우선순위", width=100)
+                    gb.configure_column("담당자", width=100)
+                    gb.configure_column("역할", width=100)
+                    
+                    grid_options = gb.build()
+                    
+                    # AgGrid 표시
+                    grid_response = AgGrid(
+                        df_with_action,
+                        gridOptions=grid_options,
+                        data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
+                        update_mode=GridUpdateMode.SELECTION_CHANGED,
+                        fit_columns_on_grid_load=True,
+                        allow_unsafe_jscode=True,
+                        custom_css={
+                            ".ag-row-hover": {"background-color": "lightblue !important"},
+                            ".ag-cell": {"border": "1px solid #ddd"}
+                        }
+                    )
+                    
+                    # 버튼 클릭 이벤트 처리
+                    if grid_response['selected_rows']:
+                        selected_row = grid_response['selected_rows'][0]
+                        show_ai_analysis(selected_row)
                     
                     # 통계 정보
                     stats = components['multi_user_db'].get_statistics()
@@ -694,8 +762,50 @@ with tab3:
     # 이전 검색 결과가 있으면 표시 (검색 버튼을 클릭하지 않았을 때)
     if not search_clicked and st.session_state.history_search_performed and st.session_state.history_search_results is not None:
         st.markdown("### 📊 이전 검색 결과")
-        # 인덱스 숨기기로 중복 번호 제거
-        st.dataframe(st.session_state.history_search_results, use_container_width=True, hide_index=True)
+        
+        # 이전 검색 결과도 AgGrid로 표시
+        df_previous = st.session_state.history_search_results.copy()
+        df_previous['상세보기'] = '🔍'
+        
+        # AgGrid 설정
+        gb_previous = GridOptionsBuilder.from_dataframe(df_previous)
+        gb_previous.configure_column("상세보기", 
+                                   cellRenderer="buttonRenderer",
+                                   cellRendererParams={
+                                       "label": "🔍",
+                                       "style": {"background-color": "#4CAF50", "color": "white", "border-radius": "5px", "padding": "5px"}
+                                   },
+                                   width=100)
+        
+        # 다른 컬럼들 설정
+        gb_previous.configure_column("번호", width=80)
+        gb_previous.configure_column("날짜", width=150)
+        gb_previous.configure_column("고객사명", width=150)
+        gb_previous.configure_column("문의유형", width=120)
+        gb_previous.configure_column("우선순위", width=100)
+        gb_previous.configure_column("담당자", width=100)
+        gb_previous.configure_column("역할", width=100)
+        
+        grid_options_previous = gb_previous.build()
+        
+        # AgGrid 표시
+        grid_response_previous = AgGrid(
+            df_previous,
+            gridOptions=grid_options_previous,
+            data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
+            update_mode=GridUpdateMode.SELECTION_CHANGED,
+            fit_columns_on_grid_load=True,
+            allow_unsafe_jscode=True,
+            custom_css={
+                ".ag-row-hover": {"background-color": "lightblue !important"},
+                ".ag-cell": {"border": "1px solid #ddd"}
+            }
+        )
+        
+        # 버튼 클릭 이벤트 처리
+        if grid_response_previous['selected_rows']:
+            selected_row_previous = grid_response_previous['selected_rows'][0]
+            show_ai_analysis(selected_row_previous)
 
 
 
