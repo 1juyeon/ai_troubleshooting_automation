@@ -7,7 +7,6 @@ import requests
 from typing import Dict, Any
 import pickle
 import pytz
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode, JsCode
 
 # 커스텀 모듈 import
 from classify_issue import IssueClassifier
@@ -676,71 +675,55 @@ with tab3:
                     
                     st.success(f"✅ {len(history_data)}건의 이력이 조회되었습니다.")
                     
-                    # AgGrid로 변경하여 행별 버튼 기능 구현
                     # 상세보기 컬럼 추가
                     df_with_action = df.copy()
                     df_with_action['상세보기'] = '🔍'
                     
-                    # AgGrid 설정 - onCellClicked 이벤트 사용
-                    gb = GridOptionsBuilder.from_dataframe(df_with_action)
+                    # Streamlit 기본 테이블로 변경 (무한루프 방지)
+                    st.markdown("### 📊 이력 조회 결과")
                     
-                    # 상세보기 컬럼 설정 (클릭 가능한 버튼처럼 보이게)
-                    gb.configure_column("상세보기", 
-                                       width=100,
-                                       cellStyle={"background-color": "#4CAF50", "color": "white", "border-radius": "5px", "padding": "5px", "text-align": "center", "cursor": "pointer"})
+                    # 테이블 표시
+                    st.dataframe(df, use_container_width=True)
                     
-                    # 다른 컬럼들 설정
-                    gb.configure_column("번호", width=80)
-                    gb.configure_column("날짜", width=150)
-                    gb.configure_column("고객사명", width=150)
-                    gb.configure_column("문의유형", width=120)
-                    gb.configure_column("우선순위", width=100)
-                    gb.configure_column("담당자", width=100)
-                    gb.configure_column("역할", width=100)
+                    # 각 행마다 개별 상세보기 버튼 추가
+                    st.markdown("### 📋 상세보기")
                     
-                    grid_options = gb.build()
-                    
-                    # AgGrid 표시
-                    grid_response = AgGrid(
-                        df_with_action,
-                        gridOptions=grid_options,
-                        data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
-                        update_mode=GridUpdateMode.SELECTION_CHANGED,
-                        fit_columns_on_grid_load=True,
-                        allow_unsafe_jscode=True,
-                        custom_css={
-                            ".ag-row-hover": {"background-color": "lightblue !important"},
-                            ".ag-cell": {"border": "1px solid #ddd"},
-                            ".ag-cell[col-id='상세보기']:hover": {"background-color": "#45a049 !important"}
-                        }
-                    )
-                    
-                    # 상세보기 컬럼 클릭 시 행 선택 처리
-                    # AgGrid에서 상세보기 컬럼을 클릭하면 해당 행이 선택되도록 설정
-                    if grid_response['selected_rows']:
-                        selected_row = grid_response['selected_rows'][0]
-                        # 상세보기 컬럼을 제외한 원본 데이터만 사용
-                        original_row = {
-                            '번호': selected_row.get('번호'),
-                            '날짜': selected_row.get('날짜'),
-                            '고객사명': selected_row.get('고객사명'),
-                            '문의유형': selected_row.get('문의유형'),
-                            '우선순위': selected_row.get('우선순위'),
-                            '담당자': selected_row.get('담당자'),
-                            '역할': selected_row.get('역할')
-                        }
-                        show_ai_analysis(original_row)
-                    
-                    # 상세보기 버튼 클릭 이벤트 처리
-                    # 각 행에 대해 개별 버튼 생성
-                    st.markdown("### 🔍 상세보기")
-                    for idx, row in df.iterrows():
-                        col1, col2, col3 = st.columns([1, 3, 1])
+                    # 데이터프레임을 순회하며 각 행에 대한 상세보기 버튼 생성
+                    for index, row in df.iterrows():
+                        col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([0.5, 1, 1.5, 1.2, 1, 1, 1, 1])
+                        
+                        with col1:
+                            st.write(f"**{row['번호']}**")
                         with col2:
-                            if st.button(f"🔍 {row['고객사명']} - {row['문의유형']}", key=f"detail_{idx}"):
-                                show_ai_analysis(row)
-                        if idx < len(df) - 1:  # 마지막 행이 아니면 구분선 추가
-                            st.markdown("---")
+                            st.write(row['날짜'])
+                        with col3:
+                            st.write(f"**{row['고객사명']}**")
+                        with col4:
+                            st.write(row['문의유형'])
+                        with col5:
+                            st.write(row['우선순위'])
+                        with col6:
+                            st.write(row['담당자'])
+                        with col7:
+                            st.write(row['역할'])
+                        with col8:
+                            if st.button(f"🔍 상세보기", key=f"detail_{row['번호']}_{index}"):
+                                # 해당 행의 데이터로 상세보기 실행
+                                original_row = {
+                                    '번호': row['번호'],
+                                    '날짜': row['날짜'],
+                                    '고객사명': row['고객사명'],
+                                    '문의유형': row['문의유형'],
+                                    '우선순위': row['우선순위'],
+                                    '담당자': row['담당자'],
+                                    '역할': row['역할']
+                                }
+                                show_ai_analysis(original_row)
+                        
+                        # 행 구분선 추가
+                        st.markdown("---")
+                    
+                    
                     
                     # 통계 정보
                     stats = components['multi_user_db'].get_statistics()
@@ -784,70 +767,55 @@ with tab3:
     if not search_clicked and st.session_state.history_search_performed and st.session_state.history_search_results is not None:
         st.markdown("### 📊 이전 검색 결과")
         
-        # 이전 검색 결과도 AgGrid로 표시
+        # 이전 검색 결과도 Streamlit 기본 테이블로 표시
         df_previous = st.session_state.history_search_results.copy()
         df_previous['상세보기'] = '🔍'
         
-        # AgGrid 설정 - onCellClicked 이벤트 사용
-        gb_previous = GridOptionsBuilder.from_dataframe(df_previous)
+        # Streamlit 기본 테이블로 변경 (무한루프 방지)
+        st.markdown("### 📊 이전 검색 결과")
         
-        # 상세보기 컬럼 설정 (클릭 가능한 버튼처럼 보이게)
-        gb_previous.configure_column("상세보기", 
-                                   width=100,
-                                   cellStyle={"background-color": "#4CAF50", "color": "white", "border-radius": "5px", "padding": "5px", "text-align": "center", "cursor": "pointer"})
+        # 테이블 표시
+        st.dataframe(df_previous, use_container_width=True)
         
-        # 다른 컬럼들 설정
-        gb_previous.configure_column("번호", width=80)
-        gb_previous.configure_column("날짜", width=150)
-        gb_previous.configure_column("고객사명", width=150)
-        gb_previous.configure_column("문의유형", width=120)
-        gb_previous.configure_column("우선순위", width=100)
-        gb_previous.configure_column("담당자", width=100)
-        gb_previous.configure_column("역할", width=100)
+        # 각 행마다 개별 상세보기 버튼 추가
+        st.markdown("### 📋 상세보기")
         
-        grid_options_previous = gb_previous.build()
-        
-        # AgGrid 표시
-        grid_response_previous = AgGrid(
-            df_previous,
-            gridOptions=grid_options_previous,
-            data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
-            update_mode=GridUpdateMode.SELECTION_CHANGED,
-            fit_columns_on_grid_load=True,
-            allow_unsafe_jscode=True,
-            custom_css={
-                ".ag-row-hover": {"background-color": "lightblue !important"},
-                ".ag-cell": {"border": "1px solid #ddd"},
-                ".ag-cell[col-id='상세보기']:hover": {"background-color": "#45a049 !important"}
-            }
-        )
-        
-        # 상세보기 컬럼 클릭 시 행 선택 처리
-        # AgGrid에서 상세보기 컬럼을 클릭하면 해당 행이 선택되도록 설정
-        if grid_response_previous['selected_rows']:
-            selected_row = grid_response_previous['selected_rows'][0]
-            # 상세보기 컬럼을 제외한 원본 데이터만 사용
-            original_row = {
-                '번호': selected_row.get('번호'),
-                '날짜': selected_row.get('날짜'),
-                '고객사명': selected_row.get('고객사명'),
-                '문의유형': selected_row.get('문의유형'),
-                '우선순위': selected_row.get('우선순위'),
-                '담당자': selected_row.get('담당자'),
-                '역할': selected_row.get('역할')
-            }
-            show_ai_analysis(original_row)
-        
-        # 상세보기 버튼 클릭 이벤트 처리
-        # 각 행에 대해 개별 버튼 생성
-        st.markdown("### 🔍 상세보기")
-        for idx, row in df_previous.iterrows():
-            col1, col2, col3 = st.columns([1, 3, 1])
+        # 데이터프레임을 순회하며 각 행에 대한 상세보기 버튼 생성
+        for index, row in df_previous.iterrows():
+            col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([0.5, 1, 1.5, 1.2, 1, 1, 1, 1])
+            
+            with col1:
+                st.write(f"**{row['번호']}**")
             with col2:
-                if st.button(f"🔍 {row['고객사명']} - {row['문의유형']}", key=f"detail_prev_{idx}"):
-                    show_ai_analysis(row)
-            if idx < len(df_previous) - 1:  # 마지막 행이 아니면 구분선 추가
-                st.markdown("---")
+                st.write(row['날짜'])
+            with col3:
+                st.write(f"**{row['고객사명']}**")
+            with col4:
+                st.write(row['문의유형'])
+            with col5:
+                st.write(row['우선순위'])
+            with col6:
+                st.write(row['담당자'])
+            with col7:
+                st.write(row['역할'])
+            with col8:
+                if st.button(f"🔍 상세보기", key=f"prev_detail_{row['번호']}_{index}"):
+                    # 해당 행의 데이터로 상세보기 실행
+                    original_row = {
+                        '번호': row['번호'],
+                        '날짜': row['날짜'],
+                        '고객사명': row['고객사명'],
+                        '문의유형': row['문의유형'],
+                        '우선순위': row['우선순위'],
+                        '담당자': row['담당자'],
+                        '역할': row['역할']
+                    }
+                    show_ai_analysis(original_row)
+            
+            # 행 구분선 추가
+            st.markdown("---")
+        
+        
 
 
 
