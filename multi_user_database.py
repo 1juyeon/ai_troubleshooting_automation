@@ -307,6 +307,48 @@ class MultiUserHistoryDB:
             print(f"❌ 사용자 이력 삭제 실패: {e}")
             return {"success": False, "error": str(e)}
     
+    def get_analysis_by_customer_and_date(self, customer_name: str, inquiry_date: str):
+        """고객사명과 날짜를 기준으로 분석 결과 조회"""
+        try:
+            # 전체 이력에서 해당 고객의 문의 찾기
+            global_history_file = self._get_global_history_file()
+            history = self._load_history(global_history_file)
+            
+            # 고객사명과 날짜로 필터링
+            matching_entries = []
+            for entry in history:
+                entry_customer = entry.get('customer_name', '')
+                entry_timestamp = entry.get('timestamp', '')
+                
+                # 고객사명 매칭
+                if customer_name and entry_customer != customer_name:
+                    continue
+                
+                # 날짜 매칭 (YYYY-MM-DD 형식으로 비교)
+                if inquiry_date and entry_timestamp:
+                    entry_date = entry_timestamp.split('T')[0] if 'T' in entry_timestamp else entry_timestamp.split(' ')[0]
+                    if entry_date != inquiry_date:
+                        continue
+                
+                matching_entries.append(entry)
+            
+            if matching_entries:
+                # 가장 최근 항목 반환
+                latest_entry = max(matching_entries, key=lambda x: x.get('timestamp', ''))
+                return {
+                    "success": True,
+                    "data": latest_entry
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "해당 조건에 맞는 분석 결과를 찾을 수 없습니다."
+                }
+                
+        except Exception as e:
+            print(f"❌ 분석 결과 조회 실패: {e}")
+            return {"success": False, "error": str(e)}
+    
     def clear_all_history(self):
         """전체 이력 삭제"""
         try:

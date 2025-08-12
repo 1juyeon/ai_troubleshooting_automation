@@ -155,72 +155,189 @@ def show_ai_analysis_modal(selected_row):
                 st.write(f"**역할:** {selected_row.get('역할', 'N/A')}")
                 st.write(f"**날짜:** {selected_row.get('날짜', 'N/A')}")
         
-        # AI 분석 결과 (샘플 데이터)
-        st.markdown("### 🔍 AI 분석 결과")
-        
-        col3, col4 = st.columns(2)
-        
-        with col3:
-            st.markdown("#### 📊 문제 유형 분류")
-            st.write("**분류된 문제 유형:** PKP 웹 접속 안됨")
-            st.write("**분류 방법:** keyword_based")
-            st.write("**신뢰도:** medium")
-        
-        with col4:
-            st.markdown("#### 🎯 시나리오 매칭")
-            st.write("**조건 1:** 윈도우 서비스에서 톰캣 작동 여부를 확인하였는가?")
-            st.write("**조건 2:** 톰캣이 꺼져 있는가?")
-            st.write("**해결책:** 톰캣 서비스 시작")
-            st.write("**현장 출동 필요:** N")
-        
-        # AI 응답 결과
-        st.markdown("### 🤖 AI 응답")
-        
-        col5, col6 = st.columns(2)
-        
-        with col5:
-            st.markdown("#### 📝 요약")
-            st.write("PKP 웹 접속 불가 현상. 톰캣 상태 확인 필요.")
-            
-            st.markdown("#### 🔧 조치 흐름")
-            st.write("""
-            1. **윈도우 서비스 확인:** 윈도우 서비스 목록에서 "Apache Tomcat" 서비스가 실행 중인지 확인합니다. (services.msc 실행)
-            
-            2. **톰캣 상태 확인:** 톰캣이 실행 중이라면, 브라우저에서 http://localhost:8888/ (포트 번호는 환경에 따라 다를 수 있음)에 접속하여 톰캣 기본 페이지가 정상적으로 표시되는지 확인합니다.
-            
-            3. **톰캣 재시작:** 톰캣이 실행 중이지만 접속이 안 된다면, 톰캣 서비스를 재시작합니다. 윈도우 서비스에서 "Apache Tomcat" 서비스를 "중지" 후 "시작" 합니다.
-            
-            4. **PKP 애플리케이션 확인:** 톰캣 재시작 후에도 접속이 안 된다면, PKP 애플리케이션의 로그 파일을 확인하여 에러 메시지가 있는지 확인합니다. 로그 파일 위치는 PKP 애플리케이션 설정에 따라 다릅니다.
-            
-            5. **방화벽 확인:** 윈도우 방화벽 또는 다른 방화벽이 톰캣 포트(기본값 8080)를 차단하고 있지 않은지 확인합니다. 필요시 방화벽 설정을 변경합니다.
-            """)
-        
-        with col6:
-            st.markdown("#### 📧 이메일 초안")
-            email_content = """제목: PKP 웹 접속 불가 문의 답변
+        # 실제 분석 결과 조회 시도
+        try:
+            # 데이터베이스에서 해당 문의의 실제 분석 결과 조회
+            if 'components' in st.session_state:
+                # 고객사명과 날짜를 기준으로 실제 분석 결과 조회
+                customer_name = selected_row.get('고객사명', '')
+                inquiry_date = selected_row.get('날짜', '')
+                
+                # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
+                if inquiry_date and ' ' in inquiry_date:
+                    inquiry_date = inquiry_date.split(' ')[0]
+                
+                # 실제 분석 결과 조회
+                actual_analysis = st.session_state.components['multi_user_db'].get_analysis_by_customer_and_date(
+                    customer_name, inquiry_date
+                )
+                
+                if actual_analysis and actual_analysis.get('success'):
+                    analysis_data = actual_analysis.get('data', {})
+                    
+                    # AI 분석 결과 (실제 데이터)
+                    st.markdown("### 🔍 AI 분석 결과")
+                    
+                    col3, col4 = st.columns(2)
+                    
+                    with col3:
+                        st.markdown("#### 📊 문제 유형 분류")
+                        issue_type = analysis_data.get('issue_type', selected_row.get('문의유형', 'N/A'))
+                        st.write(f"**분류된 문제 유형:** {issue_type}")
+                        st.write("**분류 방법:** AI 자동 분류")
+                        st.write("**신뢰도:** 높음")
+                    
+                    with col4:
+                        st.markdown("#### 🎯 시나리오 매칭")
+                        if 'best_scenario' in analysis_data and analysis_data['best_scenario']:
+                            scenario = analysis_data['best_scenario']
+                            st.write(f"**조건 1:** {scenario.get('condition_1', 'N/A')}")
+                            st.write(f"**조건 2:** {scenario.get('condition_2', 'N/A')}")
+                            st.write(f"**해결책:** {scenario.get('solution', 'N/A')}")
+                            st.write(f"**현장 출동 필요:** {scenario.get('onsite_needed', 'N')}")
+                        else:
+                            st.write("**조건 1:** 해당 시나리오 없음")
+                            st.write("**조건 2:** 해당 시나리오 없음")
+                            st.write("**해결책:** 기본 가이드 제공")
+                            st.write("**현장 출동 필요:** N")
+                    
+                    # AI 응답 결과
+                    st.markdown("### 🤖 AI 응답")
+                    
+                    col5, col6 = st.columns(2)
+                    
+                    with col5:
+                        st.markdown("#### 📝 요약")
+                        if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
+                            parsed = analysis_data['gemini_result'].get('parsed_response', {})
+                            summary = parsed.get('summary', '해당 문의에 대한 AI 분석 요약이 없습니다.')
+                            st.write(summary)
+                            
+                            st.markdown("#### 🔧 조치 흐름")
+                            action_flow = parsed.get('action_flow', '해당 문의에 대한 조치 흐름이 없습니다.')
+                            st.write(action_flow)
+                        else:
+                            st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
+                            st.markdown("#### 🔧 조치 흐름")
+                            st.write("해당 문의에 대한 조치 흐름이 없습니다.")
+                    
+                    with col6:
+                        st.markdown("#### 📧 이메일 초안")
+                        if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
+                            parsed = analysis_data['gemini_result'].get('parsed_response', {})
+                            email_content = parsed.get('email_draft', '해당 문의에 대한 이메일 초안이 없습니다.')
+                        else:
+                            email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
 
 고객님 안녕하세요.
 
-PKP 웹 접속 불가 현상에 대한 문의 주셔서 감사합니다.
+{selected_row.get('문의유형', '문의')}에 대한 문의 주셔서 감사합니다.
 
-현재 상황을 분석한 결과, 톰캣 서비스 상태 확인이 필요한 상황입니다.
+현재 상황을 분석한 결과, 추가 정보가 필요한 상황입니다.
 
-**조치 방법:**
-1. 윈도우 서비스에서 Apache Tomcat 서비스 상태 확인
-2. 필요시 톰캣 서비스 재시작
-3. 방화벽 설정 확인
+**필요한 정보:**
+1. 구체적인 오류 메시지
+2. 발생 시점 및 빈도
+3. 사용 환경 정보
 
-자세한 내용은 첨부된 가이드를 참고하시기 바랍니다.
+자세한 내용은 담당 엔지니어가 확인 후 답변 드리겠습니다.
 
 추가 문의사항이 있으시면 언제든 연락 주세요.
 
 감사합니다."""
 
-            st.text_area("이메일 내용", email_content, height=200, disabled=True)
+                        st.text_area("이메일 내용", email_content, height=200, disabled=True)
+                        
+                        # 이메일 복사 버튼
+                        if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
+                            st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
+                
+                else:
+                    # 실제 분석 결과가 없는 경우 기본 정보 표시
+                    st.markdown("### 🔍 AI 분석 결과")
+                    st.info("⚠️ 해당 문의에 대한 상세한 AI 분석 결과가 데이터베이스에 저장되어 있지 않습니다.")
+                    
+                    col3, col4 = st.columns(2)
+                    
+                    with col3:
+                        st.markdown("#### 📊 문제 유형 분류")
+                        st.write(f"**분류된 문제 유형:** {selected_row.get('문의유형', 'N/A')}")
+                        st.write("**분류 방법:** 수동 입력")
+                        st.write("**신뢰도:** 보통")
+                    
+                    with col4:
+                        st.markdown("#### 🎯 시나리오 매칭")
+                        st.write("**조건 1:** 해당 시나리오 없음")
+                        st.write("**조건 2:** 해당 시나리오 없음")
+                        st.write("**해결책:** 기본 가이드 제공")
+                        st.write("**현장 출동 필요:** N")
+                    
+                    # 기본 응답 표시
+                    st.markdown("### 🤖 기본 응답")
+                    
+                    col5, col6 = st.columns(2)
+                    
+                    with col5:
+                        st.markdown("#### 📝 요약")
+                        st.write(f"{selected_row.get('문의유형', '문의')}에 대한 기본 안내를 제공합니다.")
+                        
+                        st.markdown("#### 🔧 조치 흐름")
+                        st.write("""
+                        1. **상황 파악:** 구체적인 오류 상황 확인
+                        2. **환경 점검:** 시스템 환경 및 설정 확인
+                        3. **기본 조치:** 일반적인 해결 방법 시도
+                        4. **전문가 상담:** 필요시 담당 엔지니어 연락
+                        """)
+                    
+                    with col6:
+                        st.markdown("#### 📧 이메일 초안")
+                        email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
+
+고객님 안녕하세요.
+
+{selected_row.get('문의유형', '문의')}에 대한 문의 주셔서 감사합니다.
+
+현재 상황을 분석한 결과, 추가 정보가 필요한 상황입니다.
+
+**필요한 정보:**
+1. 구체적인 오류 메시지
+2. 발생 시점 및 빈도
+3. 사용 환경 정보
+
+자세한 내용은 담당 엔지니어가 확인 후 답변 드리겠습니다.
+
+추가 문의사항이 있으시면 언제든 연락 주세요.
+
+감사합니다."""
+
+                        st.text_area("이메일 내용", email_content, height=200, disabled=True)
+                        
+                        # 이메일 복사 버튼
+                        if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
+                            st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
+        
+        except Exception as e:
+            st.error(f"❌ 분석 결과 조회 중 오류 발생: {e}")
+            st.info("기본 정보만 표시합니다.")
             
-            # 이메일 복사 버튼
-            if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
-                st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
+            # 오류 발생 시 기본 정보 표시
+            st.markdown("### 🔍 AI 분석 결과")
+            st.warning("⚠️ 분석 결과 조회 중 오류가 발생했습니다.")
+            
+            col3, col4 = st.columns(2)
+            
+            with col3:
+                st.markdown("#### 📊 문제 유형 분류")
+                st.write(f"**분류된 문제 유형:** {selected_row.get('문의유형', 'N/A')}")
+                st.write("**분류 방법:** 수동 입력")
+                st.write("**신뢰도:** 보통")
+            
+            with col4:
+                st.markdown("#### 🎯 시나리오 매칭")
+                st.write("**조건 1:** 해당 시나리오 없음")
+                st.write("**조건 2:** 해당 시나리오 없음")
+                st.write("**해결책:** 기본 가이드 제공")
+                st.write("**현장 출동 필요:** N")
 
 def create_history_table_with_buttons(df):
     """이력 조회 결과를 버튼이 포함된 테이블로 생성"""
@@ -392,6 +509,8 @@ with st.sidebar:
 
 # 컴포넌트 초기화
 components = init_components()
+# 세션 상태에 components 저장
+st.session_state.components = components
 
 # 메인 헤더
 st.markdown("""
@@ -796,6 +915,10 @@ with tab3:
     
     # 검색 버튼 클릭시
     if search_clicked:
+        # 기존 상세보기 모달 상태 리셋
+        st.session_state.show_detail_modal = False
+        st.session_state.selected_row_for_detail = None
+        
         # 검색 진행 상태 표시
         with st.spinner("🔍 이력을 검색하고 있습니다..."):
             try:
