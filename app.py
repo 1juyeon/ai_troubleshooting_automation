@@ -686,12 +686,11 @@ with tab3:
                     edited_df = st.data_editor(
                         df_with_action,
                         column_config={
-                            "상세보기": st.column_config.ButtonColumn(
+                            "상세보기": st.column_config.TextColumn(
                                 "상세보기",
                                 help="클릭하여 상세 분석 결과 보기",
-                                default="🔍 상세보기",
-                                max_chars=None,
-                                validate="^🔍 상세보기$"
+                                default="🔍",
+                                max_chars=None
                             )
                         },
                         hide_index=True,
@@ -699,12 +698,30 @@ with tab3:
                         key="history_table"
                     )
                     
-                    # 상세보기 버튼 클릭 이벤트 처리
-                    if edited_df is not None and not edited_df.empty:
-                        # 변경된 행 찾기
-                        for index, row in edited_df.iterrows():
-                            if row['상세보기'] == '🔍 상세보기':
-                                # 해당 행의 원본 데이터로 상세보기 실행
+                    # 상세보기 버튼을 별도로 생성하여 각 행에 배치
+                    st.markdown("### 📋 상세보기")
+                    
+                    # 각 행마다 개별 상세보기 버튼 생성
+                    for index, row in df.iterrows():
+                        col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([0.5, 1, 1.5, 1.2, 1, 1, 1, 1])
+                        
+                        with col1:
+                            st.write(f"**{row['번호']}**")
+                        with col2:
+                            st.write(row['날짜'])
+                        with col3:
+                            st.write(f"**{row['고객사명']}**")
+                        with col4:
+                            st.write(row['문의유형'])
+                        with col5:
+                            st.write(row['우선순위'])
+                        with col6:
+                            st.write(row['담당자'])
+                        with col7:
+                            st.write(row['역할'])
+                        with col8:
+                            if st.button(f"🔍 상세보기", key=f"detail_{row['번호']}_{index}"):
+                                # 해당 행의 데이터로 상세보기 실행
                                 original_row = {
                                     '번호': row['번호'],
                                     '날짜': row['날짜'],
@@ -715,8 +732,10 @@ with tab3:
                                     '역할': row['역할']
                                 }
                                 show_ai_analysis(original_row)
-                                break
-                     
+                        
+                        # 행 구분선 추가
+                        st.markdown("---")
+                    
                     # 통계 정보
                     stats = components['multi_user_db'].get_statistics()
                     
@@ -770,12 +789,11 @@ with tab3:
         edited_df_previous = st.data_editor(
             df_previous,
             column_config={
-                "상세보기": st.column_config.ButtonColumn(
+                "상세보기": st.column_config.TextColumn(
                     "상세보기",
                     help="클릭하여 상세 분석 결과 보기",
-                    default="🔍 상세보기",
-                    max_chars=None,
-                    validate="^🔍 상세보기$"
+                    default="🔍",
+                    max_chars=None
                 )
             },
             hide_index=True,
@@ -783,12 +801,30 @@ with tab3:
             key="previous_history_table"
         )
         
-        # 상세보기 버튼 클릭 이벤트 처리
-        if edited_df_previous is not None and not edited_df_previous.empty:
-            # 변경된 행 찾기
-            for index, row in edited_df_previous.iterrows():
-                if row['상세보기'] == '🔍 상세보기':
-                    # 해당 행의 원본 데이터로 상세보기 실행
+        # 상세보기 버튼을 별도로 생성하여 각 행에 배치
+        st.markdown("### 📋 상세보기")
+        
+        # 각 행마다 개별 상세보기 버튼 생성
+        for index, row in df_previous.iterrows():
+            col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([0.5, 1, 1.5, 1.2, 1, 1, 1, 1])
+            
+            with col1:
+                st.write(f"**{row['번호']}**")
+            with col2:
+                st.write(row['날짜'])
+            with col3:
+                st.write(f"**{row['고객사명']}**")
+            with col4:
+                st.write(row['문의유형'])
+            with col5:
+                st.write(row['우선순위'])
+            with col6:
+                st.write(row['담당자'])
+            with col7:
+                st.write(row['역할'])
+            with col8:
+                if st.button(f"🔍 상세보기", key=f"prev_detail_{row['번호']}_{index}"):
+                    # 해당 행의 데이터로 상세보기 실행
                     original_row = {
                         '번호': row['번호'],
                         '날짜': row['날짜'],
@@ -799,7 +835,9 @@ with tab3:
                         '역할': row['역할']
                     }
                     show_ai_analysis(original_row)
-                    break
+            
+            # 행 구분선 추가
+            st.markdown("---")
 
 # 탭 4: 사용 가이드
 with tab4:
