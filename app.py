@@ -698,6 +698,19 @@ with tab3:
                     gb.configure_column("담당자", width=100)
                     gb.configure_column("역할", width=100)
                     
+                    # onCellClicked 이벤트 설정
+                    gb.configure_grid_options(
+                        onCellClicked=JsCode("""
+                            function(params) {
+                                if (params.column.colId === '상세보기') {
+                                    // 상세보기 컬럼 클릭 시 해당 행 선택
+                                    params.api.setFocusedCell(params.rowIndex, '상세보기');
+                                    params.api.selectRow(params.rowIndex);
+                                }
+                            }
+                        """)
+                    )
+                    
                     grid_options = gb.build()
                     
                     # AgGrid 표시
@@ -715,16 +728,21 @@ with tab3:
                         }
                     )
                     
-                    # 상세보기 버튼 클릭 이벤트 처리
-                    # 각 행에 대해 개별 버튼 생성
-                    st.markdown("### 🔍 상세보기")
-                    for idx, row in df.iterrows():
-                        col1, col2, col3 = st.columns([1, 3, 1])
-                        with col2:
-                            if st.button(f"🔍 {row['고객사명']} - {row['문의유형']}", key=f"detail_{idx}"):
-                                show_ai_analysis(row)
-                        if idx < len(df) - 1:  # 마지막 행이 아니면 구분선 추가
-                            st.markdown("---")
+                    # 상세보기 컬럼 클릭 시 행 선택 처리
+                    # AgGrid에서 상세보기 컬럼을 클릭하면 해당 행이 선택되도록 설정
+                    if grid_response['selected_rows']:
+                        selected_row = grid_response['selected_rows'][0]
+                        # 상세보기 컬럼을 제외한 원본 데이터만 사용
+                        original_row = {
+                            '번호': selected_row.get('번호'),
+                            '날짜': selected_row.get('날짜'),
+                            '고객사명': selected_row.get('고객사명'),
+                            '문의유형': selected_row.get('문의유형'),
+                            '우선순위': selected_row.get('우선순위'),
+                            '담당자': selected_row.get('담당자'),
+                            '역할': selected_row.get('역할')
+                        }
+                        show_ai_analysis(original_row)
                     
                     # 통계 정보
                     stats = components['multi_user_db'].get_statistics()
@@ -789,6 +807,19 @@ with tab3:
         gb_previous.configure_column("담당자", width=100)
         gb_previous.configure_column("역할", width=100)
         
+        # onCellClicked 이벤트 설정
+        gb_previous.configure_grid_options(
+            onCellClicked=JsCode("""
+                function(params) {
+                    if (params.column.colId === '상세보기') {
+                        // 상세보기 컬럼 클릭 시 해당 행 선택
+                        params.api.setFocusedCell(params.rowIndex, '상세보기');
+                        params.api.selectRow(params.rowIndex);
+                    }
+                }
+            """)
+        )
+        
         grid_options_previous = gb_previous.build()
         
         # AgGrid 표시
@@ -806,16 +837,21 @@ with tab3:
             }
         )
         
-        # 상세보기 버튼 클릭 이벤트 처리
-        # 각 행에 대해 개별 버튼 생성
-        st.markdown("### 🔍 상세보기")
-        for idx, row in df_previous.iterrows():
-            col1, col2, col3 = st.columns([1, 3, 1])
-            with col2:
-                if st.button(f"🔍 {row['고객사명']} - {row['문의유형']}", key=f"detail_prev_{idx}"):
-                    show_ai_analysis(row)
-            if idx < len(df_previous) - 1:  # 마지막 행이 아니면 구분선 추가
-                st.markdown("---")
+        # 상세보기 컬럼 클릭 시 행 선택 처리
+        # AgGrid에서 상세보기 컬럼을 클릭하면 해당 행이 선택되도록 설정
+        if grid_response_previous['selected_rows']:
+            selected_row = grid_response_previous['selected_rows'][0]
+            # 상세보기 컬럼을 제외한 원본 데이터만 사용
+            original_row = {
+                '번호': selected_row.get('번호'),
+                '날짜': selected_row.get('날짜'),
+                '고객사명': selected_row.get('고객사명'),
+                '문의유형': selected_row.get('문의유형'),
+                '우선순위': selected_row.get('우선순위'),
+                '담당자': selected_row.get('담당자'),
+                '역할': selected_row.get('역할')
+            }
+            show_ai_analysis(original_row)
 
 
 
