@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date, timedelta
 import pandas as pd
 import json
 import os
@@ -553,10 +553,10 @@ with tab3:
     col15, col16, col17, col18 = st.columns(4)
     
     with col15:
-        filter_date_from = st.date_input("시작 날짜", value=datetime.date.today() - datetime.timedelta(days=30))
+        filter_date_from = st.date_input("시작 날짜", value=date.today() - timedelta(days=30))
     
     with col16:
-        filter_date_to = st.date_input("종료 날짜", value=datetime.date.today())
+        filter_date_to = st.date_input("종료 날짜", value=date.today())
     
     with col17:
         filter_type = st.selectbox("문제 유형 필터", 
