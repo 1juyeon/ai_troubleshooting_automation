@@ -190,10 +190,10 @@ st.markdown("""
 #st.success("✅ AI 분석 서비스를 이용할 수 있습니다!")
 
 # 탭 생성
-tab_names = ["📝 고객 문의 입력", "🤖 AI 분석 결과", "📊 이력 관리", "🔍 시스템 상태", "📚 사용 가이드"]
+tab_names = ["📝 고객 문의 입력", "🤖 AI 분석 결과", "📊 이력 관리", "📚 사용 가이드"]
 
 # 탭 생성
-tab1, tab2, tab3, tab4, tab5 = st.tabs(tab_names)
+tab1, tab2, tab3, tab4 = st.tabs(tab_names)
 
 # 분석 완료 알림 (전역적으로 표시)
 # if st.session_state.analysis_result and st.session_state.analysis_completed:
@@ -697,81 +697,10 @@ with tab3:
         # 인덱스 숨기기로 중복 번호 제거
         st.dataframe(st.session_state.history_search_results, use_container_width=True, hide_index=True)
 
-# 탭 4: 시스템 상태
-with tab4:
-    st.markdown("## 🔍 시스템 상태")
-    
-    if components['classifier'] and components['scenario_db'] and components['vector_search'] and components['gpt_handler']:
-        st.success("✅ 모든 모듈이 정상적으로 초기화되었습니다.")
-        
-        # 각 모듈 상태 확인
-        col22, col23 = st.columns(2)
-        
-        with col22:
-            st.markdown("#### 📊 시나리오 DB 상태")
-            issue_types = components['scenario_db'].get_all_issue_types()
-            st.write(f"**등록된 문제 유형:** {len(issue_types)}개")
-            for issue_type in issue_types[:5]:  # 처음 5개만 표시
-                st.write(f"- {issue_type}")
-            if len(issue_types) > 5:
-                st.write(f"... 외 {len(issue_types) - 5}개")
-        
-        with col23:
-            st.markdown("#### 🔍 벡터 검색 상태")
-            stats = components['vector_search'].get_statistics()
-            st.write(f"**총 문서 수:** {stats.get('total_documents', 0)}건")
-            st.write(f"**벡터 차원:** {stats.get('vector_dimensions', 0)}")
-            
-            if stats.get('issue_types'):
-                st.write("**문제 유형별 분포:**")
-                for issue_type in stats['issue_types'][:3]:
-                    st.write(f"- {issue_type}")
-        
-        # 시스템 정보
-        st.markdown("#### ⚙️ 시스템 정보")
-        col24, col25, col26 = st.columns(3)
-        
-        with col24:
-            st.write(f"**AI 모델:** {st.session_state.get('ai_model', 'Gemini 1.5 Pro')}")
-            st.write("**벡터 DB:** ChromaDB")
-        
-        with col25:
-            st.write("**시나리오 소스:** JSON + Excel")
-            st.write("**프롬프트 템플릿:** 로드됨")
-        
-        with col26:
-            st.write("**API 상태:** 정상")
-            st.write("**데이터베이스:** 연결됨")
-        
-        # 벡터 DB 관리
-        st.markdown("#### 🔧 벡터 DB 관리")
-        col27, col28 = st.columns(2)
-        
-        with col27:
-            if st.button("📝 샘플 데이터 추가", use_container_width=True):
-                try:
-                    if components['vector_search'].add_initial_sample_data():
-                        st.success("✅ 샘플 데이터가 추가되었습니다!")
-                        st.rerun()
-                    else:
-                        st.error("❌ 샘플 데이터 추가에 실패했습니다.")
-                except Exception as e:
-                    st.error(f"❌ 오류 발생: {e}")
-        
-        with col28:
-            if st.button("🗑️ 벡터 DB 초기화", use_container_width=True):
-                try:
-                    components['vector_search'].vector_search.vector_db.clear()
-                    st.success("✅ 벡터 DB가 초기화되었습니다!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ 초기화 실패: {e}")
-    
-    else:
-        st.error("❌ 일부 모듈 초기화에 실패했습니다.")
 
-# 탭 5: 사용 가이드
-with tab5:
+
+# 탭 4: 사용 가이드
+with tab4:
     st.markdown("## 📚 사용 가이드")
     
     st.markdown("### 🎯 시스템 개요")
