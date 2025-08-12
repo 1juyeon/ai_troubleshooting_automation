@@ -679,25 +679,6 @@ with tab3:
                     df_with_action = df.copy()
                     df_with_action['상세보기'] = '🔍'
                     
-                    # URL 파라미터에서 상세보기 요청 확인
-                    query_params = st.experimental_get_query_params()
-                    if 'action' in query_params and 'row' in query_params:
-                        action = query_params['action'][0]
-                        row_index = int(query_params['row'][0])
-                        
-                        if action == 'detail' and 0 <= row_index < len(df):
-                            row = df.iloc[row_index]
-                            original_row = {
-                                '번호': row['번호'],
-                                '날짜': row['날짜'],
-                                '고객사명': row['고객사명'],
-                                '문의유형': row['문의유형'],
-                                '우선순위': row['우선순위'],
-                                '담당자': row['담당자'],
-                                '역할': row['역할']
-                            }
-                            show_ai_analysis(original_row)
-                    
                     # Streamlit data_editor를 사용하여 클릭 가능한 상세보기 링크 포함 테이블 생성
                     st.markdown("### 📊 이력 조회 결과")
                     
@@ -717,13 +698,24 @@ with tab3:
                         key="history_table"
                     )
                     
-                    # 상세보기 링크 클릭 시 URL 파라미터 설정
+                    # 상세보기 링크 클릭 시 해당 행의 데이터로 AI 분석 결과 표시
                     if edited_df is not None and not edited_df.empty:
                         for index, row in edited_df.iterrows():
                             if row['상세보기'] == '🔍':
                                 # 해당 행의 상세보기 링크 생성
                                 detail_url = f"?action=detail&row={index}"
-                                st.markdown(f"[🔍 상세보기]({detail_url})")
+                                if st.button(f"🔍 상세보기 (행 {index + 1})", key=f"detail_btn_{index}"):
+                                    # 해당 행의 데이터로 상세보기 실행
+                                    original_row = {
+                                        '번호': row['번호'],
+                                        '날짜': row['날짜'],
+                                        '고객사명': row['고객사명'],
+                                        '문의유형': row['문의유형'],
+                                        '우선순위': row['우선순위'],
+                                        '담당자': row['담당자'],
+                                        '역할': row['역할']
+                                    }
+                                    show_ai_analysis(original_row)
                                 break
                     
                     # 통계 정보
@@ -772,25 +764,6 @@ with tab3:
         df_previous = st.session_state.history_search_results.copy()
         df_previous['상세보기'] = '🔍'
         
-        # URL 파라미터에서 상세보기 요청 확인 (이전 검색 결과)
-        query_params_prev = st.experimental_get_query_params()
-        if 'action' in query_params_prev and 'prev_row' in query_params_prev:
-            action = query_params_prev['action'][0]
-            row_index = int(query_params_prev['prev_row'][0])
-            
-            if action == 'detail' and 0 <= row_index < len(df_previous):
-                row = df_previous.iloc[row_index]
-                original_row = {
-                    '번호': row['번호'],
-                    '날짜': row['날짜'],
-                    '고객사명': row['고객사명'],
-                    '문의유형': row['문의유형'],
-                    '우선순위': row['우선순위'],
-                    '담당자': row['담당자'],
-                    '역할': row['역할']
-                }
-                show_ai_analysis(original_row)
-        
         # Streamlit data_editor를 사용하여 클릭 가능한 상세보기 링크 포함 테이블 생성
         st.markdown("### 📊 이전 검색 결과")
         
@@ -810,13 +783,24 @@ with tab3:
             key="previous_history_table"
         )
         
-        # 상세보기 링크 클릭 시 URL 파라미터 설정 (이전 검색 결과)
+        # 상세보기 링크 클릭 시 해당 행의 데이터로 AI 분석 결과 표시 (이전 검색 결과)
         if edited_df_previous is not None and not edited_df_previous.empty:
             for index, row in edited_df_previous.iterrows():
                 if row['상세보기'] == '🔍':
                     # 해당 행의 상세보기 링크 생성
                     detail_url_prev = f"?action=detail&prev_row={index}"
-                    st.markdown(f"[🔍 상세보기]({detail_url_prev})")
+                    if st.button(f"🔍 상세보기 (행 {index + 1})", key=f"prev_detail_btn_{index}"):
+                        # 해당 행의 데이터로 상세보기 실행
+                        original_row = {
+                            '번호': row['번호'],
+                            '날짜': row['날짜'],
+                            '고객사명': row['고객사명'],
+                            '문의유형': row['문의유형'],
+                            '우선순위': row['우선순위'],
+                            '담당자': row['담당자'],
+                            '역할': row['역할']
+                        }
+                        show_ai_analysis(original_row)
                     break
 
 # 탭 4: 사용 가이드
