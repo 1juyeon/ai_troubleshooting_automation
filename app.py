@@ -679,36 +679,32 @@ with tab3:
                     df_with_action = df.copy()
                     df_with_action['상세보기'] = '🔍'
                     
-                    # Streamlit 기본 테이블로 변경 (무한루프 방지)
+                    # Streamlit data_editor를 사용하여 클릭 가능한 상세보기 버튼 포함 테이블 생성
                     st.markdown("### 📊 이력 조회 결과")
                     
-                    # 테이블 표시
-                    st.dataframe(df, use_container_width=True)
+                    # 각 행에 상세보기 버튼을 포함한 데이터프레임 생성
+                    edited_df = st.data_editor(
+                        df_with_action,
+                        column_config={
+                            "상세보기": st.column_config.ButtonColumn(
+                                "상세보기",
+                                help="클릭하여 상세 분석 결과 보기",
+                                default="🔍 상세보기",
+                                max_chars=None,
+                                validate="^🔍 상세보기$"
+                            )
+                        },
+                        hide_index=True,
+                        use_container_width=True,
+                        key="history_table"
+                    )
                     
-                    # 각 행마다 개별 상세보기 버튼 추가
-                    st.markdown("### 📋 상세보기")
-                    
-                    # 데이터프레임을 순회하며 각 행에 대한 상세보기 버튼 생성
-                    for index, row in df.iterrows():
-                        col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([0.5, 1, 1.5, 1.2, 1, 1, 1, 1])
-                        
-                        with col1:
-                            st.write(f"**{row['번호']}**")
-                        with col2:
-                            st.write(row['날짜'])
-                        with col3:
-                            st.write(f"**{row['고객사명']}**")
-                        with col4:
-                            st.write(row['문의유형'])
-                        with col5:
-                            st.write(row['우선순위'])
-                        with col6:
-                            st.write(row['담당자'])
-                        with col7:
-                            st.write(row['역할'])
-                        with col8:
-                            if st.button(f"🔍 상세보기", key=f"detail_{row['번호']}_{index}"):
-                                # 해당 행의 데이터로 상세보기 실행
+                    # 상세보기 버튼 클릭 이벤트 처리
+                    if edited_df is not None and not edited_df.empty:
+                        # 변경된 행 찾기
+                        for index, row in edited_df.iterrows():
+                            if row['상세보기'] == '🔍 상세보기':
+                                # 해당 행의 원본 데이터로 상세보기 실행
                                 original_row = {
                                     '번호': row['번호'],
                                     '날짜': row['날짜'],
@@ -719,12 +715,8 @@ with tab3:
                                     '역할': row['역할']
                                 }
                                 show_ai_analysis(original_row)
-                        
-                        # 행 구분선 추가
-                        st.markdown("---")
-                    
-                    
-                    
+                                break
+                     
                     # 통계 정보
                     stats = components['multi_user_db'].get_statistics()
                     
@@ -767,40 +759,36 @@ with tab3:
     if not search_clicked and st.session_state.history_search_performed and st.session_state.history_search_results is not None:
         st.markdown("### 📊 이전 검색 결과")
         
-        # 이전 검색 결과도 Streamlit 기본 테이블로 표시
+        # 이전 검색 결과도 Streamlit data_editor로 표시
         df_previous = st.session_state.history_search_results.copy()
         df_previous['상세보기'] = '🔍'
         
-        # Streamlit 기본 테이블로 변경 (무한루프 방지)
+        # Streamlit data_editor를 사용하여 클릭 가능한 상세보기 버튼 포함 테이블 생성
         st.markdown("### 📊 이전 검색 결과")
         
-        # 테이블 표시
-        st.dataframe(df_previous, use_container_width=True)
+        # 각 행에 상세보기 버튼을 포함한 데이터프레임 생성
+        edited_df_previous = st.data_editor(
+            df_previous,
+            column_config={
+                "상세보기": st.column_config.ButtonColumn(
+                    "상세보기",
+                    help="클릭하여 상세 분석 결과 보기",
+                    default="🔍 상세보기",
+                    max_chars=None,
+                    validate="^🔍 상세보기$"
+                )
+            },
+            hide_index=True,
+            use_container_width=True,
+            key="previous_history_table"
+        )
         
-        # 각 행마다 개별 상세보기 버튼 추가
-        st.markdown("### 📋 상세보기")
-        
-        # 데이터프레임을 순회하며 각 행에 대한 상세보기 버튼 생성
-        for index, row in df_previous.iterrows():
-            col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([0.5, 1, 1.5, 1.2, 1, 1, 1, 1])
-            
-            with col1:
-                st.write(f"**{row['번호']}**")
-            with col2:
-                st.write(row['날짜'])
-            with col3:
-                st.write(f"**{row['고객사명']}**")
-            with col4:
-                st.write(row['문의유형'])
-            with col5:
-                st.write(row['우선순위'])
-            with col6:
-                st.write(row['담당자'])
-            with col7:
-                st.write(row['역할'])
-            with col8:
-                if st.button(f"🔍 상세보기", key=f"prev_detail_{row['번호']}_{index}"):
-                    # 해당 행의 데이터로 상세보기 실행
+        # 상세보기 버튼 클릭 이벤트 처리
+        if edited_df_previous is not None and not edited_df_previous.empty:
+            # 변경된 행 찾기
+            for index, row in edited_df_previous.iterrows():
+                if row['상세보기'] == '🔍 상세보기':
+                    # 해당 행의 원본 데이터로 상세보기 실행
                     original_row = {
                         '번호': row['번호'],
                         '날짜': row['날짜'],
@@ -811,13 +799,7 @@ with tab3:
                         '역할': row['역할']
                     }
                     show_ai_analysis(original_row)
-            
-            # 행 구분선 추가
-            st.markdown("---")
-        
-        
-
-
+                    break
 
 # 탭 4: 사용 가이드
 with tab4:
