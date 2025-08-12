@@ -196,8 +196,8 @@ tab_names = ["📝 고객 문의 입력", "🤖 AI 분석 결과", "📊 이력 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(tab_names)
 
 # 분석 완료 알림 (전역적으로 표시)
-if st.session_state.analysis_result and st.session_state.analysis_completed:
-    st.success("✅ AI 분석이 완료되었습니다! AI 분석 결과 페이지로 이동해 상세한 결과를 확인하세요.")
+# if st.session_state.analysis_result and st.session_state.analysis_completed:
+#    st.success("✅ AI 분석이 완료되었습니다! AI 분석 결과 페이지로 이동해 상세한 결과를 확인하세요.")
 
 # 탭 1: 고객 문의 입력
 with tab1:
