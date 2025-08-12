@@ -309,12 +309,13 @@ with tab1:
                         'best_scenario': best_scenario,
                                                    'similar_cases': similar_cases,
                            'gemini_result': gemini_result,
-                           'timestamp': datetime.datetime.now(tz.gettz('Asia/Seoul')).isoformat()
+                           'timestamp': datetime.now(tz.gettz('Asia/Seoul')).isoformat()
                     }
                     
                     st.session_state.analysis_result = analysis_result
                     
                     st.session_state.inquiry_data = {
+                        "timestamp": datetime.now(tz.gettz('Asia/Seoul')).isoformat(),
                         "customer_name": customer_name,
                         "customer_contact": customer_contact,
                         "customer_manager": customer_manager,
@@ -334,13 +335,29 @@ with tab1:
                         # inquiry_data에 사용자 정보 추가
                         inquiry_data_with_user = st.session_state.inquiry_data.copy()
                         inquiry_data_with_user['user_email'] = f"{st.session_state.contact_name}_{st.session_state.role}@privkeeper.com"
+                        
+                        # 저장 시도
                         save_result = components['multi_user_db'].save_analysis(analysis_result, inquiry_data_with_user)
+                        
                         if save_result.get('success'):
-                            st.success("✅ 분석 결과가 저장되었습니다.")
+                            st.success(f"✅ 분석 결과가 저장되었습니다. (사용자: {save_result.get('user_name', 'Unknown')}, ID: {save_result.get('user_id', 'Unknown')})")
                         else:
-                            st.warning("⚠️ 분석 결과 저장에 실패했습니다.")
+                            error_msg = save_result.get('error', '알 수 없는 오류')
+                            st.warning(f"⚠️ 분석 결과 저장에 실패했습니다: {error_msg}")
+                            
+                            # 백업 저장 시도
+                            try:
+                                backup_result = components['history_db'].save_analysis(analysis_result, inquiry_data_with_user)
+                                if backup_result.get('success'):
+                                    st.info("📋 백업 저장소에 저장되었습니다.")
+                                else:
+                                    st.error("❌ 백업 저장도 실패했습니다.")
+                            except Exception as backup_e:
+                                st.error(f"❌ 백업 저장 중 오류: {backup_e}")
+                                
                     except Exception as e:
                         st.error(f"❌ 데이터 저장 중 오류: {e}")
+                        st.info("💡 저장 실패 시 관리자에게 문의하세요.")
                     
                     st.session_state.analysis_completed = True
                     st.success("🎉 AI 분석이 완료되었습니다! AI 분석 결과 페이지로 이동해 상세한 결과를 확인하세요.")
@@ -504,7 +521,7 @@ with tab2:
         with col11:
             if st.button("💾 결과 저장", use_container_width=True):
                 # 결과를 JSON 파일로 저장
-                filename = f"analysis_result_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                filename = f"analysis_result_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
                 with open(filename, 'w', encoding='utf-8') as f:
                     json.dump(st.session_state.analysis_result, f, ensure_ascii=False, indent=2)
                 st.success(f"분석 결과가 {filename}에 저장되었습니다!")

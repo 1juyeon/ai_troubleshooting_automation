@@ -8,7 +8,11 @@ from dateutil import tz
 class MultiUserHistoryDB:
     def __init__(self, data_dir: str = "user_data"):
         """다중 사용자 이력 저장소 초기화"""
-        self.data_dir = data_dir
+        # 절대 경로로 변환
+        if not os.path.isabs(data_dir):
+            self.data_dir = os.path.join(os.getcwd(), data_dir)
+        else:
+            self.data_dir = data_dir
         self._ensure_data_directory()
     
     def _ensure_data_directory(self):
@@ -49,11 +53,33 @@ class MultiUserHistoryDB:
     def _save_history(self, history_data: List[Dict], file_path: str) -> bool:
         """이력 데이터 저장"""
         try:
-            with open(file_path, 'w', encoding='utf-8') as f:
+            # 디렉토리가 존재하는지 확인
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            
+            # 임시 파일에 먼저 저장
+            temp_file = file_path + '.tmp'
+            with open(temp_file, 'w', encoding='utf-8') as f:
                 json.dump(history_data, f, ensure_ascii=False, indent=2)
+            
+            # 성공적으로 저장되면 원본 파일로 이동
+            if os.path.exists(file_path):
+                backup_file = file_path + '.backup'
+                os.rename(file_path, backup_file)
+            
+            os.rename(temp_file, file_path)
             return True
+            
+        except PermissionError as e:
+            print(f"❌ 파일 권한 오류: {e}")
+            print(f"파일 경로: {file_path}")
+            return False
+        except OSError as e:
+            print(f"❌ 파일 시스템 오류: {e}")
+            print(f"파일 경로: {file_path}")
+            return False
         except Exception as e:
             print(f"❌ 이력 저장 실패: {e}")
+            print(f"파일 경로: {file_path}")
             return False
     
     def save_analysis(self, analysis_result: Dict, inquiry_data: Dict):
@@ -78,7 +104,7 @@ class MultiUserHistoryDB:
                 'user_id': user_id,
                 'user_name': user_name,
                 'user_role': user_role,
-                                   'timestamp': inquiry_data.get('timestamp', datetime.datetime.now(tz.gettz('Asia/Seoul')).isoformat()),
+                'timestamp': inquiry_data.get('timestamp', datetime.now(tz.gettz('Asia/Seoul')).isoformat()),
                 'customer_name': inquiry_data.get('customer_name', ''),
                 'customer_contact': inquiry_data.get('customer_contact', ''),
                 'customer_manager': inquiry_data.get('customer_manager', ''),

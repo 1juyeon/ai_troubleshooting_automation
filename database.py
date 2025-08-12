@@ -28,11 +28,33 @@ class HistoryDB:
     def _save_history(self, history_data: List[Dict]):
         """히스토리 데이터 저장"""
         try:
-            with open(self.history_file, 'w', encoding='utf-8') as f:
+            # 디렉토리가 존재하는지 확인
+            os.makedirs(os.path.dirname(self.history_file), exist_ok=True)
+            
+            # 임시 파일에 먼저 저장
+            temp_file = self.history_file + '.tmp'
+            with open(temp_file, 'w', encoding='utf-8') as f:
                 json.dump(history_data, f, ensure_ascii=False, indent=2)
+            
+            # 성공적으로 저장되면 원본 파일로 이동
+            if os.path.exists(self.history_file):
+                backup_file = self.history_file + '.backup'
+                os.rename(self.history_file, backup_file)
+            
+            os.rename(temp_file, self.history_file)
             return True
+            
+        except PermissionError as e:
+            print(f"❌ 파일 권한 오류: {e}")
+            print(f"파일 경로: {self.history_file}")
+            return False
+        except OSError as e:
+            print(f"❌ 파일 시스템 오류: {e}")
+            print(f"파일 경로: {self.history_file}")
+            return False
         except Exception as e:
             print(f"❌ 이력 저장 실패: {e}")
+            print(f"파일 경로: {self.history_file}")
             return False
     
     def save_analysis(self, analysis_result: Dict, inquiry_data: Dict):
