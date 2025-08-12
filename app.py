@@ -6,7 +6,7 @@ import os
 import requests
 from typing import Dict, Any
 import pickle
-from dateutil import tz
+import pytz
 
 # 커스텀 모듈 import
 from classify_issue import IssueClassifier
@@ -22,6 +22,15 @@ st.set_page_config(
     page_icon="🤖",
     layout="wide"
 )
+
+# 안전한 타임스탬프 생성 함수
+def get_safe_timestamp():
+    """안전한 타임스탬프 생성 (한국 시간대, 실패 시 UTC 사용)"""
+    try:
+        return datetime.now(pytz.timezone('Asia/Seoul')).isoformat()
+    except Exception as e:
+        print(f"⚠️ 한국 시간대 설정 실패, UTC 사용: {e}")
+        return datetime.now().isoformat()
 
 # 세션 상태 초기화 (단순화)
 def init_session_state():
@@ -308,13 +317,13 @@ with tab1:
                         'best_scenario': best_scenario,
                                                    'similar_cases': similar_cases,
                            'gemini_result': gemini_result,
-                           'timestamp': datetime.now(tz.gettz('Asia/Seoul')).isoformat()
+                           'timestamp': get_safe_timestamp()
                     }
                     
                     st.session_state.analysis_result = analysis_result
                     
                     st.session_state.inquiry_data = {
-                        "timestamp": datetime.now(tz.gettz('Asia/Seoul')).isoformat(),
+                        "timestamp": get_safe_timestamp(),
                         "customer_name": customer_name,
                         "customer_contact": customer_contact,
                         "customer_manager": customer_manager,

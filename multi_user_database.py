@@ -3,7 +3,7 @@ import os
 import hashlib
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
-from dateutil import tz
+import pytz
 
 class MultiUserHistoryDB:
     def __init__(self, data_dir: str = "user_data"):
@@ -20,6 +20,14 @@ class MultiUserHistoryDB:
         if not os.path.exists(self.data_dir):
             os.makedirs(self.data_dir)
             print(f"✅ 사용자 데이터 디렉토리 생성: {self.data_dir}")
+    
+    def _get_safe_timestamp(self) -> str:
+        """안전한 타임스탬프 생성 (한국 시간대, 실패 시 UTC 사용)"""
+        try:
+            return datetime.now(pytz.timezone('Asia/Seoul')).isoformat()
+        except Exception as e:
+            print(f"⚠️ 한국 시간대 설정 실패, UTC 사용: {e}")
+            return datetime.now().isoformat()
     
     def _get_user_id(self, user_name: str, user_role: str) -> str:
         """사용자 ID 생성 (이름 + 역할 기반)"""
@@ -104,7 +112,7 @@ class MultiUserHistoryDB:
                 'user_id': user_id,
                 'user_name': user_name,
                 'user_role': user_role,
-                'timestamp': inquiry_data.get('timestamp', datetime.now(tz.gettz('Asia/Seoul')).isoformat()),
+                'timestamp': inquiry_data.get('timestamp', self._get_safe_timestamp()),
                 'customer_name': inquiry_data.get('customer_name', ''),
                 'customer_contact': inquiry_data.get('customer_contact', ''),
                 'customer_manager': inquiry_data.get('customer_manager', ''),
