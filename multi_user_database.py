@@ -335,9 +335,26 @@ class MultiUserHistoryDB:
             if matching_entries:
                 # 가장 최근 항목 반환
                 latest_entry = max(matching_entries, key=lambda x: x.get('timestamp', ''))
+                
+                # full_analysis_result에서 실제 AI 분석 데이터 추출
+                full_result = latest_entry.get('full_analysis_result', {})
+                
+                # 분석 결과 데이터 구성
+                analysis_data = {
+                    'issue_type': full_result.get('issue_type', latest_entry.get('issue_type', '')),
+                    'best_scenario': full_result.get('best_scenario', {}),
+                    'gemini_result': full_result.get('gemini_result', {}),
+                    'classification': full_result.get('classification', {}),
+                    'customer_name': latest_entry.get('customer_name', ''),
+                    'timestamp': latest_entry.get('timestamp', ''),
+                    'inquiry_content': latest_entry.get('inquiry_content', ''),
+                    'priority': latest_entry.get('priority', ''),
+                    'contract_type': latest_entry.get('contract_type', '')
+                }
+                
                 return {
                     "success": True,
-                    "data": latest_entry
+                    "data": analysis_data
                 }
             else:
                 return {

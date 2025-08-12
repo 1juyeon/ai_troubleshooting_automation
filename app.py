@@ -179,47 +179,58 @@ def show_ai_analysis_modal(selected_row):
                     st.markdown("### 🔍 AI 분석 결과")
                     
                     col3, col4 = st.columns(2)
-                    
-                    with col3:
-                        st.markdown("#### 📊 문제 유형 분류")
-                        issue_type = analysis_data.get('issue_type', selected_row.get('문의유형', 'N/A'))
-                        st.write(f"**분류된 문제 유형:** {issue_type}")
-                        st.write("**분류 방법:** AI 자동 분류")
-                        st.write("**신뢰도:** 높음")
-                    
-                    with col4:
-                        st.markdown("#### 🎯 시나리오 매칭")
-                        if 'best_scenario' in analysis_data and analysis_data['best_scenario']:
-                            scenario = analysis_data['best_scenario']
-                            st.write(f"**조건 1:** {scenario.get('condition_1', 'N/A')}")
-                            st.write(f"**조건 2:** {scenario.get('condition_2', 'N/A')}")
-                            st.write(f"**해결책:** {scenario.get('solution', 'N/A')}")
-                            st.write(f"**현장 출동 필요:** {scenario.get('onsite_needed', 'N')}")
-                        else:
-                            st.write("**조건 1:** 해당 시나리오 없음")
-                            st.write("**조건 2:** 해당 시나리오 없음")
-                            st.write("**해결책:** 기본 가이드 제공")
-                            st.write("**현장 출동 필요:** N")
-                    
-                    # AI 응답 결과
-                    st.markdown("### 🤖 AI 응답")
-                    
-                    col5, col6 = st.columns(2)
-                    
-                    with col5:
-                        st.markdown("#### 📝 요약")
-                        if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
-                            parsed = analysis_data['gemini_result'].get('parsed_response', {})
-                            summary = parsed.get('summary', '해당 문의에 대한 AI 분석 요약이 없습니다.')
-                            st.write(summary)
-                            
-                            st.markdown("#### 🔧 조치 흐름")
-                            action_flow = parsed.get('action_flow', '해당 문의에 대한 조치 흐름이 없습니다.')
-                            st.write(action_flow)
-                        else:
-                            st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
-                            st.markdown("#### 🔧 조치 흐름")
-                            st.write("해당 문의에 대한 조치 흐름이 없습니다.")
+                     
+                     with col3:
+                         st.markdown("#### 📊 문제 유형 분류")
+                         issue_type = analysis_data.get('issue_type', selected_row.get('문의유형', 'N/A'))
+                         st.write(f"**분류된 문제 유형:** {issue_type}")
+                         
+                         # 분류 방법과 신뢰도 정보 표시
+                         classification = analysis_data.get('classification', {})
+                         classification_method = classification.get('method', 'AI 자동 분류')
+                         confidence = classification.get('confidence', '높음')
+                         st.write(f"**분류 방법:** {classification_method}")
+                         st.write(f"**신뢰도:** {confidence}")
+                     
+                     with col4:
+                         st.markdown("#### 🎯 시나리오 매칭")
+                         if 'best_scenario' in analysis_data and analysis_data['best_scenario']:
+                             scenario = analysis_data['best_scenario']
+                             st.write(f"**조건 1:** {scenario.get('condition_1', 'N/A')}")
+                             st.write(f"**조건 2:** {scenario.get('condition_2', 'N/A')}")
+                             st.write(f"**해결책:** {scenario.get('solution', 'N/A')}")
+                             st.write(f"**현장 출동 필요:** {scenario.get('onsite_needed', 'N')}")
+                         else:
+                             st.write("**조건 1:** 해당 시나리오 없음")
+                             st.write("**조건 2:** 해당 시나리오 없음")
+                             st.write("**해결책:** 기본 가이드 제공")
+                             st.write("**현장 출동 필요:** N")
+                     
+                     # AI 응답 결과
+                     st.markdown("### 🤖 AI 응답")
+                     
+                     col5, col6 = st.columns(2)
+                     
+                     with col5:
+                         st.markdown("#### 📝 요약")
+                         if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
+                             parsed = analysis_data['gemini_result'].get('parsed_response', {})
+                             summary = parsed.get('summary', '')
+                             if summary:
+                                 st.write(summary)
+                             else:
+                                 st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
+                             
+                             st.markdown("#### 🔧 조치 흐름")
+                             action_flow = parsed.get('action_flow', '')
+                             if action_flow:
+                                 st.write(action_flow)
+                             else:
+                                 st.write("해당 문의에 대한 조치 흐름이 없습니다.")
+                         else:
+                             st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
+                             st.markdown("#### 🔧 조치 흐름")
+                             st.write("해당 문의에 대한 조치 흐름이 없습니다.")
                     
                     with col6:
                         st.markdown("#### 📧 이메일 초안")
