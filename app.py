@@ -135,6 +135,114 @@ PKP 웹 접속 불가 현상에 대한 문의 주셔서 감사합니다.
         if st.button("📊 통계 보기", use_container_width=True):
             st.info("📊 이력 관리 탭으로 이동하세요.")
 
+def show_ai_analysis_modal(selected_row):
+    """선택된 행의 AI 분석 결과를 모달 형태로 표시"""
+    with st.container():
+        st.markdown("## 🔍 AI 분석 상세 결과")
+        
+        # 분석 완료 알림
+        st.success("✅ AI 분석이 완료되었습니다! 아래에서 상세한 결과를 확인하세요.")
+        
+        # 선택된 데이터 정보 표시
+        with st.expander("📋 입력된 문의 정보", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**고객사명:** {selected_row.get('고객사명', 'N/A')}")
+                st.write(f"**문의유형:** {selected_row.get('문의유형', 'N/A')}")
+                st.write(f"**우선순위:** {selected_row.get('우선순위', 'N/A')}")
+            with col2:
+                st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')}")
+                st.write(f"**역할:** {selected_row.get('역할', 'N/A')}")
+                st.write(f"**날짜:** {selected_row.get('날짜', 'N/A')}")
+        
+        # AI 분석 결과 (샘플 데이터)
+        st.markdown("### 🔍 AI 분석 결과")
+        
+        col3, col4 = st.columns(2)
+        
+        with col3:
+            st.markdown("#### 📊 문제 유형 분류")
+            st.write("**분류된 문제 유형:** PKP 웹 접속 안됨")
+            st.write("**분류 방법:** keyword_based")
+            st.write("**신뢰도:** medium")
+        
+        with col4:
+            st.markdown("#### 🎯 시나리오 매칭")
+            st.write("**조건 1:** 윈도우 서비스에서 톰캣 작동 여부를 확인하였는가?")
+            st.write("**조건 2:** 톰캣이 꺼져 있는가?")
+            st.write("**해결책:** 톰캣 서비스 시작")
+            st.write("**현장 출동 필요:** N")
+        
+        # AI 응답 결과
+        st.markdown("### 🤖 AI 응답")
+        
+        col5, col6 = st.columns(2)
+        
+        with col5:
+            st.markdown("#### 📝 요약")
+            st.write("PKP 웹 접속 불가 현상. 톰캣 상태 확인 필요.")
+            
+            st.markdown("#### 🔧 조치 흐름")
+            st.write("""
+            1. **윈도우 서비스 확인:** 윈도우 서비스 목록에서 "Apache Tomcat" 서비스가 실행 중인지 확인합니다. (services.msc 실행)
+            
+            2. **톰캣 상태 확인:** 톰캣이 실행 중이라면, 브라우저에서 http://localhost:8888/ (포트 번호는 환경에 따라 다를 수 있음)에 접속하여 톰캣 기본 페이지가 정상적으로 표시되는지 확인합니다.
+            
+            3. **톰캣 재시작:** 톰캣이 실행 중이지만 접속이 안 된다면, 톰캣 서비스를 재시작합니다. 윈도우 서비스에서 "Apache Tomcat" 서비스를 "중지" 후 "시작" 합니다.
+            
+            4. **PKP 애플리케이션 확인:** 톰캣 재시작 후에도 접속이 안 된다면, PKP 애플리케이션의 로그 파일을 확인하여 에러 메시지가 있는지 확인합니다. 로그 파일 위치는 PKP 애플리케이션 설정에 따라 다릅니다.
+            
+            5. **방화벽 확인:** 윈도우 방화벽 또는 다른 방화벽이 톰캣 포트(기본값 8080)를 차단하고 있지 않은지 확인합니다. 필요시 방화벽 설정을 변경합니다.
+            """)
+        
+        with col6:
+            st.markdown("#### 📧 이메일 초안")
+            email_content = """제목: PKP 웹 접속 불가 문의 답변
+
+고객님 안녕하세요.
+
+PKP 웹 접속 불가 현상에 대한 문의 주셔서 감사합니다.
+
+현재 상황을 분석한 결과, 톰캣 서비스 상태 확인이 필요한 상황입니다.
+
+**조치 방법:**
+1. 윈도우 서비스에서 Apache Tomcat 서비스 상태 확인
+2. 필요시 톰캣 서비스 재시작
+3. 방화벽 설정 확인
+
+자세한 내용은 첨부된 가이드를 참고하시기 바랍니다.
+
+추가 문의사항이 있으시면 언제든 연락 주세요.
+
+감사합니다."""
+
+            st.text_area("이메일 내용", email_content, height=200, disabled=True)
+            
+            # 이메일 복사 버튼
+            if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
+                st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
+
+def create_history_table_with_buttons(df):
+    """이력 조회 결과를 버튼이 포함된 테이블로 생성"""
+    if df.empty:
+        return None
+    
+    # 데이터프레임 복사
+    df_with_buttons = df.copy()
+    
+    # 각 행에 대해 버튼 생성
+    for index, row in df_with_buttons.iterrows():
+        # 고유한 키 생성
+        button_key = f"detail_btn_{index}_{row.get('번호', 'unknown')}"
+        
+        # 버튼을 생성하고 클릭 시 상세보기 실행
+        if st.button(f"🔍", key=button_key, help="클릭하여 상세 분석 결과 보기"):
+            st.session_state.selected_row_for_detail = row.to_dict()
+            st.session_state.show_detail_modal = True
+    
+    # 원본 데이터프레임 반환 (버튼은 별도로 표시)
+    return df
+
 # 세션 상태 초기화 (단순화)
 def init_session_state():
     """세션 상태 초기화"""
@@ -148,6 +256,10 @@ def init_session_state():
         st.session_state.history_search_performed = False
     if 'history_search_results' not in st.session_state:
         st.session_state.history_search_results = None
+    if 'show_detail_modal' not in st.session_state:
+        st.session_state.show_detail_modal = False
+    if 'selected_row_for_detail' not in st.session_state:
+        st.session_state.selected_row_for_detail = None
 
     if 'system_prompt' not in st.session_state:
         st.session_state.system_prompt = """[고객 문의 내용]
@@ -754,45 +866,57 @@ with tab3:
                     
                     st.success(f"✅ {len(history_data)}건의 이력이 조회되었습니다.")
                     
-                    # 상세보기 컬럼 추가
-                    df_with_action = df.copy()
-                    df_with_action['상세보기'] = '🔍'
-                    
-                    # Streamlit data_editor를 사용하여 클릭 가능한 상세보기 링크 포함 테이블 생성
+                    # 이력 조회 결과 표시 (버튼 방식으로 변경)
                     st.markdown("### 📊 이력 조회 결과")
                     
-                    # 각 행에 상세보기 링크를 포함한 데이터프레임 생성
-                    edited_df = st.data_editor(
-                        df_with_action,
-                        column_config={
-                            "상세보기": st.column_config.LinkColumn(
-                                "상세보기",
-                                help="클릭하여 상세 분석 결과 보기",
-                                max_chars=None,
-                                validate="^🔍$"
-                            )
-                        },
+                    # 데이터프레임 표시
+                    st.dataframe(
+                        df,
                         hide_index=True,
                         use_container_width=True,
-                        key="history_table"
+                        key="history_table_main"
                     )
                     
-                    # 상세보기 링크 클릭 시 해당 행의 데이터로 AI 분석 결과 표시
-                    if edited_df is not None and not edited_df.empty:
-                        for index, row in edited_df.iterrows():
-                            if row['상세보기'] == '🔍':
-                                # 해당 행의 데이터로 상세보기 실행
-                                original_row = {
-                                    '번호': row['번호'],
-                                    '날짜': row['날짜'],
-                                    '고객사명': row['고객사명'],
-                                    '문의유형': row['문의유형'],
-                                    '우선순위': row['우선순위'],
-                                    '담당자': row['담당자'],
-                                    '역할': row['역할']
-                                }
-                                show_ai_analysis(original_row)
-                                break
+                    # 각 행마다 돋보기 버튼 표시
+                    st.markdown("#### 🔍 상세보기")
+                    st.markdown("아래 버튼을 클릭하여 각 문의의 AI 분석 상세 결과를 확인하세요.")
+                    
+                    # 행별 버튼 생성
+                    for index, row in df.iterrows():
+                        col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([2, 2, 2, 2, 2, 2, 2, 1])
+                        
+                        with col1:
+                            st.write(f"**{row.get('번호', 'N/A')}**")
+                        with col2:
+                            st.write(f"**{row.get('날짜', 'N/A')}**")
+                        with col3:
+                            st.write(f"**{row.get('고객사명', 'N/A')}**")
+                        with col4:
+                            st.write(f"**{row.get('문의유형', 'N/A')}**")
+                        with col5:
+                            st.write(f"**{row.get('우선순위', 'N/A')}**")
+                        with col6:
+                            st.write(f"**{row.get('담당자', 'N/A')}**")
+                        with col7:
+                            st.write(f"**{row.get('역할', 'N/A')}**")
+                        with col8:
+                            if st.button(f"🔍", key=f"detail_btn_{index}_{row.get('번호', 'unknown')}", 
+                                       help="클릭하여 상세 분석 결과 보기"):
+                                st.session_state.selected_row_for_detail = row.to_dict()
+                                st.session_state.show_detail_modal = True
+                        
+                        # 구분선 추가
+                        st.markdown("---")
+                    
+                    # 상세보기 모달 표시
+                    if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
+                        with st.expander("🔍 AI 분석 상세 결과", expanded=True):
+                            show_ai_analysis_modal(st.session_state.selected_row_for_detail)
+                            # 모달 닫기 버튼
+                            if st.button("❌ 닫기", key="close_modal"):
+                                st.session_state.show_detail_modal = False
+                                st.session_state.selected_row_for_detail = None
+                                st.rerun()
                     
                     # 통계 정보
                     stats = components['multi_user_db'].get_statistics()
@@ -836,45 +960,57 @@ with tab3:
     if not search_clicked and st.session_state.history_search_performed and st.session_state.history_search_results is not None:
         st.markdown("### 📊 이전 검색 결과")
         
-        # 이전 검색 결과도 Streamlit data_editor로 표시
+        # 이전 검색 결과도 동일한 방식으로 표시
         df_previous = st.session_state.history_search_results.copy()
-        df_previous['상세보기'] = '🔍'
         
-        # Streamlit data_editor를 사용하여 클릭 가능한 상세보기 링크 포함 테이블 생성
-        st.markdown("### 📊 이전 검색 결과")
-        
-        # 각 행에 상세보기 링크를 포함한 데이터프레임 생성
-        edited_df_previous = st.data_editor(
+        # 데이터프레임 표시
+        st.dataframe(
             df_previous,
-            column_config={
-                "상세보기": st.column_config.LinkColumn(
-                    "상세보기",
-                    help="클릭하여 상세 분석 결과 보기",
-                    max_chars=None,
-                    validate="^🔍$"
-                )
-            },
             hide_index=True,
             use_container_width=True,
-            key="previous_history_table"
+            key="previous_history_table_main"
         )
         
-        # 상세보기 링크 클릭 시 해당 행의 데이터로 AI 분석 결과 표시 (이전 검색 결과)
-        if edited_df_previous is not None and not edited_df_previous.empty:
-            for index, row in edited_df_previous.iterrows():
-                if row['상세보기'] == '🔍':
-                    # 해당 행의 데이터로 상세보기 실행
-                    original_row = {
-                        '번호': row['번호'],
-                        '날짜': row['날짜'],
-                        '고객사명': row['고객사명'],
-                        '문의유형': row['문의유형'],
-                        '우선순위': row['우선순위'],
-                        '담당자': row['담당자'],
-                        '역할': row['역할']
-                    }
-                    show_ai_analysis(original_row)
-                    break
+        # 각 행마다 돋보기 버튼 표시
+        st.markdown("#### 🔍 상세보기")
+        st.markdown("아래 버튼을 클릭하여 각 문의의 AI 분석 상세 결과를 확인하세요.")
+        
+        # 행별 버튼 생성
+        for index, row in df_previous.iterrows():
+            col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([2, 2, 2, 2, 2, 2, 2, 1])
+            
+            with col1:
+                st.write(f"**{row.get('번호', 'N/A')}**")
+            with col2:
+                st.write(f"**{row.get('날짜', 'N/A')}**")
+            with col3:
+                st.write(f"**{row.get('고객사명', 'N/A')}**")
+            with col4:
+                st.write(f"**{row.get('문의유형', 'N/A')}**")
+            with col5:
+                st.write(f"**{row.get('우선순위', 'N/A')}**")
+            with col6:
+                st.write(f"**{row.get('담당자', 'N/A')}**")
+            with col7:
+                st.write(f"**{row.get('역할', 'N/A')}**")
+            with col8:
+                if st.button(f"🔍", key=f"prev_detail_btn_{index}_{row.get('번호', 'unknown')}", 
+                           help="클릭하여 상세 분석 결과 보기"):
+                    st.session_state.selected_row_for_detail = row.to_dict()
+                    st.session_state.show_detail_modal = True
+            
+            # 구분선 추가
+            st.markdown("---")
+        
+        # 상세보기 모달 표시
+        if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
+            with st.expander("🔍 AI 분석 상세 결과", expanded=True):
+                show_ai_analysis_modal(st.session_state.selected_row_for_detail)
+                # 모달 닫기 버튼
+                if st.button("❌ 닫기", key="prev_close_modal"):
+                    st.session_state.show_detail_modal = False
+                    st.session_state.selected_row_for_detail = None
+                    st.rerun()
 
 # 탭 4: 사용 가이드
 with tab4:
