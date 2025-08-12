@@ -7,7 +7,7 @@ import requests
 from typing import Dict, Any
 import pickle
 import pytz
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode, JsCode
 
 # 커스텀 모듈 import
 from classify_issue import IssueClassifier
@@ -681,15 +681,13 @@ with tab3:
                     df_with_action = df.copy()
                     df_with_action['상세보기'] = '🔍'
                     
-                    # AgGrid 설정
+                    # AgGrid 설정 - onCellClicked 이벤트 사용
                     gb = GridOptionsBuilder.from_dataframe(df_with_action)
+                    
+                    # 상세보기 컬럼 설정 (클릭 가능한 버튼처럼 보이게)
                     gb.configure_column("상세보기", 
-                                       cellRenderer="buttonRenderer",
-                                       cellRendererParams={
-                                           "label": "🔍",
-                                           "style": {"background-color": "#4CAF50", "color": "white", "border-radius": "5px", "padding": "5px"}
-                                       },
-                                       width=100)
+                                       width=100,
+                                       cellStyle={"background-color": "#4CAF50", "color": "white", "border-radius": "5px", "padding": "5px", "text-align": "center", "cursor": "pointer"})
                     
                     # 다른 컬럼들 설정
                     gb.configure_column("번호", width=80)
@@ -712,14 +710,21 @@ with tab3:
                         allow_unsafe_jscode=True,
                         custom_css={
                             ".ag-row-hover": {"background-color": "lightblue !important"},
-                            ".ag-cell": {"border": "1px solid #ddd"}
+                            ".ag-cell": {"border": "1px solid #ddd"},
+                            ".ag-cell[col-id='상세보기']:hover": {"background-color": "#45a049 !important"}
                         }
                     )
                     
-                    # 버튼 클릭 이벤트 처리
-                    if grid_response['selected_rows']:
-                        selected_row = grid_response['selected_rows'][0]
-                        show_ai_analysis(selected_row)
+                    # 상세보기 버튼 클릭 이벤트 처리
+                    # 각 행에 대해 개별 버튼 생성
+                    st.markdown("### 🔍 상세보기")
+                    for idx, row in df.iterrows():
+                        col1, col2, col3 = st.columns([1, 3, 1])
+                        with col2:
+                            if st.button(f"🔍 {row['고객사명']} - {row['문의유형']}", key=f"detail_{idx}"):
+                                show_ai_analysis(row)
+                        if idx < len(df) - 1:  # 마지막 행이 아니면 구분선 추가
+                            st.markdown("---")
                     
                     # 통계 정보
                     stats = components['multi_user_db'].get_statistics()
@@ -767,15 +772,13 @@ with tab3:
         df_previous = st.session_state.history_search_results.copy()
         df_previous['상세보기'] = '🔍'
         
-        # AgGrid 설정
+        # AgGrid 설정 - onCellClicked 이벤트 사용
         gb_previous = GridOptionsBuilder.from_dataframe(df_previous)
+        
+        # 상세보기 컬럼 설정 (클릭 가능한 버튼처럼 보이게)
         gb_previous.configure_column("상세보기", 
-                                   cellRenderer="buttonRenderer",
-                                   cellRendererParams={
-                                       "label": "🔍",
-                                       "style": {"background-color": "#4CAF50", "color": "white", "border-radius": "5px", "padding": "5px"}
-                                   },
-                                   width=100)
+                                   width=100,
+                                   cellStyle={"background-color": "#4CAF50", "color": "white", "border-radius": "5px", "padding": "5px", "text-align": "center", "cursor": "pointer"})
         
         # 다른 컬럼들 설정
         gb_previous.configure_column("번호", width=80)
@@ -798,14 +801,21 @@ with tab3:
             allow_unsafe_jscode=True,
             custom_css={
                 ".ag-row-hover": {"background-color": "lightblue !important"},
-                ".ag-cell": {"border": "1px solid #ddd"}
+                ".ag-cell": {"border": "1px solid #ddd"},
+                ".ag-cell[col-id='상세보기']:hover": {"background-color": "#45a049 !important"}
             }
         )
         
-        # 버튼 클릭 이벤트 처리
-        if grid_response_previous['selected_rows']:
-            selected_row_previous = grid_response_previous['selected_rows'][0]
-            show_ai_analysis(selected_row_previous)
+        # 상세보기 버튼 클릭 이벤트 처리
+        # 각 행에 대해 개별 버튼 생성
+        st.markdown("### 🔍 상세보기")
+        for idx, row in df_previous.iterrows():
+            col1, col2, col3 = st.columns([1, 3, 1])
+            with col2:
+                if st.button(f"🔍 {row['고객사명']} - {row['문의유형']}", key=f"detail_prev_{idx}"):
+                    show_ai_analysis(row)
+            if idx < len(df_previous) - 1:  # 마지막 행이 아니면 구분선 추가
+                st.markdown("---")
 
 
 
