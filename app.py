@@ -1368,6 +1368,7 @@ with tab3:
                                        help="클릭하여 상세 분석 결과 보기"):
                                 st.session_state.selected_row_for_detail = row.to_dict()
                                 st.session_state.show_detail_modal = True
+                                st.rerun()
                         
                         # 구분선 추가
                         st.markdown("---")
@@ -1380,6 +1381,7 @@ with tab3:
                             if st.button("❌ 닫기", key="close_modal"):
                                 st.session_state.show_detail_modal = False
                                 st.session_state.selected_row_for_detail = None
+                                st.rerun()
                     
                     # 통계 정보
                     stats = components['multi_user_db'].get_statistics()
@@ -1475,6 +1477,7 @@ with tab3:
                            help="클릭하여 상세 분석 결과 보기"):
                     st.session_state.selected_row_for_detail = row.to_dict()
                     st.session_state.show_detail_modal = True
+                    st.rerun()
             
             # 구분선 추가
             st.markdown("---")
@@ -1487,6 +1490,7 @@ with tab3:
                 if st.button("❌ 닫기", key="prev_close_modal"):
                     st.session_state.show_detail_modal = False
                     st.session_state.selected_row_for_detail = None
+                    st.rerun()
 
 # 탭 4: 사용 가이드
 with tab4:
