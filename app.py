@@ -430,16 +430,50 @@ def show_ai_analysis_modal(selected_row):
         
         # 선택된 데이터 정보 표시 (간격 줄임)
         with st.expander("📋 입력된 문의 정보", expanded=True):
-            col1, col2 = st.columns(2)
-            with col1:
+            # 헤더 행
+            header_cols = st.columns(2)
+            with header_cols[0]:
+                st.markdown('<div class="history-table-header">고객사명</div>', unsafe_allow_html=True)
+            with header_cols[1]:
+                st.markdown('<div class="history-table-header">담당자</div>', unsafe_allow_html=True)
+            
+            # 데이터 행
+            data_cols = st.columns(2)
+            with data_cols[0]:
                 customer_name = selected_row.get('고객사명', '')
-                st.write(f"**고객사명:** {customer_name if customer_name else ''}")
-                st.write(f"**문의유형:** {selected_row.get('문의유형', 'N/A')}")
-                st.write(f"**우선순위:** {selected_row.get('우선순위', 'N/A')}")
-            with col2:
-                st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')}")
-                st.write(f"**역할:** {selected_row.get('역할', 'N/A')}")
-                st.write(f"**날짜:** {selected_row.get('날짜', 'N/A')}")
+                st.markdown(f'<div class="history-table-cell">{customer_name if customer_name else ""}</div>', unsafe_allow_html=True)
+            with data_cols[1]:
+                st.markdown(f'<div class="history-table-cell">{selected_row.get("담당자", "N/A")}</div>', unsafe_allow_html=True)
+            
+            st.markdown("---")
+            
+            # 두 번째 행
+            header_cols2 = st.columns(2)
+            with header_cols2[0]:
+                st.markdown('<div class="history-table-header">문의유형</div>', unsafe_allow_html=True)
+            with header_cols2[1]:
+                st.markdown('<div class="history-table-header">역할</div>', unsafe_allow_html=True)
+            
+            data_cols2 = st.columns(2)
+            with data_cols2[0]:
+                st.markdown(f'<div class="history-table-cell">{selected_row.get("문의유형", "N/A")}</div>', unsafe_allow_html=True)
+            with data_cols2[1]:
+                st.markdown(f'<div class="history-table-cell">{selected_row.get("역할", "N/A")}</div>', unsafe_allow_html=True)
+            
+            st.markdown("---")
+            
+            # 세 번째 행
+            header_cols3 = st.columns(2)
+            with header_cols3[0]:
+                st.markdown('<div class="history-table-header">우선순위</div>', unsafe_allow_html=True)
+            with header_cols3[1]:
+                st.markdown('<div class="history-table-header">날짜</div>', unsafe_allow_html=True)
+            
+            data_cols3 = st.columns(2)
+            with data_cols3[0]:
+                st.markdown(f'<div class="history-table-cell">{selected_row.get("우선순위", "N/A")}</div>', unsafe_allow_html=True)
+            with data_cols3[1]:
+                st.markdown(f'<div class="history-table-cell">{selected_row.get("날짜", "N/A")}</div>', unsafe_allow_html=True)
         
         # 실제 분석 결과 조회 시도
         try:
@@ -464,68 +498,148 @@ def show_ai_analysis_modal(selected_row):
                     # AI 분석 결과 (실제 데이터) - 간격 줄임
                     st.markdown("### 🔍 AI 분석 결과")
                     
-                    col3, col4 = st.columns(2)
+                    # 문제 유형 분류 섹션
+                    st.markdown("#### 📊 문제 유형 분류")
+                    issue_type = analysis_data.get('issue_type', selected_row.get('문의유형', 'N/A'))
                     
-                    with col3:
-                        st.markdown("#### 📊 문제 유형 분류")
-                        issue_type = analysis_data.get('issue_type', selected_row.get('문의유형', 'N/A'))
-                        st.write(f"**분류된 문제 유형:** {issue_type}")
+                    # 분류 방법과 신뢰도 정보 표시
+                    classification = analysis_data.get('classification', {})
+                    classification_method = classification.get('method', 'AI 자동 분류')
+                    confidence = classification.get('confidence', '높음')
+                    
+                    # 문제 유형 분류 테이블
+                    issue_header_cols = st.columns(3)
+                    with issue_header_cols[0]:
+                        st.markdown('<div class="history-table-header">분류된 문제 유형</div>', unsafe_allow_html=True)
+                    with issue_header_cols[1]:
+                        st.markdown('<div class="history-table-header">분류 방법</div>', unsafe_allow_html=True)
+                    with issue_header_cols[2]:
+                        st.markdown('<div class="history-table-header">신뢰도</div>', unsafe_allow_html=True)
+                    
+                    issue_data_cols = st.columns(3)
+                    with issue_data_cols[0]:
+                        st.markdown(f'<div class="history-table-cell">{issue_type}</div>', unsafe_allow_html=True)
+                    with issue_data_cols[1]:
+                        st.markdown(f'<div class="history-table-cell">{classification_method}</div>', unsafe_allow_html=True)
+                    with issue_data_cols[2]:
+                        st.markdown(f'<div class="history-table-cell">{confidence}</div>', unsafe_allow_html=True)
+                    
+                    st.markdown("---")
+                    
+                    # 시나리오 매칭 섹션
+                    st.markdown("#### 🎯 시나리오 매칭")
+                    if 'best_scenario' in analysis_data and analysis_data['best_scenario']:
+                        scenario = analysis_data['best_scenario']
                         
-                        # 분류 방법과 신뢰도 정보 표시
-                        classification = analysis_data.get('classification', {})
-                        classification_method = classification.get('method', 'AI 자동 분류')
-                        confidence = classification.get('confidence', '높음')
-                        st.write(f"**분류 방법:** {classification_method}")
-                        st.write(f"**신뢰도:** {confidence}")
+                        # 시나리오 매칭 테이블
+                        scenario_header_cols = st.columns(4)
+                        with scenario_header_cols[0]:
+                            st.markdown('<div class="history-table-header">조건 1</div>', unsafe_allow_html=True)
+                        with scenario_header_cols[1]:
+                            st.markdown('<div class="history-table-header">조건 2</div>', unsafe_allow_html=True)
+                        with scenario_header_cols[2]:
+                            st.markdown('<div class="history-table-header">해결책</div>', unsafe_allow_html=True)
+                        with scenario_header_cols[3]:
+                            st.markdown('<div class="history-table-header">현장 출동 필요</div>', unsafe_allow_html=True)
+                        
+                        scenario_data_cols = st.columns(4)
+                        with scenario_data_cols[0]:
+                            st.markdown(f'<div class="history-table-cell">{scenario.get("condition_1", "N/A")}</div>', unsafe_allow_html=True)
+                        with scenario_data_cols[1]:
+                            st.markdown(f'<div class="history-table-cell">{scenario.get("condition_2", "N/A")}</div>', unsafe_allow_html=True)
+                        with scenario_data_cols[2]:
+                            st.markdown(f'<div class="history-table-cell">{scenario.get("solution", "N/A")}</div>', unsafe_allow_html=True)
+                        with scenario_data_cols[3]:
+                            st.markdown(f'<div class="history-table-cell">{scenario.get("onsite_needed", "N")}</div>', unsafe_allow_html=True)
+                    else:
+                        # 기본 시나리오 정보
+                        scenario_header_cols = st.columns(4)
+                        with scenario_header_cols[0]:
+                            st.markdown('<div class="history-table-header">조건 1</div>', unsafe_allow_html=True)
+                        with scenario_header_cols[1]:
+                            st.markdown('<div class="history-table-header">조건 2</div>', unsafe_allow_html=True)
+                        with scenario_header_cols[2]:
+                            st.markdown('<div class="history-table-header">해결책</div>', unsafe_allow_html=True)
+                        with scenario_header_cols[3]:
+                            st.markdown('<div class="history-table-header">현장 출동 필요</div>', unsafe_allow_html=True)
+                        
+                        scenario_data_cols = st.columns(4)
+                        with scenario_data_cols[0]:
+                            st.markdown('<div class="history-table-cell">해당 시나리오 없음</div>', unsafe_allow_html=True)
+                        with scenario_data_cols[1]:
+                            st.markdown('<div class="history-table-cell">해당 시나리오 없음</div>', unsafe_allow_html=True)
+                        with scenario_data_cols[2]:
+                            st.markdown('<div class="history-table-cell">기본 가이드 제공</div>', unsafe_allow_html=True)
+                        with scenario_data_cols[3]:
+                            st.markdown('<div class="history-table-cell">N</div>', unsafe_allow_html=True)
                     
-                    with col4:
-                        st.markdown("#### 🎯 시나리오 매칭")
-                        if 'best_scenario' in analysis_data and analysis_data['best_scenario']:
-                            scenario = analysis_data['best_scenario']
-                            st.write(f"**조건 1:** {scenario.get('condition_1', 'N/A')}")
-                            st.write(f"**조건 2:** {scenario.get('condition_2', 'N/A')}")
-                            st.write(f"**해결책:** {scenario.get('solution', 'N/A')}")
-                            st.write(f"**현장 출동 필요:** {scenario.get('onsite_needed', 'N')}")
-                        else:
-                            st.write("**조건 1:** 해당 시나리오 없음")
-                            st.write("**조건 2:** 해당 시나리오 없음")
-                            st.write("**해결책:** 기본 가이드 제공")
-                            st.write("**현장 출동 필요:** N")
+                    st.markdown("---")
                     
                     # AI 응답 결과 - 간격 줄임
                     st.markdown("### 🤖 AI 응답")
                     
-                    col5, col6 = st.columns(2)
-                    
-                    with col5:
-                        st.markdown("#### 📝 요약")
-                        if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
-                            parsed = analysis_data['gemini_result'].get('parsed_response', {})
+                    # 요약과 조치 흐름 섹션
+                    if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
+                        parsed = analysis_data['gemini_result'].get('parsed_response', {})
+                        
+                        summary = parsed.get('summary', '')
+                        action_flow = parsed.get('action_flow', '')
+                        
+                        if summary or action_flow:
+                            # 요약과 조치 흐름 테이블
+                            response_header_cols = st.columns(2)
+                            with response_header_cols[0]:
+                                st.markdown('<div class="history-table-header">📝 요약</div>', unsafe_allow_html=True)
+                            with response_header_cols[1]:
+                                st.markdown('<div class="history-table-header">🔧 조치 흐름</div>', unsafe_allow_html=True)
                             
-                            summary = parsed.get('summary', '')
-                            if summary:
-                                st.write(summary)
-                            else:
-                                st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
+                            response_data_cols = st.columns(2)
+                            with response_data_cols[0]:
+                                if summary:
+                                    st.markdown(f'<div class="history-table-cell">{summary}</div>', unsafe_allow_html=True)
+                                else:
+                                    st.markdown('<div class="history-table-cell">해당 문의에 대한 AI 분석 요약이 없습니다.</div>', unsafe_allow_html=True)
+                            with response_data_cols[1]:
+                                if action_flow:
+                                    st.markdown(f'<div class="history-table-cell">{action_flow}</div>', unsafe_allow_html=True)
+                                else:
+                                    st.markdown('<div class="history-table-cell">해당 문의에 대한 조치 흐름이 없습니다.</div>', unsafe_allow_html=True)
+                        else:
+                            # 기본 메시지
+                            response_header_cols = st.columns(2)
+                            with response_header_cols[0]:
+                                st.markdown('<div class="history-table-header">📝 요약</div>', unsafe_allow_html=True)
+                            with response_header_cols[1]:
+                                st.markdown('<div class="history-table-header">🔧 조치 흐름</div>', unsafe_allow_html=True)
                             
-                            st.markdown("#### 🔧 조치 흐름")
-                            action_flow = parsed.get('action_flow', '')
-                            if action_flow:
-                                st.write(action_flow)
-                            else:
-                                st.write("해당 문의에 대한 조치 흐름이 없습니다.")
-                        else:
-                            st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
-                            st.markdown("#### 🔧 조치 흐름")
-                            st.write("해당 문의에 대한 조치 흐름이 없습니다.")
+                            response_data_cols = st.columns(2)
+                            with response_data_cols[0]:
+                                st.markdown('<div class="history-table-cell">해당 문의에 대한 AI 분석 요약이 없습니다.</div>', unsafe_allow_html=True)
+                            with response_data_cols[1]:
+                                st.markdown('<div class="history-table-cell">해당 문의에 대한 조치 흐름이 없습니다.</div>', unsafe_allow_html=True)
+                    else:
+                        # 기본 메시지
+                        response_header_cols = st.columns(2)
+                        with response_header_cols[0]:
+                            st.markdown('<div class="history-table-header">📝 요약</div>', unsafe_allow_html=True)
+                        with response_header_cols[1]:
+                            st.markdown('<div class="history-table-header">🔧 조치 흐름</div>', unsafe_allow_html=True)
+                        
+                        response_data_cols = st.columns(2)
+                        with response_data_cols[0]:
+                            st.markdown('<div class="history-table-cell">해당 문의에 대한 AI 분석 요약이 없습니다.</div>', unsafe_allow_html=True)
+                        with response_data_cols[1]:
+                            st.markdown('<div class="history-table-cell">해당 문의에 대한 조치 흐름이 없습니다.</div>', unsafe_allow_html=True)
                     
-                    with col6:
-                        st.markdown("#### 📧 이메일 초안")
-                        if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
-                            parsed = analysis_data['gemini_result'].get('parsed_response', {})
-                            email_content = parsed.get('email_draft', '해당 문의에 대한 이메일 초안이 없습니다.')
-                        else:
-                            email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
+                    st.markdown("---")
+                    
+                    # 이메일 초안 섹션
+                    st.markdown("#### 📧 이메일 초안")
+                    if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
+                        parsed = analysis_data['gemini_result'].get('parsed_response', {})
+                        email_content = parsed.get('email_draft', '해당 문의에 대한 이메일 초안이 없습니다.')
+                    else:
+                        email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
 
 고객님 안녕하세요.
 
@@ -543,12 +657,12 @@ def show_ai_analysis_modal(selected_row):
 추가 문의사항이 있으시면 언제든 연락 주세요.
 
 감사합니다."""
-                        
-                        st.text_area("이메일 내용", email_content, height=150, disabled=True)
-                        
-                        # 이메일 복사 버튼
-                        if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
-                            st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
+                    
+                    st.text_area("이메일 내용", email_content, height=150, disabled=True)
+                    
+                    # 이메일 복사 버튼
+                    if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
+                        st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
                 
                 else:
                     # 실제 분석 결과가 없는 경우 기본 정보만 표시
@@ -560,9 +674,23 @@ def show_ai_analysis_modal(selected_row):
                     
                     # 기본 정보 표시
                     st.markdown("### 📋 기본 문의 정보")
-                    st.write(f"**문의 내용:** {selected_row.get('문의내용', 'N/A')}")
-                    st.write(f"**문의 유형:** {selected_row.get('문의유형', 'N/A')}")
-                    st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')}")
+                    
+                    # 기본 정보 테이블
+                    basic_header_cols = st.columns(3)
+                    with basic_header_cols[0]:
+                        st.markdown('<div class="history-table-header">문의 내용</div>', unsafe_allow_html=True)
+                    with basic_header_cols[1]:
+                        st.markdown('<div class="history-table-header">문의 유형</div>', unsafe_allow_html=True)
+                    with basic_header_cols[2]:
+                        st.markdown('<div class="history-table-header">담당자</div>', unsafe_allow_html=True)
+                    
+                    basic_data_cols = st.columns(3)
+                    with basic_data_cols[0]:
+                        st.markdown(f'<div class="history-table-cell">{selected_row.get("문의내용", "N/A")}</div>', unsafe_allow_html=True)
+                    with basic_data_cols[1]:
+                        st.markdown(f'<div class="history-table-cell">{selected_row.get("문의유형", "N/A")}</div>', unsafe_allow_html=True)
+                    with basic_data_cols[2]:
+                        st.markdown(f'<div class="history-table-cell">{selected_row.get("담당자", "N/A")}</div>', unsafe_allow_html=True)
                     
             else:
                 st.error("❌ 컴포넌트가 초기화되지 않았습니다.")
