@@ -45,21 +45,6 @@ st.markdown("""
     hr {
         margin: 0.5rem 0 !important;
     }
-    
-    /* 데이터 행의 텍스트 세로 중앙 정렬 */
-    .row-widget.stHorizontal > div > div {
-        display: flex !important;
-        align-items: center !important;
-        min-height: 2.5rem !important;
-    }
-    
-    /* 데이터 행의 텍스트 세로 중앙 정렬 (고객사명이 비어있을 때) */
-    .row-widget.stHorizontal > div > div > div {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        min-height: 2.5rem !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -971,6 +956,9 @@ with tab3:
     
     # 검색 버튼 클릭시
     if search_clicked:
+        # 기존 상세보기 모달 상태 리셋
+        st.session_state.show_detail_modal = False
+        st.session_state.selected_row_for_detail = None
         
         # 검색 진행 상태 표시
         with st.spinner("🔍 이력을 검색하고 있습니다..."):
@@ -1078,15 +1066,20 @@ with tab3:
                         with col8:
                             if st.button(f"🔍", key=f"detail_btn_{index}_{row.get('번호', 'unknown')}", 
                                        help="클릭하여 상세 분석 결과 보기"):
-                                # 즉시 상세 결과 표시
-                                with st.expander("🔍 AI 분석 상세 결과", expanded=True):
-                                    show_ai_analysis_modal(row.to_dict())
-                                    # 모달 닫기 버튼
-                                    if st.button("❌ 닫기", key=f"close_modal_{index}_{row.get('번호', 'unknown')}"):
-                                        pass  # expander가 자동으로 닫힘
+                                st.session_state.selected_row_for_detail = row.to_dict()
+                                st.session_state.show_detail_modal = True
                         
                         # 구분선 추가
                         st.markdown("---")
+                    
+                                            # 상세보기 모달 표시
+                        if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
+                            with st.expander("🔍 AI 분석 상세 결과", expanded=True):
+                                show_ai_analysis_modal(st.session_state.selected_row_for_detail)
+                                # 모달 닫기 버튼
+                                if st.button("❌ 닫기", key="close_modal"):
+                                    st.session_state.show_detail_modal = False
+                                    st.session_state.selected_row_for_detail = None
                     
                     # 통계 정보
                     stats = components['multi_user_db'].get_statistics()
@@ -1166,15 +1159,20 @@ with tab3:
             with col8:
                 if st.button(f"🔍", key=f"prev_detail_btn_{index}_{row.get('번호', 'unknown')}", 
                            help="클릭하여 상세 분석 결과 보기"):
-                    # 즉시 상세 결과 표시
-                    with st.expander("🔍 AI 분석 상세 결과", expanded=True):
-                        show_ai_analysis_modal(row.to_dict())
-                        # 모달 닫기 버튼
-                        if st.button("❌ 닫기", key=f"prev_close_modal_{index}_{row.get('번호', 'unknown')}"):
-                            pass  # expander가 자동으로 닫힘
+                    st.session_state.selected_row_for_detail = row.to_dict()
+                    st.session_state.show_detail_modal = True
             
             # 구분선 추가
             st.markdown("---")
+        
+        # 상세보기 모달 표시
+        if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
+            with st.expander("🔍 AI 분석 상세 결과", expanded=True):
+                show_ai_analysis_modal(st.session_state.selected_row_for_detail)
+                # 모달 닫기 버튼
+                if st.button("❌ 닫기", key="prev_close_modal"):
+                    st.session_state.show_detail_modal = False
+                    st.session_state.selected_row_for_detail = None
 
 # 탭 4: 사용 가이드
 with tab4:
