@@ -1316,10 +1316,14 @@ with tab3:
                     
                     st.success(f"✅ {len(history_data)}건의 이력이 조회되었습니다.")
                     
-                    # 이력 조회 결과 표시 (커스텀 테이블 + st.dataframe 모두 표시)
+                    # 이력 조회 결과 표시 (기본 데이터프레임 + 커스텀 테이블 모두 표시)
                     st.markdown("### 📊 이력 조회 결과")
                     
-                    # 1. 커스텀 테이블 UI (기존 스타일 유지)
+                    # 1. 기본 st.dataframe 표시 (위쪽)
+                    st.markdown("#### 📋 기본 데이터프레임")
+                    st.dataframe(df, use_container_width=True, hide_index=True)
+                    
+                    # 2. 커스텀 테이블 UI (아래쪽)
                     st.markdown("#### 🎨 커스텀 테이블")
                     
                     # 헤더 행
@@ -1367,10 +1371,6 @@ with tab3:
                         
                         # 구분선 추가
                         st.markdown("---")
-                    
-                    # 2. 기존 st.dataframe 표시
-                    st.markdown("#### 📋 기본 데이터프레임")
-                    st.dataframe(df, use_container_width=True, hide_index=True)
                     
                     # 상세보기 모달 표시
                     if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
@@ -1426,7 +1426,11 @@ with tab3:
         # 이전 검색 결과도 동일한 방식으로 표시
         df_previous = st.session_state.history_search_results.copy()
         
-        # 1. 커스텀 테이블 UI (기존 스타일 유지)
+        # 1. 기본 st.dataframe 표시 (위쪽)
+        st.markdown("#### 📋 기본 데이터프레임")
+        st.dataframe(df_previous, use_container_width=True, hide_index=True)
+        
+        # 2. 커스텀 테이블 UI (아래쪽)
         st.markdown("#### 🎨 커스텀 테이블")
         
         # 헤더 행
@@ -1474,10 +1478,6 @@ with tab3:
             
             # 구분선 추가
             st.markdown("---")
-        
-        # 2. 기존 st.dataframe 표시
-        st.markdown("#### 📋 기본 데이터프레임")
-        st.dataframe(df_previous, use_container_width=True, hide_index=True)
         
         # 상세보기 모달 표시
         if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
