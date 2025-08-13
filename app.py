@@ -163,17 +163,32 @@ def show_ai_analysis_modal(selected_row):
                 customer_name = selected_row.get('고객사명', '')
                 inquiry_date = selected_row.get('날짜', '')
                 
+                # 디버깅 정보 표시
+                st.info(f"🔍 검색 조건: 고객사명='{customer_name}', 날짜='{inquiry_date}'")
+                
                 # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
                 if inquiry_date and ' ' in inquiry_date:
                     inquiry_date = inquiry_date.split(' ')[0]
+                    st.info(f"📅 변환된 날짜: {inquiry_date}")
                 
                 # 실제 분석 결과 조회
                 actual_analysis = st.session_state.components['multi_user_db'].get_analysis_by_customer_and_date(
                     customer_name, inquiry_date
                 )
                 
+                # 디버깅 정보 표시
+                if actual_analysis:
+                    st.info(f"📊 조회 결과: {actual_analysis.get('success', False)}")
+                    if not actual_analysis.get('success'):
+                        st.warning(f"⚠️ 조회 실패: {actual_analysis.get('error', '알 수 없는 오류')}")
+                else:
+                    st.warning("⚠️ 조회 결과가 없습니다.")
+                
                 if actual_analysis and actual_analysis.get('success'):
                     analysis_data = actual_analysis.get('data', {})
+                    
+                    # 디버깅: 분석 데이터 구조 확인
+                    st.info(f"📋 분석 데이터 키: {list(analysis_data.keys())}")
                     
                     # AI 분석 결과 (실제 데이터)
                     st.markdown("### 🔍 AI 분석 결과")
@@ -215,6 +230,8 @@ def show_ai_analysis_modal(selected_row):
                         st.markdown("#### 📝 요약")
                         if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
                             parsed = analysis_data['gemini_result'].get('parsed_response', {})
+                            st.info(f"📝 파싱된 응답 키: {list(parsed.keys())}")
+                            
                             summary = parsed.get('summary', '')
                             if summary:
                                 st.write(summary)
@@ -256,7 +273,7 @@ def show_ai_analysis_modal(selected_row):
 추가 문의사항이 있으시면 언제든 연락 주세요.
 
 감사합니다."""
-
+                        
                         st.text_area("이메일 내용", email_content, height=200, disabled=True)
                         
                         # 이메일 복사 버튼
@@ -264,91 +281,28 @@ def show_ai_analysis_modal(selected_row):
                             st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
                 
                 else:
-                    # 실제 분석 결과가 없는 경우 기본 정보 표시
-                    st.markdown("### 🔍 AI 분석 결과")
-                    st.info("⚠️ 해당 문의에 대한 상세한 AI 분석 결과가 데이터베이스에 저장되어 있지 않습니다.")
+                    # 실제 분석 결과가 없는 경우 기본 정보만 표시
+                    st.warning("⚠️ 해당 문의의 실제 AI 분석 결과를 찾을 수 없습니다.")
+                    st.info("이는 다음과 같은 이유일 수 있습니다:")
+                    st.info("1. 분석이 완료되지 않았거나 저장되지 않음")
+                    st.info("2. Streamlit Cloud 환경에서 데이터 저장 문제")
+                    st.info("3. 검색 조건이 정확하지 않음")
                     
-                    col3, col4 = st.columns(2)
+                    # 기본 정보 표시
+                    st.markdown("### 📋 기본 문의 정보")
+                    st.write(f"**문의 내용:** {selected_row.get('문의내용', 'N/A')}")
+                    st.write(f"**문의 유형:** {selected_row.get('문의유형', 'N/A')}")
+                    st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')}")
                     
-                    with col3:
-                        st.markdown("#### 📊 문제 유형 분류")
-                        st.write(f"**분류된 문제 유형:** {selected_row.get('문의유형', 'N/A')}")
-                        st.write("**분류 방법:** 수동 입력")
-                        st.write("**신뢰도:** 보통")
-                    
-                    with col4:
-                        st.markdown("#### 🎯 시나리오 매칭")
-                        st.write("**조건 1:** 해당 시나리오 없음")
-                        st.write("**조건 2:** 해당 시나리오 없음")
-                        st.write("**해결책:** 기본 가이드 제공")
-                        st.write("**현장 출동 필요:** N")
-                    
-                    # 기본 응답 표시
-                    st.markdown("### 🤖 기본 응답")
-                    
-                    col5, col6 = st.columns(2)
-                    
-                    with col5:
-                        st.markdown("#### 📝 요약")
-                        st.write(f"{selected_row.get('문의유형', '문의')}에 대한 기본 안내를 제공합니다.")
-                        
-                        st.markdown("#### 🔧 조치 흐름")
-                        st.write("""
-                        1. **상황 파악:** 구체적인 오류 상황 확인
-                        2. **환경 점검:** 시스템 환경 및 설정 확인
-                        3. **기본 조치:** 일반적인 해결 방법 시도
-                        4. **전문가 상담:** 필요시 담당 엔지니어 연락
-                        """)
-                    
-                    with col6:
-                        st.markdown("#### 📧 이메일 초안")
-                        email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
-
-고객님 안녕하세요.
-
-{selected_row.get('문의유형', '문의')}에 대한 문의 주셔서 감사합니다.
-
-현재 상황을 분석한 결과, 추가 정보가 필요한 상황입니다.
-
-**필요한 정보:**
-1. 구체적인 오류 메시지
-2. 발생 시점 및 빈도
-3. 사용 환경 정보
-
-자세한 내용은 담당 엔지니어가 확인 후 답변 드리겠습니다.
-
-추가 문의사항이 있으시면 언제든 연락 주세요.
-
-감사합니다."""
-
-                        st.text_area("이메일 내용", email_content, height=200, disabled=True)
-                        
-                        # 이메일 복사 버튼
-                        if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
-                            st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
-        
+            else:
+                st.error("❌ 컴포넌트가 초기화되지 않았습니다.")
+                st.info("페이지를 새로고침하거나 다시 시도해주세요.")
+                
         except Exception as e:
-            st.error(f"❌ 분석 결과 조회 중 오류 발생: {e}")
-            st.info("기본 정보만 표시합니다.")
-            
-            # 오류 발생 시 기본 정보 표시
-            st.markdown("### 🔍 AI 분석 결과")
-            st.warning("⚠️ 분석 결과 조회 중 오류가 발생했습니다.")
-            
-            col3, col4 = st.columns(2)
-            
-            with col3:
-                st.markdown("#### 📊 문제 유형 분류")
-                st.write(f"**분류된 문제 유형:** {selected_row.get('문의유형', 'N/A')}")
-                st.write("**분류 방법:** 수동 입력")
-                st.write("**신뢰도:** 보통")
-            
-            with col4:
-                st.markdown("#### 🎯 시나리오 매칭")
-                st.write("**조건 1:** 해당 시나리오 없음")
-                st.write("**조건 2:** 해당 시나리오 없음")
-                st.write("**해결책:** 기본 가이드 제공")
-                st.write("**현장 출동 필요:** N")
+            st.error(f"❌ 분석 결과 조회 중 오류가 발생했습니다: {str(e)}")
+            st.info("오류 상세 정보:")
+            st.code(str(e))
+            st.info("Streamlit Cloud 환경에서는 일시적인 데이터 접근 문제가 발생할 수 있습니다.")
 
 def create_history_table_with_buttons(df):
     """이력 조회 결과를 버튼이 포함된 테이블로 생성"""
@@ -424,7 +378,6 @@ def init_session_state():
 init_session_state()
 
 # 컴포넌트 초기화
-@st.cache_resource
 def init_components():
     """컴포넌트 초기화"""
     try:
@@ -517,11 +470,80 @@ with st.sidebar:
     st.session_state.contact_name = contact_name
     st.session_state.role = role
     st.session_state.ai_model = ai_model
+    
+    st.markdown("---")
+    
+    # 디버깅 정보 (Streamlit Cloud 환경 확인)
+    st.markdown("## 🔍 시스템 정보")
+    
+    # 환경 정보
+    is_cloud = os.getenv('STREAMLIT_SERVER_RUNNING') == 'true'
+    if is_cloud:
+        st.success("☁️ Streamlit Cloud 환경")
+        st.info("데이터는 임시 저장소에 저장됩니다.")
+    else:
+        st.info("💻 로컬 환경")
+        st.info("데이터는 파일 시스템에 저장됩니다.")
+    
+    # 데이터 저장 상태 확인
+    if 'components' in st.session_state and 'multi_user_db' in st.session_state.components:
+        multi_user_db = st.session_state.components['multi_user_db']
+        
+        if hasattr(multi_user_db, 'is_cloud') and multi_user_db.is_cloud:
+            # 클라우드 환경에서 저장된 데이터 확인
+            if hasattr(multi_user_db, 'cloud_storage'):
+                stored_keys = multi_user_db.cloud_storage.get_all_keys()
+                st.info(f"📊 저장된 데이터: {len(stored_keys)}개")
+                if stored_keys:
+                    st.write("저장된 키:")
+                    for key in stored_keys[:5]:  # 처음 5개만 표시
+                        st.write(f"• {key}")
+                    if len(stored_keys) > 5:
+                        st.write(f"... 외 {len(stored_keys) - 5}개")
+                else:
+                    st.warning("저장된 데이터가 없습니다.")
+        else:
+            # 로컬 환경에서 파일 상태 확인
+            try:
+                if hasattr(multi_user_db, 'data_dir') and os.path.exists(multi_user_db.data_dir):
+                    files = os.listdir(multi_user_db.data_dir)
+                    json_files = [f for f in files if f.endswith('.json')]
+                    st.info(f"📁 데이터 파일: {len(json_files)}개")
+                    if json_files:
+                        st.write("파일 목록:")
+                        for file in json_files[:5]:  # 처음 5개만 표시
+                            st.write(f"• {file}")
+                        if len(json_files) > 5:
+                            st.write(f"... 외 {len(json_files) - 5}개")
+                else:
+                    st.warning("데이터 디렉토리를 찾을 수 없습니다.")
+            except Exception as e:
+                st.error(f"파일 상태 확인 실패: {e}")
+    
+    # 데이터 초기화 버튼
+    st.markdown("---")
+    st.markdown("## 🗑️ 데이터 관리")
+    
+    if st.button("🗑️ 모든 데이터 초기화", type="secondary"):
+        if 'components' in st.session_state and 'multi_user_db' in st.session_state.components:
+            try:
+                result = st.session_state.components['multi_user_db'].clear_all_history()
+                if result.get('success'):
+                    st.success("✅ 모든 데이터가 초기화되었습니다.")
+                    st.rerun()
+                else:
+                    st.error(f"❌ 데이터 초기화 실패: {result.get('error', '알 수 없는 오류')}")
+            except Exception as e:
+                st.error(f"❌ 데이터 초기화 중 오류: {e}")
+        else:
+            st.error("❌ 데이터베이스가 초기화되지 않았습니다.")
 
-# 컴포넌트 초기화
-components = init_components()
-# 세션 상태에 components 저장
-st.session_state.components = components
+# 컴포넌트 초기화 (캐싱 제거)
+if 'components' not in st.session_state:
+    components = init_components()
+    st.session_state.components = components
+else:
+    components = st.session_state.components
 
 # 메인 헤더
 st.markdown("""
