@@ -212,6 +212,102 @@ st.markdown("""
         margin: 0.1rem !important;
         padding: 0.1rem !important;
     }
+
+    /* 상세보기 영역만을 위한 특정 스타일링 */
+    .stContainer:has(.stExpander) {
+        border: 2px solid #007acc !important;
+        border-radius: 6px !important;
+        background-color: #f8f9fa !important;
+        padding: 0.5rem !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+
+    /* 상세보기 내부 expander만 스타일링 */
+    .stContainer:has(.stExpander) .stExpander > div > div > div > div {
+        border: 1px solid #e0e0e0 !important;
+        border-radius: 4px !important;
+        background-color: #fafafa !important;
+    }
+
+    /* 상세보기 내부 컬럼만 스타일링 */
+    .stContainer:has(.stExpander) .stHorizontal > div {
+        border: 1px solid #d0d0d0 !important;
+        border-radius: 3px !important;
+        background-color: #ffffff !important;
+        padding: 0.5rem !important;
+        margin: 0.25rem !important;
+    }
+
+    /* 상세보기 내부 텍스트 블록만 스타일링 */
+    .stContainer:has(.stExpander) .stMarkdown > div {
+        border: 1px solid #e8e8e8 !important;
+        border-radius: 3px !important;
+        background-color: #fefefe !important;
+        padding: 0.5rem !important;
+        margin: 0.25rem !important;
+    }
+
+    /* 상세보기 내부 섹션 헤더만 스타일링 */
+    .stContainer:has(.stExpander) .stMarkdown h2,
+    .stContainer:has(.stExpander) .stMarkdown h3,
+    .stContainer:has(.stExpander) .stMarkdown h4 {
+        border-bottom: 2px solid #007acc !important;
+        padding-bottom: 0.25rem !important;
+        margin-top: 0.75rem !important;
+        margin-bottom: 0.5rem !important;
+        color: #1f1f1f !important;
+    }
+
+    /* 상세보기 내부 expander 헤더만 스타일링 */
+    .stContainer:has(.stExpander) .stExpander > div > div > div > div > div:first-child {
+        border-bottom: 1px solid #e0e0e0 !important;
+        background-color: #f5f5f5 !important;
+        padding: 0.5rem !important;
+        margin: 0.25rem !important;
+        font-weight: bold !important;
+    }
+
+    /* 상세보기 내부 버튼만 스타일링 */
+    .stContainer:has(.stExpander) .stButton > button {
+        border: 1px solid #007acc !important;
+        border-radius: 4px !important;
+        background-color: #007acc !important;
+        color: white !important;
+        margin: 0.1rem !important;
+        padding: 0.1rem 0.25rem !important;
+    }
+
+    /* 상세보기 내부 text_area만 스타일링 */
+    .stContainer:has(.stExpander) .stTextArea > div > div > textarea {
+        border: 1px solid #d0d0d0 !important;
+        border-radius: 4px !important;
+        background-color: #ffffff !important;
+        margin: 0.1rem !important;
+        padding: 0.1rem !important;
+    }
+
+    /* 상세보기 내부 구분선만 스타일링 */
+    .stContainer:has(.stExpander) hr {
+        border: 1px solid #e0e0e0 !important;
+        margin: 0.5rem 0 !important;
+        opacity: 0.6 !important;
+    }
+
+    /* 상세보기 내부 강조 텍스트만 스타일링 */
+    .stContainer:has(.stExpander) .stMarkdown strong {
+        color: #007acc !important;
+        font-weight: 600 !important;
+    }
+
+    /* 상세보기 내부 정보 표시만 스타일링 */
+    .stContainer:has(.stExpander) .stMarkdown p {
+        border-left: 3px solid #007acc !important;
+        padding-left: 0.5rem !important;
+        margin: 0.25rem 0 !important;
+        background-color: #f8f9fa !important;
+        padding: 0.25rem 0.5rem !important;
+        border-radius: 0 3px 3px 0 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
