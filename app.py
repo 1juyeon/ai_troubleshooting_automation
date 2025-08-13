@@ -791,6 +791,9 @@ def init_components():
         st.error(f"❌ 컴포넌트 초기화 실패: {str(e)}")
         st.stop()
 
+# 세션 상태 초기화 (가장 먼저 실행)
+init_session_state()
+
 # 메인 애플리케이션 시작
 #st.success("✅ 애플리케이션 시작")
 
@@ -846,7 +849,7 @@ with st.sidebar:
     )
     
     # 페이지당 항목 수가 변경되면 현재 페이지를 1로 리셋
-    if st.session_state.items_per_page != items_per_page:
+    if 'items_per_page' in st.session_state and st.session_state.items_per_page != items_per_page:
         st.session_state.items_per_page = items_per_page
         st.session_state.current_page = 1
     
@@ -916,9 +919,6 @@ with st.sidebar:
                 st.error(f"❌ 데이터 초기화 중 오류: {e}")
         else:
             st.error("❌ 데이터베이스가 초기화되지 않았습니다.")
-
-# 세션 상태 초기화
-init_session_state()
 
 # 컴포넌트 초기화
 components = init_components()
