@@ -641,7 +641,7 @@ def init_session_state():
     if 'current_page' not in st.session_state:
         st.session_state.current_page = 1
     if 'items_per_page' not in st.session_state:
-        st.session_state.items_per_page = 10
+        st.session_state.items_per_page = 5  # 고정값 5개
 
     if 'system_prompt' not in st.session_state:
         st.session_state.system_prompt = """[고객 문의 내용]
@@ -835,23 +835,6 @@ with st.sidebar:
     st.session_state.contact_name = contact_name
     st.session_state.role = role
     st.session_state.ai_model = ai_model
-    
-    st.markdown("---")
-    
-    st.markdown("## 📄 페이지네이션 설정")
-    
-    # 페이지당 항목 수 선택
-    items_per_page = st.selectbox(
-        "페이지당 항목 수",
-        options=[5, 10, 20, 50],
-        index=1,  # 기본값 10
-        help="한 페이지에 표시할 항목 수를 선택하세요"
-    )
-    
-    # 페이지당 항목 수가 변경되면 현재 페이지를 1로 리셋
-    if 'items_per_page' in st.session_state and st.session_state.items_per_page != items_per_page:
-        st.session_state.items_per_page = items_per_page
-        st.session_state.current_page = 1
     
     st.markdown("---")
     
