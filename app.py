@@ -467,91 +467,93 @@ def show_ai_analysis_modal(selected_row):
                 st.write(f"**역할:** {selected_row.get('역할', 'N/A')}")
                 st.write(f"**날짜:** {selected_row.get('날짜', 'N/A')}")
         
-        # 실제 분석 결과 조회 시도
-        try:
-            # 데이터베이스에서 해당 문의의 실제 분석 결과 조회
-            if 'components' in st.session_state:
-                # 고객사명과 날짜를 기준으로 실제 분석 결과 조회
-                customer_name = selected_row.get('고객사명', '')
-                inquiry_date = selected_row.get('날짜', '')
-                
-                # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
-                if inquiry_date and ' ' in inquiry_date:
-                    inquiry_date = inquiry_date.split(' ')[0]
-                
-                # 실제 분석 결과 조회
-                actual_analysis = st.session_state.components['multi_user_db'].get_analysis_by_customer_and_date(
-                    customer_name, inquiry_date
-                )
-                
-                if actual_analysis and actual_analysis.get('success'):
-                    analysis_data = actual_analysis.get('data', {})
+        # 로딩 상태 표시
+        with st.spinner("AI 분석 결과를 불러오는 중..."):
+            # 실제 분석 결과 조회 시도
+            try:
+                # 데이터베이스에서 해당 문의의 실제 분석 결과 조회
+                if 'components' in st.session_state:
+                    # 고객사명과 날짜를 기준으로 실제 분석 결과 조회
+                    customer_name = selected_row.get('고객사명', '')
+                    inquiry_date = selected_row.get('날짜', '')
                     
-                    # AI 분석 결과 (실제 데이터) - 간격 줄임
-                    st.markdown("### 🔍 AI 분석 결과")
+                    # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
+                    if inquiry_date and ' ' in inquiry_date:
+                        inquiry_date = inquiry_date.split(' ')[0]
                     
-                    col3, col4 = st.columns(2)
+                    # 실제 분석 결과 조회
+                    actual_analysis = st.session_state.components['multi_user_db'].get_analysis_by_customer_and_date(
+                        customer_name, inquiry_date
+                    )
                     
-                    with col3:
-                        st.markdown("#### 📊 문제 유형 분류")
-                        issue_type = analysis_data.get('issue_type', selected_row.get('문의유형', 'N/A'))
-                        st.write(f"**분류된 문제 유형:** {issue_type}")
+                    if actual_analysis and actual_analysis.get('success'):
+                        analysis_data = actual_analysis.get('data', {})
                         
-                        # 분류 방법과 신뢰도 정보 표시
-                        classification = analysis_data.get('classification', {})
-                        classification_method = classification.get('method', 'AI 자동 분류')
-                        confidence = classification.get('confidence', '높음')
-                        st.write(f"**분류 방법:** {classification_method}")
-                        st.write(f"**신뢰도:** {confidence}")
-                    
-                    with col4:
-                        st.markdown("#### 🎯 시나리오 매칭")
-                        if 'best_scenario' in analysis_data and analysis_data['best_scenario']:
-                            scenario = analysis_data['best_scenario']
-                            st.write(f"**조건 1:** {scenario.get('condition_1', 'N/A')}")
-                            st.write(f"**조건 2:** {scenario.get('condition_2', 'N/A')}")
-                            st.write(f"**해결책:** {scenario.get('solution', 'N/A')}")
-                            st.write(f"**현장 출동 필요:** {scenario.get('onsite_needed', 'N')}")
-                        else:
-                            st.write("**조건 1:** 해당 시나리오 없음")
-                            st.write("**조건 2:** 해당 시나리오 없음")
-                            st.write("**해결책:** 기본 가이드 제공")
-                            st.write("**현장 출동 필요:** N")
-                    
-                    # AI 응답 결과 - 간격 줄임
-                    st.markdown("### 🤖 AI 응답")
-                    
-                    col5, col6 = st.columns(2)
-                    
-                    with col5:
-                        st.markdown("#### 📝 요약")
-                        if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
-                            parsed = analysis_data['gemini_result'].get('parsed_response', {})
+                        # AI 분석 결과 (실제 데이터) - 간격 줄임
+                        st.markdown("### 🔍 AI 분석 결과")
+                        
+                        col3, col4 = st.columns(2)
+                        
+                        with col3:
+                            st.markdown("#### 📊 문제 유형 분류")
+                            issue_type = analysis_data.get('issue_type', selected_row.get('문의유형', 'N/A'))
+                            st.write(f"**분류된 문제 유형:** {issue_type}")
                             
-                            summary = parsed.get('summary', '')
-                            if summary:
-                                st.write(summary)
+                            # 분류 방법과 신뢰도 정보 표시
+                            classification = analysis_data.get('classification', {})
+                            classification_method = classification.get('method', 'AI 자동 분류')
+                            confidence = classification.get('confidence', '높음')
+                            st.write(f"**분류 방법:** {classification_method}")
+                            st.write(f"**신뢰도:** {confidence}")
+                        
+                        with col4:
+                            st.markdown("#### 🎯 시나리오 매칭")
+                            if 'best_scenario' in analysis_data and analysis_data['best_scenario']:
+                                scenario = analysis_data['best_scenario']
+                                st.write(f"**조건 1:** {scenario.get('condition_1', 'N/A')}")
+                                st.write(f"**조건 2:** {scenario.get('condition_2', 'N/A')}")
+                                st.write(f"**해결책:** {scenario.get('solution', 'N/A')}")
+                                st.write(f"**현장 출동 필요:** {scenario.get('onsite_needed', 'N')}")
+                            else:
+                                st.write("**조건 1:** 해당 시나리오 없음")
+                                st.write("**조건 2:** 해당 시나리오 없음")
+                                st.write("**해결책:** 기본 가이드 제공")
+                                st.write("**현장 출동 필요:** N")
+                        
+                        # AI 응답 결과 - 간격 줄임
+                        st.markdown("### 🤖 AI 응답")
+                        
+                        col5, col6 = st.columns(2)
+                        
+                        with col5:
+                            st.markdown("#### 📝 요약")
+                            if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
+                                parsed = analysis_data['gemini_result'].get('parsed_response', {})
+                                
+                                summary = parsed.get('summary', '')
+                                if summary:
+                                    st.write(summary)
+                                else:
+                                    st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
+                                
+                                st.markdown("#### 🔧 조치 흐름")
+                                action_flow = parsed.get('action_flow', '')
+                                if action_flow:
+                                    st.write(action_flow)
+                                else:
+                                    st.write("해당 문의에 대한 조치 흐름이 없습니다.")
                             else:
                                 st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
-                            
-                            st.markdown("#### 🔧 조치 흐름")
-                            action_flow = parsed.get('action_flow', '')
-                            if action_flow:
-                                st.write(action_flow)
-                            else:
+                                st.markdown("#### 🔧 조치 흐름")
                                 st.write("해당 문의에 대한 조치 흐름이 없습니다.")
-                        else:
-                            st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
-                            st.markdown("#### 🔧 조치 흐름")
-                            st.write("해당 문의에 대한 조치 흐름이 없습니다.")
-                    
-                    with col6:
-                        st.markdown("#### 📧 이메일 초안")
-                        if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
-                            parsed = analysis_data['gemini_result'].get('parsed_response', {})
-                            email_content = parsed.get('email_draft', '해당 문의에 대한 이메일 초안이 없습니다.')
-                        else:
-                            email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
+                        
+                        with col6:
+                            st.markdown("#### 📧 이메일 초안")
+                            if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
+                                parsed = analysis_data['gemini_result'].get('parsed_response', {})
+                                email_content = parsed.get('email_draft', '해당 문의에 대한 이메일 초안이 없습니다.')
+                            else:
+                                email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
 
 고객님 안녕하세요.
 
@@ -569,34 +571,34 @@ def show_ai_analysis_modal(selected_row):
 추가 문의사항이 있으시면 언제든 연락 주세요.
 
 감사합니다."""
+                            
+                            st.text_area("이메일 내용", email_content, height=150, disabled=True)
+                            
+                            # 이메일 복사 버튼
+                            if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
+                                st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
+                    
+                    else:
+                        # 실제 분석 결과가 없는 경우 기본 정보만 표시
+                        st.warning("⚠️ 해당 문의의 실제 AI 분석 결과를 찾을 수 없습니다.")
+                        st.info("이는 다음과 같은 이유일 수 있습니다:")
+                        st.info("1. 분석이 완료되지 않았거나 저장되지 않음")
+                        st.info("2. Streamlit Cloud 환경에서 데이터 저장 문제")
+                        st.info("3. 검색 조건이 정확하지 않음")
                         
-                        st.text_area("이메일 내용", email_content, height=150, disabled=True)
+                        # 기본 정보 표시
+                        st.markdown("### 📋 기본 문의 정보")
+                        st.write(f"**문의 내용:** {selected_row.get('문의내용', 'N/A')}")
+                        st.write(f"**문의 유형:** {selected_row.get('문의유형', 'N/A')}")
+                        st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')}")
                         
-                        # 이메일 복사 버튼
-                        if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
-                            st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
-                
                 else:
-                    # 실제 분석 결과가 없는 경우 기본 정보만 표시
-                    st.warning("⚠️ 해당 문의의 실제 AI 분석 결과를 찾을 수 없습니다.")
-                    st.info("이는 다음과 같은 이유일 수 있습니다:")
-                    st.info("1. 분석이 완료되지 않았거나 저장되지 않음")
-                    st.info("2. Streamlit Cloud 환경에서 데이터 저장 문제")
-                    st.info("3. 검색 조건이 정확하지 않음")
+                    st.error("❌ 컴포넌트가 초기화되지 않았습니다.")
+                    st.info("페이지를 새로고침하거나 다시 시도해주세요.")
                     
-                    # 기본 정보 표시
-                    st.markdown("### 📋 기본 문의 정보")
-                    st.write(f"**문의 내용:** {selected_row.get('문의내용', 'N/A')}")
-                    st.write(f"**문의 유형:** {selected_row.get('문의유형', 'N/A')}")
-                    st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')}")
-                    
-            else:
-                st.error("❌ 컴포넌트가 초기화되지 않았습니다.")
-                st.info("페이지를 새로고침하거나 다시 시도해주세요.")
-                
-        except Exception as e:
-            st.error(f"❌ 분석 결과 조회 중 오류가 발생했습니다: {str(e)}")
-            st.info("Streamlit Cloud 환경에서는 일시적인 데이터 접근 문제가 발생할 수 있습니다.")
+            except Exception as e:
+                st.error(f"❌ 분석 결과 조회 중 오류가 발생했습니다: {str(e)}")
+                st.info("Streamlit Cloud 환경에서는 일시적인 데이터 접근 문제가 발생할 수 있습니다.")
 
 def create_history_table_with_buttons(df):
     """이력 조회 결과를 버튼이 포함된 테이블로 생성"""
@@ -1368,20 +1370,20 @@ with tab3:
                                        help="클릭하여 상세 분석 결과 보기"):
                                 st.session_state.selected_row_for_detail = row.to_dict()
                                 st.session_state.show_detail_modal = True
-                                st.rerun()
                         
                         # 구분선 추가
                         st.markdown("---")
                     
                     # 상세보기 모달 표시
                     if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
-                        with st.expander("🔍 AI 분석 상세 결과", expanded=True):
-                            show_ai_analysis_modal(st.session_state.selected_row_for_detail)
-                            # 모달 닫기 버튼
-                            if st.button("❌ 닫기", key="close_modal"):
-                                st.session_state.show_detail_modal = False
-                                st.session_state.selected_row_for_detail = None
-                                st.rerun()
+                        modal_container = st.empty()
+                        with modal_container.container():
+                            with st.expander("🔍 AI 분석 상세 결과", expanded=True):
+                                show_ai_analysis_modal(st.session_state.selected_row_for_detail)
+                                # 모달 닫기 버튼
+                                if st.button("❌ 닫기", key="close_modal"):
+                                    st.session_state.show_detail_modal = False
+                                    st.session_state.selected_row_for_detail = None
                     
                     # 통계 정보
                     stats = components['multi_user_db'].get_statistics()
@@ -1477,20 +1479,20 @@ with tab3:
                            help="클릭하여 상세 분석 결과 보기"):
                     st.session_state.selected_row_for_detail = row.to_dict()
                     st.session_state.show_detail_modal = True
-                    st.rerun()
-            
+                    
             # 구분선 추가
             st.markdown("---")
         
         # 상세보기 모달 표시
         if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
-            with st.expander("🔍 AI 분석 상세 결과", expanded=True):
-                show_ai_analysis_modal(st.session_state.selected_row_for_detail)
-                # 모달 닫기 버튼
-                if st.button("❌ 닫기", key="prev_close_modal"):
-                    st.session_state.show_detail_modal = False
-                    st.session_state.selected_row_for_detail = None
-                    st.rerun()
+            modal_container = st.empty()
+            with modal_container.container():
+                with st.expander("🔍 AI 분석 상세 결과", expanded=True):
+                    show_ai_analysis_modal(st.session_state.selected_row_for_detail)
+                    # 모달 닫기 버튼
+                    if st.button("❌ 닫기", key="prev_close_modal"):
+                        st.session_state.show_detail_modal = False
+                        st.session_state.selected_row_for_detail = None
 
 # 탭 4: 사용 가이드
 with tab4:
