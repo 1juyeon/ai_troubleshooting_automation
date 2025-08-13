@@ -23,319 +23,61 @@ st.set_page_config(
     layout="wide"
 )
 
-# UI 간격 조정을 위한 CSS 스타일
-st.markdown("""
-<style>
-    /* 상세보기 모달의 간격 조정 */
-    .stExpander > div > div > div > div {
-        padding: 0.5rem !important;
-    }
-    
-    /* 컬럼 간격 조정 */
-    .row-widget.stHorizontal > div {
-        padding: 0.25rem !important;
-    }
-    
-    /* 텍스트 간격 조정 */
-    .stMarkdown p {
-        margin-bottom: 0.5rem !important;
-    }
-    
-    /* 구분선 간격 조정 */
-    hr {
-        margin: 0.5rem 0 !important;
-    }
-    
-    /* 데이터 행의 텍스트 세로 중앙 정렬 */
-    .row-widget.stHorizontal > div > div {
-        display: flex !important;
-        align-items: center !important;
-        min-height: 2.5rem !important;
-    }
-    
-    /* 데이터 행의 텍스트 세로 중앙 정렬 (고객사명이 비어있을 때) */
-    .row-widget.stHorizontal > div > div > div {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        min-height: 2.5rem !important;
-    }
-    
-    /* 상세보기 컨테이너 간격 조정 */
-    .stContainer > div {
-        margin-bottom: 0.5rem !important;
-    }
-    
-    /* 상세보기 내부 컬럼 간격 조정 */
-    .stHorizontal > div {
-        padding: 0.25rem !important;
-        margin: 0.25rem !important;
-    }
-    
-    /* 상세보기 내부 텍스트 간격 조정 */
-    .stMarkdown h3 {
-        margin-top: 1rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-    
-    .stMarkdown h4 {
-        margin-top: 0.75rem !important;
-        margin-bottom: 0.25rem !important;
-    }
-    
-    /* 상세보기 내부 expander 간격 조정 */
-    .stExpander > div > div > div > div > div {
-        padding: 0.25rem !important;
-        margin: 0.25rem !important;
-    }
-    
-    /* 상세보기 내부 컬럼 간격 더욱 조정 */
-    .stHorizontal > div > div {
-        padding: 0.1rem !important;
-        margin: 0.1rem !important;
-    }
-    
-    /* 상세보기 내부 텍스트 요소 간격 조정 */
-    .stMarkdown p, .stMarkdown div {
-        margin: 0.25rem 0 !important;
-        padding: 0.1rem 0 !important;
-    }
-    
-    /* 상세보기 내부 버튼 간격 조정 */
-    .stButton > button {
-        margin: 0.25rem !important;
-        padding: 0.25rem 0.5rem !important;
-    }
-    
-    /* 상세보기 내부 expander 헤더 간격 조정 */
-    .stExpander > div > div > div > div > div:first-child {
-        padding: 0.5rem !important;
-        margin: 0.25rem !important;
-    }
-    
-    /* 상세보기 내부 컬럼 레이아웃 간격 조정 */
-    .stHorizontal {
-        gap: 0.5rem !important;
-    }
-    
-    /* 상세보기 내부 텍스트 블록 간격 조정 */
-    .stMarkdown > div {
-        margin-bottom: 0.5rem !important;
-    }
-    
-    /* 상세보기 내부 섹션 간격 조정 */
-    .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {
-        margin-top: 0.75rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-    
-    /* 상세보기 내부 컨테이너 패딩 조정 */
-    .stContainer {
-        padding: 0.5rem !important;
-    }
-    
-    /* 상세보기 내부 expander 컨텐츠 간격 조정 */
-    .stExpander > div > div > div > div > div > div {
-        padding: 0.25rem !important;
-        margin: 0.25rem !important;
-    }
-    
-    /* 상세보기 내부 모든 요소의 간격 최소화 */
-    .stMarkdown, .stText, .stButton, .stExpander {
-        margin: 0.1rem !important;
-        padding: 0.1rem !important;
-    }
-    
-    /* 상세보기 내부 컬럼 간격 최소화 */
-    .stHorizontal > div {
-        padding: 0.1rem !important;
-        margin: 0.1rem !important;
-    }
-    
-    /* 상세보기 내부 텍스트 요소 간격 최소화 */
-    .stMarkdown p, .stMarkdown div, .stMarkdown h3, .stMarkdown h4 {
-        margin: 0.1rem 0 !important;
-        padding: 0.1rem 0 !important;
-    }
-    
-    /* 상세보기 내부 expander 헤더 간격 최소화 */
-    .stExpander > div > div > div > div > div:first-child {
-        padding: 0.25rem !important;
-        margin: 0.1rem !important;
-    }
-    
-    /* 상세보기 내부 컨테이너 패딩 최소화 */
-    .stContainer {
-        padding: 0.25rem !important;
-    }
-    
-    /* 상세보기 내부 섹션 간격 최소화 */
-    .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {
-        margin-top: 0.5rem !important;
-        margin-bottom: 0.25rem !important;
-    }
-    
-    /* 상세보기 내부 버튼 간격 최소화 */
-    .stButton > button {
-        margin: 0.1rem !important;
-        padding: 0.1rem 0.25rem !important;
-    }
-    
-    /* 상세보기 내부 text_area 간격 최소화 */
-    .stTextArea > div > div > textarea {
-        margin: 0.1rem !important;
-        padding: 0.1rem !important;
-    }
-    
-    /* Streamlit 기본 간격 최소화 */
-    .main > div {
-        padding: 0.5rem !important;
-    }
-    
-    .main > div > div {
-        padding: 0.25rem !important;
-    }
-    
-    /* 상세보기 내부 모든 div 요소 간격 최소화 */
-    .stExpander > div > div > div > div > div > div > div {
-        margin: 0.05rem !important;
-        padding: 0.05rem !important;
-    }
-    
-    /* 상세보기 내부 컬럼 레이아웃 간격 최소화 */
-    .stHorizontal {
-        gap: 0.25rem !important;
-    }
-    
-    /* 상세보기 내부 expander 간격 최소화 */
-    .stExpander {
-        margin: 0.1rem !important;
-        padding: 0.1rem !important;
-    }
+# Streamlit 캐싱을 위한 데이터 지속성 함수들
+@st.cache_data(ttl=3600)  # 1시간 캐시
+def load_cached_history_data():
+    """캐시된 이력 데이터 로드"""
+    try:
+        # 캐시된 데이터가 있으면 반환
+        if 'cached_history' in st.session_state:
+            return st.session_state.cached_history
+        return {}
+    except Exception as e:
+        print(f"⚠️ 캐시된 이력 데이터 로드 실패: {e}")
+        return {}
 
-    /* 상세보기 영역만을 위한 특정 스타일링 */
-    .stContainer:has(.stExpander) {
-        border: 2px solid #007acc !important;
-        border-radius: 6px !important;
-        background-color: #f8f9fa !important;
-        padding: 0.5rem !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-    }
+@st.cache_data(ttl=3600)  # 1시간 캐시
+def save_cached_history_data(data):
+    """이력 데이터를 캐시에 저장"""
+    try:
+        st.session_state.cached_history = data
+        return True
+    except Exception as e:
+        print(f"⚠️ 캐시된 이력 데이터 저장 실패: {e}")
+        return False
 
-    /* 상세보기 내부 expander만 스타일링 */
-    .stContainer:has(.stExpander) .stExpander > div > div > div > div {
-        border: 1px solid #e0e0e0 !important;
-        border-radius: 4px !important;
-        background-color: #fafafa !important;
-    }
-
-    /* 상세보기 내부 컬럼만 스타일링 */
-    .stContainer:has(.stExpander) .stHorizontal > div {
-        border: 1px solid #d0d0d0 !important;
-        border-radius: 3px !important;
-        background-color: #ffffff !important;
-        padding: 0.5rem !important;
-        margin: 0.25rem !important;
-    }
-
-    /* 상세보기 내부 텍스트 블록만 스타일링 */
-    .stContainer:has(.stExpander) .stMarkdown > div {
-        border: 1px solid #e8e8e8 !important;
-        border-radius: 3px !important;
-        background-color: #fefefe !important;
-        padding: 0.5rem !important;
-        margin: 0.25rem !important;
-    }
-
-    /* 상세보기 내부 섹션 헤더만 스타일링 */
-    .stContainer:has(.stExpander) .stMarkdown h2,
-    .stContainer:has(.stExpander) .stMarkdown h3,
-    .stContainer:has(.stExpander) .stMarkdown h4 {
-        border-bottom: 2px solid #007acc !important;
-        padding-bottom: 0.25rem !important;
-        margin-top: 0.75rem !important;
-        margin-bottom: 0.5rem !important;
-        color: #1f1f1f !important;
-    }
-
-    /* 상세보기 내부 expander 헤더만 스타일링 */
-    .stContainer:has(.stExpander) .stExpander > div > div > div > div > div:first-child {
-        border-bottom: 1px solid #e0e0e0 !important;
-        background-color: #f5f5f5 !important;
-        padding: 0.5rem !important;
-        margin: 0.25rem !important;
-        font-weight: bold !important;
-    }
-
-    /* 상세보기 내부 버튼만 스타일링 */
-    .stContainer:has(.stExpander) .stButton > button {
-        border: 1px solid #007acc !important;
-        border-radius: 4px !important;
-        background-color: #007acc !important;
-        color: white !important;
-        margin: 0.1rem !important;
-        padding: 0.1rem 0.25rem !important;
-    }
-
-    /* 상세보기 내부 text_area만 스타일링 */
-    .stContainer:has(.stExpander) .stTextArea > div > div > textarea {
-        border: 1px solid #d0d0d0 !important;
-        border-radius: 4px !important;
-        background-color: #ffffff !important;
-        margin: 0.1rem !important;
-        padding: 0.1rem !important;
-    }
-
-    /* 상세보기 내부 구분선만 스타일링 */
-    .stContainer:has(.stExpander) hr {
-        border: 1px solid #e0e0e0 !important;
-        margin: 0.5rem 0 !important;
-        opacity: 0.6 !important;
-    }
-
-    /* 상세보기 내부 강조 텍스트만 스타일링 */
-    .stContainer:has(.stExpander) .stMarkdown strong {
-        color: #007acc !important;
-        font-weight: 600 !important;
-    }
-
-    /* 상세보기 내부 정보 표시만 스타일링 */
-    .stContainer:has(.stExpander) .stMarkdown p {
-        border-left: 3px solid #007acc !important;
-        padding-left: 0.5rem !important;
-        margin: 0.25rem 0 !important;
-        background-color: #f8f9fa !important;
-        padding: 0.25rem 0.5rem !important;
-        border-radius: 0 3px 3px 0 !important;
-    }
-
-    .history-table-header {
-        background-color: #f0f2f6 !important;
-        padding: 0.75rem 0.5rem !important;
-        border-bottom: 2px solid #e0e0e0 !important;
-        font-weight: bold !important;
-        text-align: center !important;
-        border-radius: 4px !important;
-        color: #333 !important;
-        font-size: 0.9rem !important;
-    }
-
-    .history-table-cell {
-        padding: 0.75rem 0.5rem !important;
-        text-align: center !important;
-        vertical-align: middle !important;
-        border-bottom: 1px solid #f0f0f0 !important;
-        background-color: #ffffff !important;
-        border-radius: 4px !important;
-        color: #555 !important;
-        font-size: 0.9rem !important;
-        min-height: 2.5rem !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-</style>
-""", unsafe_allow_html=True)
+@st.cache_data(ttl=3600)  # 1시간 캐시
+def get_persistent_data_path():
+    """Streamlit Cloud에서 영구 데이터 저장 경로 반환"""
+    try:
+        # Streamlit Cloud 환경에서 사용할 수 있는 경로들
+        possible_paths = [
+            "/tmp/streamlit_persistent_data",
+            "/tmp/streamlit_cloud_data",
+            os.path.join(os.getcwd(), "persistent_data")
+        ]
+        
+        for path in possible_paths:
+            try:
+                if not os.path.exists(path):
+                    os.makedirs(path, exist_ok=True)
+                # 쓰기 권한 테스트
+                test_file = os.path.join(path, "test_write.tmp")
+                with open(test_file, 'w') as f:
+                    f.write("test")
+                os.remove(test_file)
+                return path
+            except Exception:
+                continue
+        
+        # 모든 경로가 실패하면 현재 작업 디렉토리 사용
+        fallback_path = os.path.join(os.getcwd(), "persistent_data")
+        os.makedirs(fallback_path, exist_ok=True)
+        return fallback_path
+        
+    except Exception as e:
+        print(f"⚠️ 영구 데이터 경로 설정 실패: {e}")
+        return os.path.join(os.getcwd(), "persistent_data")
 
 # 안전한 타임스탬프 생성 함수
 def get_safe_timestamp():
@@ -1291,6 +1033,134 @@ with tab2:
 with tab3:
     st.markdown("## 📊 분석 이력 관리")
     
+    # 데이터 지속성 정보 표시
+    if 'components' in st.session_state and 'multi_user_db' in st.session_state.components:
+        multi_user_db = st.session_state.components['multi_user_db']
+        if hasattr(multi_user_db, 'is_cloud') and multi_user_db.is_cloud:
+            st.info("☁️ **Streamlit Cloud 환경**: 이력 데이터가 영구 저장소에 자동으로 백업됩니다.")
+        else:
+            st.info("💻 **로컬 환경**: 이력 데이터가 파일 시스템에 저장됩니다.")
+    
+    # 데이터 백업 및 복구 섹션
+    with st.expander("🔒 데이터 백업 및 복구", expanded=False):
+        col_backup1, col_backup2, col_backup3 = st.columns(3)
+        
+        with col_backup1:
+            if st.button("💾 데이터 백업", type="secondary", use_container_width=True):
+                if 'components' in st.session_state and 'multi_user_db' in st.session_state.components:
+                    try:
+                        # 현재 모든 이력 데이터 수집
+                        backup_data = {
+                            'timestamp': datetime.now().isoformat(),
+                            'environment': 'cloud' if multi_user_db.is_cloud else 'local',
+                            'data': {}
+                        }
+                        
+                        # 사용자별 이력 백업
+                        if hasattr(multi_user_db, 'cloud_storage'):
+                            all_keys = multi_user_db.cloud_storage.get_all_keys()
+                            for key in all_keys:
+                                data = multi_user_db.cloud_storage.load(key)
+                                if data:
+                                    backup_data['data'][key] = data
+                        
+                        # 백업 파일 저장
+                        backup_filename = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                        backup_path = get_persistent_data_path()
+                        backup_file_path = os.path.join(backup_path, backup_filename)
+                        
+                        with open(backup_file_path, 'w', encoding='utf-8') as f:
+                            json.dump(backup_data, f, ensure_ascii=False, indent=2)
+                        
+                        st.success(f"✅ 데이터 백업 완료: {backup_filename}")
+                        
+                        # 백업 정보를 세션 상태에 저장
+                        if 'backup_files' not in st.session_state:
+                            st.session_state.backup_files = []
+                        st.session_state.backup_files.append({
+                            'filename': backup_filename,
+                            'timestamp': datetime.now().isoformat(),
+                            'path': backup_file_path
+                        })
+                        
+                    except Exception as e:
+                        st.error(f"❌ 백업 실패: {e}")
+                else:
+                    st.error("❌ 데이터베이스가 초기화되지 않았습니다.")
+        
+        with col_backup2:
+            if st.button("🔄 데이터 복구", type="secondary", use_container_width=True):
+                if 'components' in st.session_state and 'multi_user_db' in st.session_state.components:
+                    try:
+                        # 백업 파일 목록 표시
+                        backup_path = get_persistent_data_path()
+                        backup_files = []
+                        
+                        if os.path.exists(backup_path):
+                            for filename in os.listdir(backup_path):
+                                if filename.startswith("backup_") and filename.endswith(".json"):
+                                    file_path = os.path.join(backup_path, filename)
+                                    try:
+                                        with open(file_path, 'r', encoding='utf-8') as f:
+                                            backup_info = json.load(f)
+                                        backup_files.append({
+                                            'filename': filename,
+                                            'timestamp': backup_info.get('timestamp', ''),
+                                            'path': file_path
+                                        })
+                                    except Exception:
+                                        continue
+                        
+                        if backup_files:
+                            # 가장 최근 백업 파일로 복구
+                            latest_backup = max(backup_files, key=lambda x: x['timestamp'])
+                            
+                            with open(latest_backup['path'], 'r', encoding='utf-8') as f:
+                                backup_data = json.load(f)
+                            
+                            # 데이터 복구
+                            if 'data' in backup_data:
+                                for key, data in backup_data['data'].items():
+                                    if hasattr(multi_user_db, 'cloud_storage'):
+                                        multi_user_db.cloud_storage.save(key, data)
+                            
+                            st.success(f"✅ 데이터 복구 완료: {latest_backup['filename']}")
+                            st.rerun()
+                        else:
+                            st.warning("⚠️ 복구할 백업 파일이 없습니다.")
+                            
+                    except Exception as e:
+                        st.error(f"❌ 복구 실패: {e}")
+                else:
+                    st.error("❌ 데이터베이스가 초기화되지 않았습니다.")
+        
+        with col_backup3:
+            if st.button("📋 백업 목록", type="secondary", use_container_width=True):
+                backup_path = get_persistent_data_path()
+                backup_files = []
+                
+                if os.path.exists(backup_path):
+                    for filename in os.listdir(backup_path):
+                        if filename.startswith("backup_") and filename.endswith(".json"):
+                            file_path = os.path.join(backup_path, filename)
+                            try:
+                                with open(file_path, 'r', encoding='utf-8') as f:
+                                    backup_info = json.load(f)
+                                backup_files.append({
+                                    'filename': filename,
+                                    'timestamp': backup_info.get('timestamp', ''),
+                                    'size': os.path.getsize(file_path)
+                                })
+                            except Exception:
+                                continue
+                
+                if backup_files:
+                    st.markdown("### 📋 백업 파일 목록")
+                    for backup in sorted(backup_files, key=lambda x: x['timestamp'], reverse=True):
+                        st.markdown(f"- **{backup['filename']}** ({backup['timestamp']}) - {backup['size']} bytes")
+                else:
+                    st.info("📋 백업 파일이 없습니다.")
+    
     # 필터링 옵션
     col15, col16, col17, col18 = st.columns(4)
     
@@ -1662,4 +1532,318 @@ st.markdown("""
 <div style="text-align: center; color: #666; font-size: 0.8em;">
 ©2024 PrivKeeper P 장애 대응 자동화 시스템
 </div>
+""", unsafe_allow_html=True)
+
+# UI 간격 조정을 위한 CSS 스타일
+st.markdown("""
+<style>
+    /* 상세보기 모달의 간격 조정 */
+    .stExpander > div > div > div > div {
+        padding: 0.5rem !important;
+    }
+    
+    /* 컬럼 간격 조정 */
+    .row-widget.stHorizontal > div {
+        padding: 0.25rem !important;
+    }
+    
+    /* 텍스트 간격 조정 */
+    .stMarkdown p {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* 구분선 간격 조정 */
+    hr {
+        margin: 0.5rem 0 !important;
+    }
+    
+    /* 데이터 행의 텍스트 세로 중앙 정렬 */
+    .row-widget.stHorizontal > div > div {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 2.5rem !important;
+    }
+    
+    /* 데이터 행의 텍스트 세로 중앙 정렬 (고객사명이 비어있을 때) */
+    .row-widget.stHorizontal > div > div > div {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 2.5rem !important;
+    }
+    
+    /* 상세보기 컨테이너 간격 조정 */
+    .stContainer > div {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* 상세보기 내부 컬럼 간격 조정 */
+    .stHorizontal > div {
+        padding: 0.25rem !important;
+        margin: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 텍스트 간격 조정 */
+    .stMarkdown h3 {
+        margin-top: 1rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .stMarkdown h4 {
+        margin-top: 0.75rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 expander 간격 조정 */
+    .stExpander > div > div > div > div > div {
+        padding: 0.25rem !important;
+        margin: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 컬럼 간격 더욱 조정 */
+    .stHorizontal > div > div {
+        padding: 0.1rem !important;
+        margin: 0.1rem !important;
+    }
+    
+    /* 상세보기 내부 텍스트 요소 간격 조정 */
+    .stMarkdown p, .stMarkdown div {
+        margin: 0.25rem 0 !important;
+        padding: 0.1rem 0 !important;
+    }
+    
+    /* 상세보기 내부 버튼 간격 조정 */
+    .stButton > button {
+        margin: 0.25rem !important;
+        padding: 0.25rem 0.5rem !important;
+    }
+    
+    /* 상세보기 내부 expander 헤더 간격 조정 */
+    .stExpander > div > div > div > div > div:first-child {
+        padding: 0.5rem !important;
+        margin: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 컬럼 레이아웃 간격 조정 */
+    .stHorizontal {
+        gap: 0.5rem !important;
+    }
+    
+    /* 상세보기 내부 텍스트 블록 간격 조정 */
+    .stMarkdown > div {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* 상세보기 내부 섹션 간격 조정 */
+    .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {
+        margin-top: 0.75rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* 상세보기 내부 컨테이너 패딩 조정 */
+    .stContainer {
+        padding: 0.5rem !important;
+    }
+    
+    /* 상세보기 내부 expander 컨텐츠 간격 조정 */
+    .stExpander > div > div > div > div > div > div {
+        padding: 0.25rem !important;
+        margin: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 모든 요소의 간격 최소화 */
+    .stMarkdown, .stText, .stButton, .stExpander {
+        margin: 0.1rem !important;
+        padding: 0.1rem !important;
+    }
+    
+    /* 상세보기 내부 컬럼 간격 최소화 */
+    .stHorizontal > div {
+        padding: 0.1rem !important;
+        margin: 0.1rem !important;
+    }
+    
+    /* 상세보기 내부 텍스트 요소 간격 최소화 */
+    .stMarkdown p, .stMarkdown div, .stMarkdown h3, .stMarkdown h4 {
+        margin: 0.1rem 0 !important;
+        padding: 0.1rem 0 !important;
+    }
+    
+    /* 상세보기 내부 expander 헤더 간격 최소화 */
+    .stExpander > div > div > div > div > div:first-child {
+        padding: 0.25rem !important;
+        margin: 0.1rem !important;
+    }
+    
+    /* 상세보기 내부 컨테이너 패딩 최소화 */
+    .stContainer {
+        padding: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 섹션 간격 최소화 */
+    .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 버튼 간격 최소화 */
+    .stButton > button {
+        margin: 0.1rem !important;
+        padding: 0.1rem 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 text_area 간격 최소화 */
+    .stTextArea > div > div > textarea {
+        margin: 0.1rem !important;
+        padding: 0.1rem !important;
+    }
+    
+    /* Streamlit 기본 간격 최소화 */
+    .main > div {
+        padding: 0.5rem !important;
+    }
+    
+    .main > div > div {
+        padding: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 모든 div 요소 간격 최소화 */
+    .stExpander > div > div > div > div > div > div > div {
+        margin: 0.05rem !important;
+        padding: 0.05rem !important;
+    }
+    
+    /* 상세보기 내부 컬럼 레이아웃 간격 최소화 */
+    .stHorizontal {
+        gap: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 expander 간격 최소화 */
+    .stExpander {
+        margin: 0.1rem !important;
+        padding: 0.1rem !important;
+    }
+
+    /* 상세보기 영역만을 위한 특정 스타일링 */
+    .stContainer:has(.stExpander) {
+        border: 2px solid #007acc !important;
+        border-radius: 6px !important;
+        background-color: #f8f9fa !important;
+        padding: 0.5rem !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+
+    /* 상세보기 내부 expander만 스타일링 */
+    .stContainer:has(.stExpander) .stExpander > div > div > div > div {
+        border: 1px solid #e0e0e0 !important;
+        border-radius: 4px !important;
+        background-color: #fafafa !important;
+    }
+
+    /* 상세보기 내부 컬럼만 스타일링 */
+    .stContainer:has(.stExpander) .stHorizontal > div {
+        border: 1px solid #d0d0d0 !important;
+        border-radius: 3px !important;
+        background-color: #ffffff !important;
+        padding: 0.5rem !important;
+        margin: 0.25rem !important;
+    }
+
+    /* 상세보기 내부 텍스트 블록만 스타일링 */
+    .stContainer:has(.stExpander) .stMarkdown > div {
+        border: 1px solid #e8e8e8 !important;
+        border-radius: 3px !important;
+        background-color: #fefefe !important;
+        padding: 0.5rem !important;
+        margin: 0.25rem !important;
+    }
+
+    /* 상세보기 내부 섹션 헤더만 스타일링 */
+    .stContainer:has(.stExpander) .stMarkdown h2,
+    .stContainer:has(.stExpander) .stMarkdown h3,
+    .stContainer:has(.stExpander) .stMarkdown h4 {
+        border-bottom: 2px solid #007acc !important;
+        padding-bottom: 0.25rem !important;
+        margin-top: 0.75rem !important;
+        margin-bottom: 0.5rem !important;
+        color: #1f1f1f !important;
+    }
+
+    /* 상세보기 내부 expander 헤더만 스타일링 */
+    .stContainer:has(.stExpander) .stExpander > div > div > div > div > div:first-child {
+        border-bottom: 1px solid #e0e0e0 !important;
+        background-color: #f5f5f5 !important;
+        padding: 0.5rem !important;
+        margin: 0.25rem !important;
+        font-weight: bold !important;
+    }
+
+    /* 상세보기 내부 버튼만 스타일링 */
+    .stContainer:has(.stExpander) .stButton > button {
+        border: 1px solid #007acc !important;
+        border-radius: 4px !important;
+        background-color: #007acc !important;
+        color: white !important;
+        margin: 0.1rem !important;
+        padding: 0.1rem 0.25rem !important;
+    }
+
+    /* 상세보기 내부 text_area만 스타일링 */
+    .stContainer:has(.stExpander) .stTextArea > div > div > textarea {
+        border: 1px solid #d0d0d0 !important;
+        border-radius: 4px !important;
+        background-color: #ffffff !important;
+        margin: 0.1rem !important;
+        padding: 0.1rem !important;
+    }
+
+    /* 상세보기 내부 구분선만 스타일링 */
+    .stContainer:has(.stExpander) hr {
+        border: 1px solid #e0e0e0 !important;
+        margin: 0.5rem 0 !important;
+        opacity: 0.6 !important;
+    }
+
+    /* 상세보기 내부 강조 텍스트만 스타일링 */
+    .stContainer:has(.stExpander) .stMarkdown strong {
+        color: #007acc !important;
+        font-weight: 600 !important;
+    }
+
+    /* 상세보기 내부 정보 표시만 스타일링 */
+    .stContainer:has(.stExpander) .stMarkdown p {
+        border-left: 3px solid #007acc !important;
+        padding-left: 0.5rem !important;
+        margin: 0.25rem 0 !important;
+        background-color: #f8f9fa !important;
+        padding: 0.25rem 0.5rem !important;
+        border-radius: 0 3px 3px 0 !important;
+    }
+
+    .history-table-header {
+        background-color: #f0f2f6 !important;
+        padding: 0.75rem 0.5rem !important;
+        border-bottom: 2px solid #e0e0e0 !important;
+        font-weight: bold !important;
+        text-align: center !important;
+        border-radius: 4px !important;
+        color: #333 !important;
+        font-size: 0.9rem !important;
+    }
+
+    .history-table-cell {
+        padding: 0.75rem 0.5rem !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+        border-bottom: 1px solid #f0f0f0 !important;
+        background-color: #ffffff !important;
+        border-radius: 4px !important;
+        color: #555 !important;
+        font-size: 0.9rem !important;
+        min-height: 2.5rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+</style>
 """, unsafe_allow_html=True)
