@@ -636,6 +636,12 @@ def init_session_state():
         st.session_state.show_detail_modal = False
     if 'selected_row_for_detail' not in st.session_state:
         st.session_state.selected_row_for_detail = None
+    
+    # 페이지네이션 관련 변수들
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = 1
+    if 'items_per_page' not in st.session_state:
+        st.session_state.items_per_page = 10
 
     if 'system_prompt' not in st.session_state:
         st.session_state.system_prompt = """[고객 문의 내용]
@@ -668,8 +674,70 @@ def init_session_state():
     if 'ai_model' not in st.session_state:
         st.session_state.ai_model = "Gemini 1.5 Pro"
 
-# 세션 상태 초기화
-init_session_state()
+def get_paginated_data(df, page, items_per_page):
+    """데이터프레임을 페이지별로 나누는 함수"""
+    if df is None or df.empty:
+        return None, 0, 0
+    
+    total_items = len(df)
+    total_pages = (total_items + items_per_page - 1) // items_per_page
+    
+    # 페이지 범위 조정
+    if page < 1:
+        page = 1
+    elif page > total_pages:
+        page = total_pages
+    
+    start_idx = (page - 1) * items_per_page
+    end_idx = min(start_idx + items_per_page, total_items)
+    
+    return df.iloc[start_idx:end_idx], total_pages, total_items
+
+def render_pagination_controls(current_page, total_pages, total_items, items_per_page, prefix=""):
+    """페이지네이션 컨트롤을 렌더링하는 함수"""
+    if total_pages <= 1:
+        return
+    
+    st.markdown("---")
+    st.markdown(f"**📄 페이지 {current_page} / {total_pages} (총 {total_items}건, 페이지당 {items_per_page}건)**")
+    
+    # 페이지네이션 버튼들
+    col1, col2, col3, col4, col5, col6, col7, col8, col9, col10, col11 = st.columns(11)
+    
+    with col1:
+        if st.button("◀◀", key=f"{prefix}first_page", disabled=current_page == 1):
+            st.session_state.current_page = 1
+            st.rerun()
+    
+    with col2:
+        if st.button("◀", key=f"{prefix}prev_page", disabled=current_page == 1):
+            st.session_state.current_page = current_page - 1
+            st.rerun()
+    
+    # 페이지 번호 버튼들 (최대 5개까지 표시)
+    start_page = max(1, current_page - 2)
+    end_page = min(total_pages, start_page + 4)
+    
+    if end_page - start_page < 4:
+        start_page = max(1, end_page - 4)
+    
+    for i in range(start_page, end_page + 1):
+        with st.columns(11)[i - start_page + 3]:
+            if st.button(str(i), key=f"{prefix}page_{i}", type="primary" if i == current_page else "secondary"):
+                st.session_state.current_page = i
+                st.rerun()
+    
+    with col10:
+        if st.button("▶", key=f"{prefix}next_page", disabled=current_page == total_pages):
+            st.session_state.current_page = current_page + 1
+            st.rerun()
+    
+    with col11:
+        if st.button("▶▶", key=f"{prefix}last_page", disabled=current_page == total_pages):
+            st.session_state.current_page = total_pages
+            st.rerun()
+    
+    st.markdown("---")
 
 # 컴포넌트 초기화
 def init_components():
@@ -767,6 +835,23 @@ with st.sidebar:
     
     st.markdown("---")
     
+    st.markdown("## 📄 페이지네이션 설정")
+    
+    # 페이지당 항목 수 선택
+    items_per_page = st.selectbox(
+        "페이지당 항목 수",
+        options=[5, 10, 20, 50],
+        index=1,  # 기본값 10
+        help="한 페이지에 표시할 항목 수를 선택하세요"
+    )
+    
+    # 페이지당 항목 수가 변경되면 현재 페이지를 1로 리셋
+    if st.session_state.items_per_page != items_per_page:
+        st.session_state.items_per_page = items_per_page
+        st.session_state.current_page = 1
+    
+    st.markdown("---")
+    
     # 디버깅 정보 (Streamlit Cloud 환경 확인)
     st.markdown("## 🔍 시스템 정보")
     
@@ -832,12 +917,11 @@ with st.sidebar:
         else:
             st.error("❌ 데이터베이스가 초기화되지 않았습니다.")
 
-# 컴포넌트 초기화 (캐싱 제거)
-if 'components' not in st.session_state:
-    components = init_components()
-    st.session_state.components = components
-else:
-    components = st.session_state.components
+# 세션 상태 초기화
+init_session_state()
+
+# 컴포넌트 초기화
+components = init_components()
 
 # 메인 헤더
 st.markdown("""
@@ -1313,6 +1397,8 @@ with tab3:
                     # 세션 상태에 결과 저장
                     st.session_state.history_search_results = df
                     st.session_state.history_search_performed = True
+                    # 새로운 검색 시 페이지를 1로 리셋
+                    st.session_state.current_page = 1
                     
                     st.success(f"✅ {len(history_data)}건의 이력이 조회되었습니다.")
                     
@@ -1358,8 +1444,13 @@ with tab3:
                     with header_cols[7]:
                         st.markdown('<div class="history-table-header">상세보기</div>', unsafe_allow_html=True)
                     
-                    # 데이터 행들
-                    for index, row in df.iterrows():
+                    # 페이지네이션 적용
+                    paginated_df, total_pages, total_items = get_paginated_data(
+                        df, st.session_state.current_page, st.session_state.items_per_page
+                    )
+                    
+                    # 데이터 행들 (페이지네이션된 데이터만 표시)
+                    for index, row in paginated_df.iterrows():
                         row_cols = st.columns([2, 2, 2, 2, 2, 2, 2, 1])
                         
                         with row_cols[0]:
@@ -1391,6 +1482,15 @@ with tab3:
                         
                         # 구분선 추가
                         st.markdown("---")
+                    
+                    # 페이지네이션 컨트롤 표시
+                    render_pagination_controls(
+                        st.session_state.current_page, 
+                        total_pages, 
+                        total_items, 
+                        st.session_state.items_per_page,
+                        "new_"
+                    )
                     
 
                     
@@ -1478,24 +1578,29 @@ with tab3:
         with prev_header_cols[7]:
             st.markdown('<div class="history-table-header">상세보기</div>', unsafe_allow_html=True)
         
-        # 데이터 행들
-        for index, row in df_previous.iterrows():
+        # 페이지네이션 적용
+        paginated_df_prev, total_pages_prev, total_items_prev = get_paginated_data(
+            df_previous, st.session_state.current_page, st.session_state.items_per_page
+        )
+        
+        # 데이터 행들 (페이지네이션된 데이터만 표시)
+        for index, row in paginated_df_prev.iterrows():
             prev_row_cols = st.columns([2, 2, 2, 2, 2, 2, 2, 1])
             
             with prev_row_cols[0]:
                 st.markdown(f'<div class="history-table-cell">{row.get("번호", "N/A")}</div>', unsafe_allow_html=True)
             with prev_row_cols[1]:
-                st.markdown(f'<div class="history-table-cell">{row.get("날짜", "N/A")}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="history_table-cell">{row.get("날짜", "N/A")}</div>', unsafe_allow_html=True)
             with prev_row_cols[2]:
-                st.markdown(f'<div class="history-table-cell">{row.get("고객사명", "N/A")}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="history_table-cell">{row.get("고객사명", "N/A")}</div>', unsafe_allow_html=True)
             with prev_row_cols[3]:
-                st.markdown(f'<div class="history-table-cell">{row.get("문의유형", "N/A")}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="history_table-cell">{row.get("문의유형", "N/A")}</div>', unsafe_allow_html=True)
             with prev_row_cols[4]:
-                st.markdown(f'<div class="history-table-cell">{row.get("우선순위", "N/A")}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="history_table-cell">{row.get("우선순위", "N/A")}</div>', unsafe_allow_html=True)
             with prev_row_cols[5]:
-                st.markdown(f'<div class="history-table-cell">{row.get("담당자", "N/A")}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="history_table-cell">{row.get("담당자", "N/A")}</div>', unsafe_allow_html=True)
             with prev_row_cols[6]:
-                st.markdown(f'<div class="history-table-cell">{row.get("역할", "N/A")}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="history_table-cell">{row.get("역할", "N/A")}</div>', unsafe_allow_html=True)
             with prev_row_cols[7]:
                 def open_modal_prev(row_dict):
                     st.session_state.selected_row_for_detail = row_dict
@@ -1511,6 +1616,15 @@ with tab3:
             
             # 구분선 추가
             st.markdown("---")
+        
+        # 페이지네이션 컨트롤 표시
+        render_pagination_controls(
+            st.session_state.current_page, 
+            total_pages_prev, 
+            total_items_prev, 
+            st.session_state.items_per_page,
+            "prev_"
+        )
         
 
 
