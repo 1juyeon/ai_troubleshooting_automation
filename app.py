@@ -701,38 +701,48 @@ def render_pagination_controls(current_page, total_pages, total_items, items_per
     st.markdown("---")
     st.markdown(f"**📄 페이지 {current_page} / {total_pages} (총 {total_items}건, 페이지당 {items_per_page}건)**")
     
-    # 페이지네이션 버튼들
-    col1, col2, col3, col4, col5, col6, col7, col8, col9, col10, col11 = st.columns(11)
-    
-    with col1:
-        if st.button("◀◀", key=f"{prefix}first_page", disabled=current_page == 1):
-            st.session_state.current_page = 1
-            st.rerun()
-    
-    with col2:
-        if st.button("◀", key=f"{prefix}prev_page", disabled=current_page == 1):
-            st.session_state.current_page = current_page - 1
-            st.rerun()
-    
-    # 페이지 번호 버튼들 (최대 5개까지 표시)
+    # 페이지 번호 범위 계산
     start_page = max(1, current_page - 2)
     end_page = min(total_pages, start_page + 4)
     
     if end_page - start_page < 4:
         start_page = max(1, end_page - 4)
     
+    # 전체 버튼 수 계산 (첫페이지, 이전, 페이지번호들, 다음, 마지막)
+    total_buttons = 2 + (end_page - start_page + 1) + 2
+    
+    # 동적으로 컬럼 생성
+    cols = st.columns(total_buttons)
+    
+    # 첫페이지 버튼
+    with cols[0]:
+        if st.button("◀◀", key=f"{prefix}first_page", disabled=current_page == 1):
+            st.session_state.current_page = 1
+            st.rerun()
+    
+    # 이전 페이지 버튼
+    with cols[1]:
+        if st.button("◀", key=f"{prefix}prev_page", disabled=current_page == 1):
+            st.session_state.current_page = current_page - 1
+            st.rerun()
+    
+    # 페이지 번호 버튼들
+    page_col_idx = 2
     for i in range(start_page, end_page + 1):
-        with st.columns(11)[i - start_page + 3]:
+        with cols[page_col_idx]:
             if st.button(str(i), key=f"{prefix}page_{i}", type="primary" if i == current_page else "secondary"):
                 st.session_state.current_page = i
                 st.rerun()
+        page_col_idx += 1
     
-    with col10:
+    # 다음 페이지 버튼
+    with cols[page_col_idx]:
         if st.button("▶", key=f"{prefix}next_page", disabled=current_page == total_pages):
             st.session_state.current_page = current_page + 1
             st.rerun()
     
-    with col11:
+    # 마지막 페이지 버튼
+    with cols[page_col_idx + 1]:
         if st.button("▶▶", key=f"{prefix}last_page", disabled=current_page == total_pages):
             st.session_state.current_page = total_pages
             st.rerun()
