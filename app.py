@@ -1320,11 +1320,11 @@ with tab3:
                     st.markdown("### 📊 이력 조회 결과")
                     
                     # 1. 기본 st.dataframe 표시 (위쪽)
-                    st.markdown("#### 📋 기본 데이터프레임")
+                    # st.markdown("#### 📋 기본 데이터프레임")
                     st.dataframe(df, use_container_width=True, hide_index=True)
                     
                     # 2. 커스텀 테이블 UI (아래쪽)
-                    st.markdown("#### 🎨 커스텀 테이블")
+                    st.markdown("#### 🔍상세 보기")
                     
                     # 헤더 행
                     header_cols = st.columns([2, 2, 2, 2, 2, 2, 2, 1])
