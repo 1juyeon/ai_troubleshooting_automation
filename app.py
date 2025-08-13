@@ -1421,7 +1421,7 @@ with tab3:
     
     # 이전 검색 결과가 있으면 표시 (검색 버튼을 클릭하지 않았을 때)
     if not search_clicked and st.session_state.history_search_performed and st.session_state.history_search_results is not None:
-        st.markdown("### 📊 이전 검색 결과")
+        st.markdown("### 📊 이력 조회 결과과")
         
         # 이전 검색 결과도 동일한 방식으로 표시
         df_previous = st.session_state.history_search_results.copy()
