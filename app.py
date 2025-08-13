@@ -23,6 +23,31 @@ st.set_page_config(
     layout="wide"
 )
 
+# UI 간격 조정을 위한 CSS 스타일
+st.markdown("""
+<style>
+    /* 상세보기 모달의 간격 조정 */
+    .stExpander > div > div > div > div {
+        padding: 0.5rem !important;
+    }
+    
+    /* 컬럼 간격 조정 */
+    .row-widget.stHorizontal > div {
+        padding: 0.25rem !important;
+    }
+    
+    /* 텍스트 간격 조정 */
+    .stMarkdown p {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* 구분선 간격 조정 */
+    hr {
+        margin: 0.5rem 0 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # 안전한 타임스탬프 생성 함수
 def get_safe_timestamp():
     """안전한 타임스탬프 생성 (한국 시간대, 실패 시 UTC 사용)"""
@@ -147,7 +172,8 @@ def show_ai_analysis_modal(selected_row):
         with st.expander("📋 입력된 문의 정보", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
-                st.write(f"**고객사명:** {selected_row.get('고객사명', 'N/A')}")
+                customer_name = selected_row.get('고객사명', '')
+                st.write(f"**고객사명:** {customer_name if customer_name else ''}")
                 st.write(f"**문의유형:** {selected_row.get('문의유형', 'N/A')}")
                 st.write(f"**우선순위:** {selected_row.get('우선순위', 'N/A')}")
             with col2:
@@ -163,32 +189,17 @@ def show_ai_analysis_modal(selected_row):
                 customer_name = selected_row.get('고객사명', '')
                 inquiry_date = selected_row.get('날짜', '')
                 
-                # 디버깅 정보 표시
-                st.info(f"🔍 검색 조건: 고객사명='{customer_name}', 날짜='{inquiry_date}'")
-                
                 # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
                 if inquiry_date and ' ' in inquiry_date:
                     inquiry_date = inquiry_date.split(' ')[0]
-                    st.info(f"📅 변환된 날짜: {inquiry_date}")
                 
                 # 실제 분석 결과 조회
                 actual_analysis = st.session_state.components['multi_user_db'].get_analysis_by_customer_and_date(
                     customer_name, inquiry_date
                 )
                 
-                # 디버깅 정보 표시
-                if actual_analysis:
-                    st.info(f"📊 조회 결과: {actual_analysis.get('success', False)}")
-                    if not actual_analysis.get('success'):
-                        st.warning(f"⚠️ 조회 실패: {actual_analysis.get('error', '알 수 없는 오류')}")
-                else:
-                    st.warning("⚠️ 조회 결과가 없습니다.")
-                
                 if actual_analysis and actual_analysis.get('success'):
                     analysis_data = actual_analysis.get('data', {})
-                    
-                    # 디버깅: 분석 데이터 구조 확인
-                    st.info(f"📋 분석 데이터 키: {list(analysis_data.keys())}")
                     
                     # AI 분석 결과 (실제 데이터)
                     st.markdown("### 🔍 AI 분석 결과")
@@ -230,7 +241,6 @@ def show_ai_analysis_modal(selected_row):
                         st.markdown("#### 📝 요약")
                         if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
                             parsed = analysis_data['gemini_result'].get('parsed_response', {})
-                            st.info(f"📝 파싱된 응답 키: {list(parsed.keys())}")
                             
                             summary = parsed.get('summary', '')
                             if summary:
@@ -300,8 +310,6 @@ def show_ai_analysis_modal(selected_row):
                 
         except Exception as e:
             st.error(f"❌ 분석 결과 조회 중 오류가 발생했습니다: {str(e)}")
-            st.info("오류 상세 정보:")
-            st.code(str(e))
             st.info("Streamlit Cloud 환경에서는 일시적인 데이터 접근 문제가 발생할 수 있습니다.")
 
 def create_history_table_with_buttons(df):
@@ -1064,15 +1072,14 @@ with tab3:
                         # 구분선 추가
                         st.markdown("---")
                     
-                    # 상세보기 모달 표시
-                    if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
-                        with st.expander("🔍 AI 분석 상세 결과", expanded=True):
-                            show_ai_analysis_modal(st.session_state.selected_row_for_detail)
-                            # 모달 닫기 버튼
-                            if st.button("❌ 닫기", key="close_modal"):
-                                st.session_state.show_detail_modal = False
-                                st.session_state.selected_row_for_detail = None
-                                st.rerun()
+                                            # 상세보기 모달 표시
+                        if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
+                            with st.expander("🔍 AI 분석 상세 결과", expanded=True):
+                                show_ai_analysis_modal(st.session_state.selected_row_for_detail)
+                                # 모달 닫기 버튼
+                                if st.button("❌ 닫기", key="close_modal"):
+                                    st.session_state.show_detail_modal = False
+                                    st.session_state.selected_row_for_detail = None
                     
                     # 통계 정보
                     stats = components['multi_user_db'].get_statistics()
@@ -1166,7 +1173,6 @@ with tab3:
                 if st.button("❌ 닫기", key="prev_close_modal"):
                     st.session_state.show_detail_modal = False
                     st.session_state.selected_row_for_detail = None
-                    st.rerun()
 
 # 탭 4: 사용 가이드
 with tab4:
