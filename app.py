@@ -846,8 +846,6 @@ with st.sidebar:
     st.session_state.role = role
     st.session_state.ai_model = ai_model
     
-    st.markdown("---")
-    
     # 데이터 초기화 버튼
     st.markdown("---")
     st.markdown("## 🗑️ 데이터 관리")
