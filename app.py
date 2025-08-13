@@ -1316,33 +1316,70 @@ with tab3:
                     
                     st.success(f"✅ {len(history_data)}건의 이력이 조회되었습니다.")
                     
-                    # 이력 조회 결과 표시 (st.dataframe + 버튼 방식)
+                    # 이력 조회 결과 표시 (커스텀 테이블 + st.dataframe 모두 표시)
                     st.markdown("### 📊 이력 조회 결과")
                     
-                    # 데이터프레임과 버튼을 나란히 배치
-                    col_data, col_buttons = st.columns([7, 1])
+                    # 1. 커스텀 테이블 UI (기존 스타일 유지)
+                    st.markdown("#### 🎨 커스텀 테이블")
                     
-                    with col_data:
-                        # 데이터프레임 표시
-                        st.dataframe(df, use_container_width=True, hide_index=True)
+                    # 헤더 행
+                    header_cols = st.columns([2, 2, 2, 2, 2, 2, 2, 1])
+                    with header_cols[0]:
+                        st.markdown('<div class="history-table-header">번호</div>', unsafe_allow_html=True)
+                    with header_cols[1]:
+                        st.markdown('<div class="history-table-header">날짜</div>', unsafe_allow_html=True)
+                    with header_cols[2]:
+                        st.markdown('<div class="history-table-header">고객사명</div>', unsafe_allow_html=True)
+                    with header_cols[3]:
+                        st.markdown('<div class="history-table-header">문의유형</div>', unsafe_allow_html=True)
+                    with header_cols[4]:
+                        st.markdown('<div class="history-table-header">우선순위</div>', unsafe_allow_html=True)
+                    with header_cols[5]:
+                        st.markdown('<div class="history-table-header">담당자</div>', unsafe_allow_html=True)
+                    with header_cols[6]:
+                        st.markdown('<div class="history-table-header">역할</div>', unsafe_allow_html=True)
+                    with header_cols[7]:
+                        st.markdown('<div class="history-table-header">상세보기</div>', unsafe_allow_html=True)
                     
-                    with col_buttons:
-                        st.markdown("**상세보기**")
-                        # 각 행에 대한 상세보기 버튼
-                        for index, row in df.iterrows():
-                            if st.button(f"🔍 {index+1}", key=f"detail_btn_{index}_{row.get('번호', 'unknown')}", 
-                                       help="클릭하여 상세 분석 결과 보기", use_container_width=True):
+                    # 데이터 행들
+                    for index, row in df.iterrows():
+                        row_cols = st.columns([2, 2, 2, 2, 2, 2, 2, 1])
+                        
+                        with row_cols[0]:
+                            st.markdown(f'<div class="history-table-cell">{row.get("번호", "N/A")}</div>', unsafe_allow_html=True)
+                        with row_cols[1]:
+                            st.markdown(f'<div class="history-table-cell">{row.get("날짜", "N/A")}</div>', unsafe_allow_html=True)
+                        with row_cols[2]:
+                            st.markdown(f'<div class="history-table-cell">{row.get("고객사명", "N/A")}</div>', unsafe_allow_html=True)
+                        with row_cols[3]:
+                            st.markdown(f'<div class="history-table-cell">{row.get("문의유형", "N/A")}</div>', unsafe_allow_html=True)
+                        with row_cols[4]:
+                            st.markdown(f'<div class="history-table-cell">{row.get("우선순위", "N/A")}</div>', unsafe_allow_html=True)
+                        with row_cols[5]:
+                            st.markdown(f'<div class="history-table-cell">{row.get("담당자", "N/A")}</div>', unsafe_allow_html=True)
+                        with row_cols[6]:
+                            st.markdown(f'<div class="history-table-cell">{row.get("역할", "N/A")}</div>', unsafe_allow_html=True)
+                        with row_cols[7]:
+                            if st.button(f"🔍", key=f"detail_btn_{index}_{row.get('번호', 'unknown')}", 
+                                       help="클릭하여 상세 분석 결과 보기"):
                                 st.session_state.selected_row_for_detail = row.to_dict()
                                 st.session_state.show_detail_modal = True
+                        
+                        # 구분선 추가
+                        st.markdown("---")
                     
-                                            # 상세보기 모달 표시
-                        if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
-                            with st.expander("🔍 AI 분석 상세 결과", expanded=True):
-                                show_ai_analysis_modal(st.session_state.selected_row_for_detail)
-                                # 모달 닫기 버튼
-                                if st.button("❌ 닫기", key="close_modal"):
-                                    st.session_state.show_detail_modal = False
-                                    st.session_state.selected_row_for_detail = None
+                    # 2. 기존 st.dataframe 표시
+                    st.markdown("#### 📋 기본 데이터프레임")
+                    st.dataframe(df, use_container_width=True, hide_index=True)
+                    
+                    # 상세보기 모달 표시
+                    if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
+                        with st.expander("🔍 AI 분석 상세 결과", expanded=True):
+                            show_ai_analysis_modal(st.session_state.selected_row_for_detail)
+                            # 모달 닫기 버튼
+                            if st.button("❌ 닫기", key="close_modal"):
+                                st.session_state.show_detail_modal = False
+                                st.session_state.selected_row_for_detail = None
                     
                     # 통계 정보
                     stats = components['multi_user_db'].get_statistics()
@@ -1389,21 +1426,58 @@ with tab3:
         # 이전 검색 결과도 동일한 방식으로 표시
         df_previous = st.session_state.history_search_results.copy()
         
-        # 데이터프레임과 버튼을 나란히 배치
-        prev_col_data, prev_col_buttons = st.columns([7, 1])
+        # 1. 커스텀 테이블 UI (기존 스타일 유지)
+        st.markdown("#### 🎨 커스텀 테이블")
         
-        with prev_col_data:
-            # 데이터프레임 표시
-            st.dataframe(df_previous, use_container_width=True, hide_index=True)
+        # 헤더 행
+        prev_header_cols = st.columns([2, 2, 2, 2, 2, 2, 2, 1])
+        with prev_header_cols[0]:
+            st.markdown('<div class="history-table-header">번호</div>', unsafe_allow_html=True)
+        with prev_header_cols[1]:
+            st.markdown('<div class="history-table-header">날짜</div>', unsafe_allow_html=True)
+        with prev_header_cols[2]:
+            st.markdown('<div class="history-table-header">고객사명</div>', unsafe_allow_html=True)
+        with prev_header_cols[3]:
+            st.markdown('<div class="history-table-header">문의유형</div>', unsafe_allow_html=True)
+        with prev_header_cols[4]:
+            st.markdown('<div class="history-table-header">우선순위</div>', unsafe_allow_html=True)
+        with prev_header_cols[5]:
+            st.markdown('<div class="history-table-header">담당자</div>', unsafe_allow_html=True)
+        with prev_header_cols[6]:
+            st.markdown('<div class="history-table-header">역할</div>', unsafe_allow_html=True)
+        with prev_header_cols[7]:
+            st.markdown('<div class="history-table-header">상세보기</div>', unsafe_allow_html=True)
         
-        with prev_col_buttons:
-            st.markdown("**상세보기**")
-            # 각 행에 대한 상세보기 버튼
-            for index, row in df_previous.iterrows():
-                if st.button(f"🔍 {index+1}", key=f"prev_detail_btn_{index}_{row.get('번호', 'unknown')}", 
-                           help="클릭하여 상세 분석 결과 보기", use_container_width=True):
+        # 데이터 행들
+        for index, row in df_previous.iterrows():
+            prev_row_cols = st.columns([2, 2, 2, 2, 2, 2, 2, 1])
+            
+            with prev_row_cols[0]:
+                st.markdown(f'<div class="history-table-cell">{row.get("번호", "N/A")}</div>', unsafe_allow_html=True)
+            with prev_row_cols[1]:
+                st.markdown(f'<div class="history-table-cell">{row.get("날짜", "N/A")}</div>', unsafe_allow_html=True)
+            with prev_row_cols[2]:
+                st.markdown(f'<div class="history-table-cell">{row.get("고객사명", "N/A")}</div>', unsafe_allow_html=True)
+            with prev_row_cols[3]:
+                st.markdown(f'<div class="history-table-cell">{row.get("문의유형", "N/A")}</div>', unsafe_allow_html=True)
+            with prev_row_cols[4]:
+                st.markdown(f'<div class="history-table-cell">{row.get("우선순위", "N/A")}</div>', unsafe_allow_html=True)
+            with prev_row_cols[5]:
+                st.markdown(f'<div class="history-table-cell">{row.get("담당자", "N/A")}</div>', unsafe_allow_html=True)
+            with prev_row_cols[6]:
+                st.markdown(f'<div class="history-table-cell">{row.get("역할", "N/A")}</div>', unsafe_allow_html=True)
+            with prev_row_cols[7]:
+                if st.button(f"🔍", key=f"prev_detail_btn_{index}_{row.get('번호', 'unknown')}", 
+                           help="클릭하여 상세 분석 결과 보기"):
                     st.session_state.selected_row_for_detail = row.to_dict()
                     st.session_state.show_detail_modal = True
+            
+            # 구분선 추가
+            st.markdown("---")
+        
+        # 2. 기존 st.dataframe 표시
+        st.markdown("#### 📋 기본 데이터프레임")
+        st.dataframe(df_previous, use_container_width=True, hide_index=True)
         
         # 상세보기 모달 표시
         if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
