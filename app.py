@@ -1301,34 +1301,11 @@ with tab3:
                         key="history_table_main"
                     )
                     
-                    # 상세보기 테이블 생성
+                    # 각 행마다 돋보기 버튼 표시
                     st.markdown("#### 🔍 상세보기")
-                    st.markdown("아래 테이블에서 각 문의의 AI 분석 상세 결과를 확인하세요.")
+                    st.markdown("아래 버튼을 클릭하여 각 문의의 AI 분석 상세 결과를 확인하세요.")
                     
-                    # 상세보기용 데이터프레임 생성 (버튼 컬럼 추가)
-                    detail_df = df.copy()
-                    detail_df['상세보기'] = '🔍'
-                    
-                    # 상세보기 테이블 표시
-                    st.dataframe(
-                        detail_df,
-                        hide_index=True,
-                        use_container_width=True,
-                        column_config={
-                            "번호": st.column_config.NumberColumn("📊 번호", width="small"),
-                            "날짜": st.column_config.TextColumn("📅 날짜", width="medium"),
-                            "고객사명": st.column_config.TextColumn("🏢 고객사명", width="medium"),
-                            "문의유형": st.column_config.TextColumn("📝 문의유형", width="large"),
-                            "우선순위": st.column_config.TextColumn("⚡ 우선순위", width="small"),
-                            "담당자": st.column_config.TextColumn("👤 담당자", width="medium"),
-                            "역할": st.column_config.TextColumn("🎭 역할", width="small"),
-                            "상세보기": st.column_config.TextColumn("🔍 상세보기", width="small")
-                        }
-                    )
-                    
-                    # 각 행에 대한 상세보기 버튼 생성
-                    st.markdown("**상세보기 버튼을 클릭하여 AI 분석 결과를 확인하세요:**")
-                    
+                    # 행별 버튼 생성
                     for index, row in df.iterrows():
                         col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([2, 2, 2, 2, 2, 2, 2, 1])
                         
@@ -1417,34 +1394,11 @@ with tab3:
             key="previous_history_table_main"
         )
         
-        # 상세보기 테이블 생성
+        # 각 행마다 돋보기 버튼 표시
         st.markdown("#### 🔍 상세보기")
-        st.markdown("아래 테이블에서 각 문의의 AI 분석 상세 결과를 확인하세요.")
+        st.markdown("아래 버튼을 클릭하여 각 문의의 AI 분석 상세 결과를 확인하세요.")
         
-        # 상세보기용 데이터프레임 생성 (버튼 컬럼 추가)
-        detail_df_prev = df_previous.copy()
-        detail_df_prev['상세보기'] = '🔍'
-        
-        # 상세보기 테이블 표시
-        st.dataframe(
-            detail_df_prev,
-            hide_index=True,
-            use_container_width=True,
-            column_config={
-                "번호": st.column_config.NumberColumn("📊 번호", width="small"),
-                "날짜": st.column_config.TextColumn("📅 날짜", width="medium"),
-                "고객사명": st.column_config.TextColumn("🏢 고객사명", width="medium"),
-                "문의유형": st.column_config.TextColumn("📝 문의유형", width="large"),
-                "우선순위": st.column_config.TextColumn("⚡ 우선순위", width="small"),
-                "담당자": st.column_config.TextColumn("👤 담당자", width="medium"),
-                "역할": st.column_config.TextColumn("🎭 역할", width="small"),
-                "상세보기": st.column_config.TextColumn("🔍 상세보기", width="small")
-            }
-        )
-        
-        # 각 행에 대한 상세보기 버튼 생성
-        st.markdown("**상세보기 버튼을 클릭하여 AI 분석 결과를 확인하세요:**")
-        
+        # 행별 버튼 생성
         for index, row in df_previous.iterrows():
             col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([2, 2, 2, 2, 2, 2, 2, 1])
             
