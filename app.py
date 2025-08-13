@@ -45,6 +45,173 @@ st.markdown("""
     hr {
         margin: 0.5rem 0 !important;
     }
+    
+    /* 데이터 행의 텍스트 세로 중앙 정렬 */
+    .row-widget.stHorizontal > div > div {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 2.5rem !important;
+    }
+    
+    /* 데이터 행의 텍스트 세로 중앙 정렬 (고객사명이 비어있을 때) */
+    .row-widget.stHorizontal > div > div > div {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 2.5rem !important;
+    }
+    
+    /* 상세보기 컨테이너 간격 조정 */
+    .stContainer > div {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* 상세보기 내부 컬럼 간격 조정 */
+    .stHorizontal > div {
+        padding: 0.25rem !important;
+        margin: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 텍스트 간격 조정 */
+    .stMarkdown h3 {
+        margin-top: 1rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .stMarkdown h4 {
+        margin-top: 0.75rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 expander 간격 조정 */
+    .stExpander > div > div > div > div > div {
+        padding: 0.25rem !important;
+        margin: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 컬럼 간격 더욱 조정 */
+    .stHorizontal > div > div {
+        padding: 0.1rem !important;
+        margin: 0.1rem !important;
+    }
+    
+    /* 상세보기 내부 텍스트 요소 간격 조정 */
+    .stMarkdown p, .stMarkdown div {
+        margin: 0.25rem 0 !important;
+        padding: 0.1rem 0 !important;
+    }
+    
+    /* 상세보기 내부 버튼 간격 조정 */
+    .stButton > button {
+        margin: 0.25rem !important;
+        padding: 0.25rem 0.5rem !important;
+    }
+    
+    /* 상세보기 내부 expander 헤더 간격 조정 */
+    .stExpander > div > div > div > div > div:first-child {
+        padding: 0.5rem !important;
+        margin: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 컬럼 레이아웃 간격 조정 */
+    .stHorizontal {
+        gap: 0.5rem !important;
+    }
+    
+    /* 상세보기 내부 텍스트 블록 간격 조정 */
+    .stMarkdown > div {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* 상세보기 내부 섹션 간격 조정 */
+    .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {
+        margin-top: 0.75rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* 상세보기 내부 컨테이너 패딩 조정 */
+    .stContainer {
+        padding: 0.5rem !important;
+    }
+    
+    /* 상세보기 내부 expander 컨텐츠 간격 조정 */
+    .stExpander > div > div > div > div > div > div {
+        padding: 0.25rem !important;
+        margin: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 모든 요소의 간격 최소화 */
+    .stMarkdown, .stText, .stButton, .stExpander {
+        margin: 0.1rem !important;
+        padding: 0.1rem !important;
+    }
+    
+    /* 상세보기 내부 컬럼 간격 최소화 */
+    .stHorizontal > div {
+        padding: 0.1rem !important;
+        margin: 0.1rem !important;
+    }
+    
+    /* 상세보기 내부 텍스트 요소 간격 최소화 */
+    .stMarkdown p, .stMarkdown div, .stMarkdown h3, .stMarkdown h4 {
+        margin: 0.1rem 0 !important;
+        padding: 0.1rem 0 !important;
+    }
+    
+    /* 상세보기 내부 expander 헤더 간격 최소화 */
+    .stExpander > div > div > div > div > div:first-child {
+        padding: 0.25rem !important;
+        margin: 0.1rem !important;
+    }
+    
+    /* 상세보기 내부 컨테이너 패딩 최소화 */
+    .stContainer {
+        padding: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 섹션 간격 최소화 */
+    .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 버튼 간격 최소화 */
+    .stButton > button {
+        margin: 0.1rem !important;
+        padding: 0.1rem 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 text_area 간격 최소화 */
+    .stTextArea > div > div > textarea {
+        margin: 0.1rem !important;
+        padding: 0.1rem !important;
+    }
+    
+    /* Streamlit 기본 간격 최소화 */
+    .main > div {
+        padding: 0.5rem !important;
+    }
+    
+    .main > div > div {
+        padding: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 모든 div 요소 간격 최소화 */
+    .stExpander > div > div > div > div > div > div > div {
+        margin: 0.05rem !important;
+        padding: 0.05rem !important;
+    }
+    
+    /* 상세보기 내부 컬럼 레이아웃 간격 최소화 */
+    .stHorizontal {
+        gap: 0.25rem !important;
+    }
+    
+    /* 상세보기 내부 expander 간격 최소화 */
+    .stExpander {
+        margin: 0.1rem !important;
+        padding: 0.1rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -165,10 +332,7 @@ def show_ai_analysis_modal(selected_row):
     with st.container():
         st.markdown("## 🔍 AI 분석 상세 결과")
         
-        # 분석 완료 알림
-        st.success("✅ AI 분석이 완료되었습니다! 아래에서 상세한 결과를 확인하세요.")
-        
-        # 선택된 데이터 정보 표시
+        # 선택된 데이터 정보 표시 (간격 줄임)
         with st.expander("📋 입력된 문의 정보", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
@@ -201,7 +365,7 @@ def show_ai_analysis_modal(selected_row):
                 if actual_analysis and actual_analysis.get('success'):
                     analysis_data = actual_analysis.get('data', {})
                     
-                    # AI 분석 결과 (실제 데이터)
+                    # AI 분석 결과 (실제 데이터) - 간격 줄임
                     st.markdown("### 🔍 AI 분석 결과")
                     
                     col3, col4 = st.columns(2)
@@ -232,7 +396,7 @@ def show_ai_analysis_modal(selected_row):
                             st.write("**해결책:** 기본 가이드 제공")
                             st.write("**현장 출동 필요:** N")
                     
-                    # AI 응답 결과
+                    # AI 응답 결과 - 간격 줄임
                     st.markdown("### 🤖 AI 응답")
                     
                     col5, col6 = st.columns(2)
@@ -284,7 +448,7 @@ def show_ai_analysis_modal(selected_row):
 
 감사합니다."""
                         
-                        st.text_area("이메일 내용", email_content, height=200, disabled=True)
+                        st.text_area("이메일 내용", email_content, height=150, disabled=True)
                         
                         # 이메일 복사 버튼
                         if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
