@@ -846,23 +846,7 @@ with st.sidebar:
     st.session_state.role = role
     st.session_state.ai_model = ai_model
     
-    # 데이터 초기화 버튼
-    st.markdown("---")
-    st.markdown("## 🗑️ 데이터 관리")
-    
-    if st.button("🗑️ 모든 데이터 초기화", type="secondary"):
-        if 'components' in st.session_state and 'multi_user_db' in st.session_state.components:
-            try:
-                result = st.session_state.components['multi_user_db'].clear_all_history()
-                if result.get('success'):
-                    st.success("✅ 모든 데이터가 초기화되었습니다.")
-                    st.rerun()
-                else:
-                    st.error(f"❌ 데이터 초기화 실패: {result.get('error', '알 수 없는 오류')}")
-            except Exception as e:
-                st.error(f"❌ 데이터 초기화 중 오류: {e}")
-        else:
-            st.error("❌ 데이터베이스가 초기화되지 않았습니다.")
+
 
 # 컴포넌트 초기화
 components = init_components()
