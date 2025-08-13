@@ -1427,11 +1427,11 @@ with tab3:
         df_previous = st.session_state.history_search_results.copy()
         
         # 1. 기본 st.dataframe 표시 (위쪽)
-        st.markdown("#### 📋 기본 데이터프레임")
+        #st.markdown("#### 📋 기본 데이터프레임")
         st.dataframe(df_previous, use_container_width=True, hide_index=True)
         
         # 2. 커스텀 테이블 UI (아래쪽)
-        st.markdown("#### 🎨 커스텀 테이블")
+        st.markdown("#### 🔍상세 보기")
         
         # 헤더 행
         prev_header_cols = st.columns([2, 2, 2, 2, 2, 2, 2, 1])
