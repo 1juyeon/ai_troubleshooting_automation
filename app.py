@@ -1323,7 +1323,20 @@ with tab3:
                     # st.markdown("#### 📋 기본 데이터프레임")
                     st.dataframe(df, use_container_width=True, hide_index=True)
                     
-                    # 2. 커스텀 테이블 UI (아래쪽)
+                    # 0) 모달을 위쪽에서 먼저 그리기(있다면)
+                    if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
+                        with st.expander("🔍 AI 분석 상세 결과", expanded=True):
+                            show_ai_analysis_modal(st.session_state.selected_row_for_detail)
+                            # 모달 닫기 버튼
+                            def close_modal_new():
+                                st.session_state.show_detail_modal = False
+                                st.session_state.selected_row_for_detail = None
+
+                            if st.button("❌ 닫기", key="close_modal"):
+                                close_modal_new()
+                        st.markdown("---")  # 모달과 리스트 구분선
+
+                    # 1) 커스텀 테이블 UI
                     st.markdown("#### 🔍상세 보기")
                     
                     # 헤더 행
@@ -1364,24 +1377,22 @@ with tab3:
                         with row_cols[6]:
                             st.markdown(f'<div class="history-table-cell">{row.get("역할", "N/A")}</div>', unsafe_allow_html=True)
                         with row_cols[7]:
-                            if st.button(f"🔍", key=f"detail_btn_{index}_{row.get('번호', 'unknown')}", 
-                                       help="클릭하여 상세 분석 결과 보기"):
-                                st.session_state.selected_row_for_detail = row.to_dict()
+                            def open_modal_new(row_dict):
+                                st.session_state.selected_row_for_detail = row_dict
                                 st.session_state.show_detail_modal = True
-                                st.rerun()
+
+                            st.button(
+                                "🔍",
+                                key=f"detail_btn_{index}_{row.get('번호', 'unknown')}",
+                                help="클릭하여 상세 분석 결과 보기",
+                                on_click=open_modal_new,
+                                args=(row.to_dict(),),
+                            )
                         
                         # 구분선 추가
                         st.markdown("---")
                     
-                    # 상세보기 모달 표시
-                    if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
-                        with st.expander("🔍 AI 분석 상세 결과", expanded=True):
-                            show_ai_analysis_modal(st.session_state.selected_row_for_detail)
-                            # 모달 닫기 버튼
-                            if st.button("❌ 닫기", key="close_modal"):
-                                st.session_state.show_detail_modal = False
-                                st.session_state.selected_row_for_detail = None
-                                st.rerun()
+
                     
                     # 통계 정보
                     stats = components['multi_user_db'].get_statistics()
@@ -1432,7 +1443,20 @@ with tab3:
         #st.markdown("#### 📋 기본 데이터프레임")
         st.dataframe(df_previous, use_container_width=True, hide_index=True)
         
-        # 2. 커스텀 테이블 UI (아래쪽)
+        # 0) 모달을 위쪽에서 먼저 그리기(있다면)
+        if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
+            with st.expander("🔍 AI 분석 상세 결과", expanded=True):
+                show_ai_analysis_modal(st.session_state.selected_row_for_detail)
+                # 모달 닫기 버튼
+                def close_modal_prev():
+                    st.session_state.show_detail_modal = False
+                    st.session_state.selected_row_for_detail = None
+
+                if st.button("❌ 닫기", key="prev_close_modal"):
+                    close_modal_prev()
+            st.markdown("---")  # 모달과 리스트 구분선
+
+        # 1) 커스텀 테이블 UI
         st.markdown("#### 🔍상세 보기")
         
         # 헤더 행
@@ -1473,24 +1497,22 @@ with tab3:
             with prev_row_cols[6]:
                 st.markdown(f'<div class="history-table-cell">{row.get("역할", "N/A")}</div>', unsafe_allow_html=True)
             with prev_row_cols[7]:
-                if st.button(f"🔍", key=f"prev_detail_btn_{index}_{row.get('번호', 'unknown')}", 
-                           help="클릭하여 상세 분석 결과 보기"):
-                    st.session_state.selected_row_for_detail = row.to_dict()
+                def open_modal_prev(row_dict):
+                    st.session_state.selected_row_for_detail = row_dict
                     st.session_state.show_detail_modal = True
-                    st.rerun()
+
+                st.button(
+                    "🔍",
+                    key=f"prev_detail_btn_{index}_{row.get('번호', 'unknown')}",
+                    help="클릭하여 상세 분석 결과 보기",
+                    on_click=open_modal_prev,
+                    args=(row.to_dict(),),
+                )
             
             # 구분선 추가
             st.markdown("---")
         
-        # 상세보기 모달 표시
-        if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
-            with st.expander("🔍 AI 분석 상세 결과", expanded=True):
-                show_ai_analysis_modal(st.session_state.selected_row_for_detail)
-                # 모달 닫기 버튼
-                if st.button("❌ 닫기", key="prev_close_modal"):
-                    st.session_state.show_detail_modal = False
-                    st.session_state.selected_row_for_detail = None
-                    st.rerun()
+
 
 # 탭 4: 사용 가이드
 with tab4:
