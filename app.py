@@ -428,18 +428,31 @@ def show_ai_analysis_modal(selected_row):
     with st.container():
         st.markdown("## 🔍 AI 분석 상세 결과")
         
-        # 선택된 데이터 정보 표시 (간격 줄임)
+        # 선택된 데이터 정보를 표 형태로 표시
         with st.expander("📋 입력된 문의 정보", expanded=True):
-            col1, col2 = st.columns(2)
-            with col1:
-                customer_name = selected_row.get('고객사명', '')
-                st.write(f"**고객사명:** {customer_name if customer_name else ''}")
-                st.write(f"**문의유형:** {selected_row.get('문의유형', 'N/A')}")
-                st.write(f"**우선순위:** {selected_row.get('우선순위', 'N/A')}")
-            with col2:
-                st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')}")
-                st.write(f"**역할:** {selected_row.get('역할', 'N/A')}")
-                st.write(f"**날짜:** {selected_row.get('날짜', 'N/A')}")
+            # 기본 정보를 표 형태로 표시
+            basic_info_data = {
+                "항목": ["고객사명", "문의유형", "우선순위", "담당자", "역할", "날짜"],
+                "내용": [
+                    selected_row.get('고객사명', '') or 'N/A',
+                    selected_row.get('문의유형', 'N/A'),
+                    selected_row.get('우선순위', 'N/A'),
+                    selected_row.get('담당자', 'N/A'),
+                    selected_row.get('역할', 'N/A'),
+                    selected_row.get('날짜', 'N/A')
+                ]
+            }
+            
+            basic_info_df = pd.DataFrame(basic_info_data)
+            st.dataframe(
+                basic_info_df,
+                hide_index=True,
+                use_container_width=True,
+                column_config={
+                    "항목": st.column_config.TextColumn("📋 항목", width="medium"),
+                    "내용": st.column_config.TextColumn("📝 내용", width="large")
+                }
+            )
         
         # 실제 분석 결과 조회 시도
         try:
@@ -461,71 +474,117 @@ def show_ai_analysis_modal(selected_row):
                 if actual_analysis and actual_analysis.get('success'):
                     analysis_data = actual_analysis.get('data', {})
                     
-                    # AI 분석 결과 (실제 데이터) - 간격 줄임
+                    # AI 분석 결과를 표 형태로 표시
                     st.markdown("### 🔍 AI 분석 결과")
                     
-                    col3, col4 = st.columns(2)
+                    # 문제 유형 분류 정보를 표 형태로 표시
+                    st.markdown("#### 📊 문제 유형 분류")
+                    classification_data = {
+                        "분류 항목": ["분류된 문제 유형", "분류 방법", "신뢰도"],
+                        "내용": [
+                            analysis_data.get('issue_type', selected_row.get('문의유형', 'N/A')),
+                            analysis_data.get('classification', {}).get('method', 'AI 자동 분류'),
+                            analysis_data.get('classification', {}).get('confidence', '높음')
+                        ]
+                    }
                     
-                    with col3:
-                        st.markdown("#### 📊 문제 유형 분류")
-                        issue_type = analysis_data.get('issue_type', selected_row.get('문의유형', 'N/A'))
-                        st.write(f"**분류된 문제 유형:** {issue_type}")
-                        
-                        # 분류 방법과 신뢰도 정보 표시
-                        classification = analysis_data.get('classification', {})
-                        classification_method = classification.get('method', 'AI 자동 분류')
-                        confidence = classification.get('confidence', '높음')
-                        st.write(f"**분류 방법:** {classification_method}")
-                        st.write(f"**신뢰도:** {confidence}")
+                    classification_df = pd.DataFrame(classification_data)
+                    st.dataframe(
+                        classification_df,
+                        hide_index=True,
+                        use_container_width=True,
+                        column_config={
+                            "분류 항목": st.column_config.TextColumn("🔍 분류 항목", width="medium"),
+                            "내용": st.column_config.TextColumn("📊 내용", width="large")
+                        }
+                    )
                     
-                    with col4:
-                        st.markdown("#### 🎯 시나리오 매칭")
-                        if 'best_scenario' in analysis_data and analysis_data['best_scenario']:
-                            scenario = analysis_data['best_scenario']
-                            st.write(f"**조건 1:** {scenario.get('condition_1', 'N/A')}")
-                            st.write(f"**조건 2:** {scenario.get('condition_2', 'N/A')}")
-                            st.write(f"**해결책:** {scenario.get('solution', 'N/A')}")
-                            st.write(f"**현장 출동 필요:** {scenario.get('onsite_needed', 'N')}")
-                        else:
-                            st.write("**조건 1:** 해당 시나리오 없음")
-                            st.write("**조건 2:** 해당 시나리오 없음")
-                            st.write("**해결책:** 기본 가이드 제공")
-                            st.write("**현장 출동 필요:** N")
+                    # 시나리오 매칭 정보를 표 형태로 표시
+                    st.markdown("#### 🎯 시나리오 매칭")
+                    if 'best_scenario' in analysis_data and analysis_data['best_scenario']:
+                        scenario = analysis_data['best_scenario']
+                        scenario_data = {
+                            "시나리오 항목": ["조건 1", "조건 2", "해결책", "현장 출동 필요"],
+                            "내용": [
+                                scenario.get('condition_1', 'N/A'),
+                                scenario.get('condition_2', 'N/A'),
+                                scenario.get('solution', 'N/A'),
+                                scenario.get('onsite_needed', 'N')
+                            ]
+                        }
+                    else:
+                        scenario_data = {
+                            "시나리오 항목": ["조건 1", "조건 2", "해결책", "현장 출동 필요"],
+                            "내용": ["해당 시나리오 없음", "해당 시나리오 없음", "기본 가이드 제공", "N"]
+                        }
                     
-                    # AI 응답 결과 - 간격 줄임
+                    scenario_df = pd.DataFrame(scenario_data)
+                    st.dataframe(
+                        scenario_df,
+                        hide_index=True,
+                        use_container_width=True,
+                        column_config={
+                            "시나리오 항목": st.column_config.TextColumn("🎯 시나리오 항목", width="medium"),
+                            "내용": st.column_config.TextColumn("📋 내용", width="large")
+                        }
+                    )
+                    
+                    # AI 응답 결과를 표 형태로 표시
                     st.markdown("### 🤖 AI 응답")
                     
-                    col5, col6 = st.columns(2)
-                    
-                    with col5:
+                    if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
+                        parsed = analysis_data['gemini_result'].get('parsed_response', {})
+                        
+                        # 요약 정보를 표 형태로 표시
                         st.markdown("#### 📝 요약")
-                        if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
-                            parsed = analysis_data['gemini_result'].get('parsed_response', {})
-                            
-                            summary = parsed.get('summary', '')
-                            if summary:
-                                st.write(summary)
-                            else:
-                                st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
-                            
-                            st.markdown("#### 🔧 조치 흐름")
-                            action_flow = parsed.get('action_flow', '')
-                            if action_flow:
-                                st.write(action_flow)
-                            else:
-                                st.write("해당 문의에 대한 조치 흐름이 없습니다.")
-                        else:
-                            st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
-                            st.markdown("#### 🔧 조치 흐름")
-                            st.write("해당 문의에 대한 조치 흐름이 없습니다.")
+                        summary = parsed.get('summary', '해당 문의에 대한 AI 분석 요약이 없습니다.')
+                        summary_data = {
+                            "항목": ["AI 분석 요약"],
+                            "내용": [summary]
+                        }
+                        summary_df = pd.DataFrame(summary_data)
+                        st.dataframe(
+                            summary_df,
+                            hide_index=True,
+                            use_container_width=True,
+                            column_config={
+                                "항목": st.column_config.TextColumn("📝 항목", width="medium"),
+                                "내용": st.column_config.TextColumn("📊 내용", width="large")
+                            }
+                        )
+                        
+                        # 조치 흐름을 표 형태로 표시
+                        st.markdown("#### 🔧 조치 흐름")
+                        action_flow = parsed.get('action_flow', '해당 문의에 대한 조치 흐름이 없습니다.')
+                        action_flow_data = {
+                            "항목": ["조치 흐름"],
+                            "내용": [action_flow]
+                        }
+                        action_flow_df = pd.DataFrame(action_flow_data)
+                        st.dataframe(
+                            action_flow_df,
+                            hide_index=True,
+                            use_container_width=True,
+                            column_config={
+                                "항목": st.column_config.TextColumn("🔧 항목", width="medium"),
+                                "내용": st.column_config.TextColumn("📋 내용", width="large")
+                            }
+                        )
+                    else:
+                        # AI 응답이 없는 경우 기본 정보 표시
+                        st.markdown("#### 📝 요약")
+                        st.info("해당 문의에 대한 AI 분석 요약이 없습니다.")
+                        
+                        st.markdown("#### 🔧 조치 흐름")
+                        st.info("해당 문의에 대한 조치 흐름이 없습니다.")
                     
-                    with col6:
-                        st.markdown("#### 📧 이메일 초안")
-                        if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
-                            parsed = analysis_data['gemini_result'].get('parsed_response', {})
-                            email_content = parsed.get('email_draft', '해당 문의에 대한 이메일 초안이 없습니다.')
-                        else:
-                            email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
+                    # 이메일 초안을 표 형태로 표시
+                    st.markdown("#### 📧 이메일 초안")
+                    if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
+                        parsed = analysis_data['gemini_result'].get('parsed_response', {})
+                        email_content = parsed.get('email_draft', '해당 문의에 대한 이메일 초안이 없습니다.')
+                    else:
+                        email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
 
 고객님 안녕하세요.
 
@@ -543,26 +602,53 @@ def show_ai_analysis_modal(selected_row):
 추가 문의사항이 있으시면 언제든 연락 주세요.
 
 감사합니다."""
-                        
-                        st.text_area("이메일 내용", email_content, height=150, disabled=True)
-                        
-                        # 이메일 복사 버튼
-                        if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
-                            st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
+                    
+                    # 이메일 내용을 표 형태로 표시
+                    email_data = {
+                        "항목": ["이메일 내용"],
+                        "내용": [email_content]
+                    }
+                    email_df = pd.DataFrame(email_data)
+                    st.dataframe(
+                        email_df,
+                        hide_index=True,
+                        use_container_width=True,
+                        column_config={
+                            "항목": st.column_config.TextColumn("📧 항목", width="medium"),
+                            "내용": st.column_config.TextColumn("📝 내용", width="large")
+                        }
+                    )
+                    
+                    # 이메일 복사 버튼
+                    if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
+                        st.success("✅ 이메일 내용이 클립보드에 복사되었습니다.")
                 
                 else:
                     # 실제 분석 결과가 없는 경우 기본 정보만 표시
                     st.warning("⚠️ 해당 문의의 실제 AI 분석 결과를 찾을 수 없습니다.")
                     st.info("이는 다음과 같은 이유일 수 있습니다:")
-                    st.info("1. 분석이 완료되지 않았거나 저장되지 않음")
-                    st.info("2. Streamlit Cloud 환경에서 데이터 저장 문제")
-                    st.info("3. 검색 조건이 정확하지 않음")
                     
-                    # 기본 정보 표시
+                    # 기본 정보를 표 형태로 표시
                     st.markdown("### 📋 기본 문의 정보")
-                    st.write(f"**문의 내용:** {selected_row.get('문의내용', 'N/A')}")
-                    st.write(f"**문의 유형:** {selected_row.get('문의유형', 'N/A')}")
-                    st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')}")
+                    basic_info_data = {
+                        "항목": ["문의 내용", "문의 유형", "담당자"],
+                        "내용": [
+                            selected_row.get('문의내용', 'N/A'),
+                            selected_row.get('문의유형', 'N/A'),
+                            selected_row.get('담당자', 'N/A')
+                        ]
+                    }
+                    
+                    basic_info_df = pd.DataFrame(basic_info_data)
+                    st.dataframe(
+                        basic_info_df,
+                        hide_index=True,
+                        use_container_width=True,
+                        column_config={
+                            "항목": st.column_config.TextColumn("📋 항목", width="medium"),
+                            "내용": st.column_config.TextColumn("📝 내용", width="large")
+                        }
+                    )
                     
             else:
                 st.error("❌ 컴포넌트가 초기화되지 않았습니다.")
