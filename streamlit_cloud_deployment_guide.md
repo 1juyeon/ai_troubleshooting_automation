@@ -1,174 +1,158 @@
-# ☁️ Streamlit Cloud 배포 가이드
+# 🚀 Streamlit Cloud 배포 가이드
 
-PrivKeeper P 장애 대응 자동화 시스템을 Streamlit Cloud에 배포하는 방법을 안내합니다.
+## 📋 개요
 
-## 🚀 배포 전 준비사항
+이 문서는 PrivKeeper P 장애 대응 자동화 시스템을 Streamlit Cloud에 배포하기 위한 가이드입니다.
 
-### 1. GitHub 저장소 준비
-- 모든 코드가 GitHub에 푸시되어 있어야 합니다
-- `requirements.txt` 파일이 포함되어 있어야 합니다
-- `.streamlit/` 디렉토리와 설정 파일들이 포함되어 있어야 합니다
+## ☁️ Streamlit Cloud 환경 특징
 
-### 2. API 키 준비
-- Gemini API 키가 필요합니다
-- [Google AI Studio](https://makersuite.google.com/app/apikey)에서 API 키를 발급받으세요
+### **제한사항**
+- **읽기 전용 파일 시스템**: `user_data/` 디렉토리에 파일 저장 불가
+- **임시 저장소**: 세션 기반 임시 데이터 저장만 가능
+- **재시작 시 데이터 손실**: 앱 재시작 시 모든 데이터 초기화
+- **메모리 제한**: 대용량 데이터 처리 시 메모리 부족 가능
 
-## 📋 배포 단계
+### **장점**
+- **무료 호스팅**: 개인 프로젝트 무료 배포 가능
+- **자동 HTTPS**: SSL 인증서 자동 적용
+- **Git 연동**: GitHub 저장소와 자동 동기화
+- **확장성**: 트래픽 증가 시 자동 스케일링
 
-### 1단계: Streamlit Cloud 접속
-1. [Streamlit Cloud](https://streamlit.io/cloud)에 접속
-2. GitHub 계정으로 로그인
-3. "New app" 버튼 클릭
+## 🔧 배포 준비
 
-### 2단계: 앱 설정
-```
-Repository: your-username/streamlit_pratice
-Branch: main (또는 원하는 브랜치)
-Main file path: app.py
-```
-
-### 3단계: 고급 설정
-- **Python version**: 3.9 이상
-- **Requirements file**: `requirements.txt`
-- **Command**: `streamlit run app.py --server.port $PORT --server.address 0.0.0.0`
-
-### 4단계: Secrets 설정
-`.streamlit/secrets.toml` 파일을 생성하거나 Streamlit Cloud의 Secrets 관리에서 설정:
-
-```toml
-GEMINI_API_KEY = "your-actual-gemini-api-key"
-```
-
-### 5단계: 배포
-- "Deploy!" 버튼 클릭
-- 배포 완료까지 대기 (보통 2-5분 소요)
-
-## 🔒 데이터 지속성 설정
-
-### 자동 백업 시스템
-- 모든 데이터가 자동으로 `/tmp/streamlit_cloud_data` 디렉토리에 저장됩니다
-- 서버 재부팅 시에도 데이터가 유지됩니다
-- 별도의 설정이 필요하지 않습니다
-
-### 수동 백업
-1. 앱 실행 후 "이력 관리" 탭으로 이동
-2. "🔒 데이터 백업 및 복구" 섹션 확장
-3. "💾 데이터 백업" 버튼으로 수동 백업 생성
-
-## 🛠️ 문제 해결
-
-### 일반적인 배포 문제
-
-#### 1. 의존성 설치 실패
-```
-Error: Could not find a version that satisfies the requirement
-```
-**해결방법:**
-- `requirements.txt`의 버전을 더 유연하게 설정
-- 예: `streamlit>=1.32.0` → `streamlit>=1.30.0`
-
-#### 2. 메모리 부족
-```
-Error: Process killed due to memory limit
-```
-**해결방법:**
-- 앱의 메모리 사용량 최적화
-- 불필요한 데이터 로딩 제거
-- Streamlit Cloud의 더 높은 티어 사용 고려
-
-#### 3. API 키 인증 실패
-```
-Error: Invalid API key
-```
-**해결방법:**
-- Streamlit Secrets에서 API 키 재설정
-- API 키의 유효성 확인
-- Gemini API 사용 권한 확인
-
-### 데이터 지속성 문제
-
-#### 1. 서버 재부팅 후 데이터 사라짐
-**확인사항:**
-- "이력 관리" 탭에서 환경 정보 확인
-- "☁️ Streamlit Cloud 환경" 메시지가 표시되는지 확인
-- 백업 파일이 생성되었는지 확인
-
-**해결방법:**
-- "🔄 데이터 복구" 버튼으로 최신 백업에서 복구
-- 수동으로 "💾 데이터 백업" 생성
-
-#### 2. 백업 파일 생성 실패
-**확인사항:**
-- 파일 쓰기 권한 확인
-- 디스크 공간 확인
-- 에러 메시지 상세 내용 확인
-
-**해결방법:**
-- 앱 재시작
-- 다른 백업 경로 시도
-- Streamlit Cloud 지원팀 문의
-
-## 📊 모니터링 및 유지보수
-
-### 1. 앱 상태 모니터링
-- Streamlit Cloud 대시보드에서 앱 상태 확인
-- 로그 확인 및 오류 모니터링
-- 사용량 통계 확인
-
-### 2. 정기적인 백업
-- 주기적으로 수동 백업 생성
-- 백업 파일의 무결성 확인
-- 오래된 백업 파일 정리
-
-### 3. 성능 최적화
-- 메모리 사용량 모니터링
-- 응답 시간 확인
-- 사용자 피드백 수집
-
-## 🔄 업데이트 및 배포
-
-### 1. 코드 업데이트
+### 1. **GitHub 저장소 설정**
 ```bash
-# 로컬에서 코드 수정
+# 로컬 저장소를 GitHub에 푸시
 git add .
-git commit -m "Update: 새로운 기능 추가"
+git commit -m "Streamlit Cloud 배포 준비"
 git push origin main
 ```
 
-### 2. 자동 배포
-- GitHub에 푸시하면 Streamlit Cloud에서 자동으로 재배포
-- 배포 상태는 Streamlit Cloud 대시보드에서 확인 가능
+### 2. **Streamlit Cloud Secrets 설정**
+Streamlit Cloud 대시보드에서 다음 환경변수 설정:
 
-### 3. 롤백
-- 이전 버전으로 되돌리려면 GitHub에서 이전 커밋으로 체크아웃
-- 또는 Streamlit Cloud에서 이전 배포 버전 선택
+```toml
+# .streamlit/secrets.toml
+GEMINI_API_KEY = "your_actual_api_key_here"
+```
 
-## 📞 지원 및 문의
+### 3. **requirements.txt 확인**
+```txt
+streamlit>=1.32.0
+pandas>=2.2.0
+google-generativeai>=0.8.0
+python-dotenv>=1.0.0
+scikit-learn>=1.4.0
+numpy>=1.26.0
+pymongo>=4.6.0
+dnspython>=2.6.0
+pytz>=2024.1
+requests>=2.31.0
+```
 
-### Streamlit Cloud 지원
-- [Streamlit Cloud 문서](https://docs.streamlit.io/streamlit-community-cloud)
-- [Streamlit Community 포럼](https://discuss.streamlit.io/)
+## 🚀 배포 단계
 
-### PrivKeeper P 내부 지원
-- 개발팀 문의
-- 시스템 관리자 문의
+### 1. **Streamlit Cloud 접속**
+- [share.streamlit.io](https://share.streamlit.io) 접속
+- GitHub 계정으로 로그인
 
-## 📝 체크리스트
+### 2. **새 앱 생성**
+- "New app" 버튼 클릭
+- GitHub 저장소 선택
+- 메인 파일 경로: `app.py`
+- Python 버전: 3.9 이상
 
-배포 전 확인사항:
-- [ ] GitHub에 모든 코드 푸시 완료
-- [ ] `requirements.txt` 파일 포함
-- [ ] `.streamlit/` 설정 파일 포함
-- [ ] Gemini API 키 준비 완료
-- [ ] Streamlit Cloud 계정 생성 완료
+### 3. **Secrets 설정**
+- "Secrets" 탭에서 환경변수 설정
+- `GEMINI_API_KEY` 값 입력
 
-배포 후 확인사항:
-- [ ] 앱 정상 실행 확인
-- [ ] API 키 인증 확인
-- [ ] 데이터 지속성 테스트
-- [ ] 백업 기능 테스트
-- [ ] 사용자 접근 테스트
+### 4. **배포 실행**
+- "Deploy!" 버튼 클릭
+- 배포 완료까지 대기 (약 2-3분)
+
+## 🔍 배포 후 확인사항
+
+### 1. **환경 감지 확인**
+사이드바에 "☁️ Streamlit Cloud 환경" 메시지 표시 확인
+
+### 2. **데이터 저장 테스트**
+- 새로운 고객 문의 입력
+- AI 분석 실행
+- 이력 조회에서 데이터 확인
+
+### 3. **오류 로그 확인**
+Streamlit Cloud 대시보드의 "Logs" 탭에서 오류 확인
+
+## ⚠️ 주의사항
+
+### **데이터 지속성**
+- **중요**: Streamlit Cloud는 앱 재시작 시 모든 데이터가 손실됩니다
+- 프로덕션 환경에서는 외부 데이터베이스 사용 권장
+- MongoDB Atlas, PostgreSQL 등 클라우드 데이터베이스 연동 고려
+
+### **API 키 보안**
+- `GEMINI_API_KEY`는 반드시 Streamlit Secrets에 설정
+- 코드에 직접 API 키 입력 금지
+- API 키 사용량 모니터링 필요
+
+### **성능 최적화**
+- 대용량 데이터 처리 시 메모리 사용량 주의
+- 캐싱 전략 활용으로 API 호출 최소화
+- 이미지나 파일 업로드 시 크기 제한 고려
+
+## 🛠️ 문제 해결
+
+### **일반적인 오류**
+
+#### 1. **ImportError: No module named 'xxx'**
+```bash
+# requirements.txt에 누락된 패키지 추가
+pip install package_name
+```
+
+#### 2. **API 키 인증 실패**
+- Streamlit Secrets에서 `GEMINI_API_KEY` 확인
+- API 키 유효성 및 사용량 확인
+
+#### 3. **메모리 부족 오류**
+- 데이터 처리 로직 최적화
+- 대용량 데이터 청크 단위 처리
+
+### **디버깅 팁**
+- 사이드바의 "🔍 시스템 정보" 섹션 활용
+- "📊 저장된 데이터" 개수 확인
+- 오류 발생 시 "🗑️ 모든 데이터 초기화" 버튼으로 상태 리셋
+
+## 📈 모니터링 및 유지보수
+
+### **정기 확인사항**
+- API 키 사용량 및 만료일
+- 앱 성능 및 응답 시간
+- 오류 로그 및 사용자 피드백
+
+### **업데이트 방법**
+```bash
+# 로컬에서 코드 수정 후
+git add .
+git commit -m "업데이트 내용"
+git push origin main
+
+# Streamlit Cloud에서 자동 재배포
+```
+
+## 🔗 유용한 링크
+
+- [Streamlit Cloud 공식 문서](https://docs.streamlit.io/streamlit-community-cloud)
+- [Streamlit Secrets 관리](https://docs.streamlit.io/streamlit-community-cloud/deploy-your-app/secrets-management)
+- [GitHub 연동 가이드](https://docs.streamlit.io/streamlit-community-cloud/deploy-your-app/github)
+
+## 📞 지원
+
+문제 발생 시:
+1. Streamlit Cloud 로그 확인
+2. GitHub Issues에 버그 리포트
+3. 개발팀에 문의
 
 ---
 
-**⚠️ 주의사항**: 이 가이드는 PrivKeeper P 내부 사용을 위한 것입니다. 외부 공개 시 보안에 주의하세요.
+**⚠️ 중요**: 이 시스템은 Streamlit Cloud 환경에서 임시 데이터 저장소를 사용합니다. 프로덕션 환경에서는 지속적인 데이터 저장을 위한 외부 데이터베이스 연동을 권장합니다.

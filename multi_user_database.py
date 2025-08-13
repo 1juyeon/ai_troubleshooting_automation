@@ -4,101 +4,33 @@ import hashlib
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 import pytz
-import streamlit as st
 
 class CloudDataStorage:
-    """Streamlit Cloud 환경용 영구 데이터 저장소"""
+    """Streamlit Cloud 환경용 임시 데이터 저장소"""
     
     def __init__(self):
         self.data = {}
         self.timestamp = datetime.now().isoformat()
-        # Streamlit Cloud에서 사용할 수 있는 임시 디렉토리
-        self.cloud_data_dir = "/tmp/streamlit_cloud_data"
-        self._ensure_cloud_directory()
-    
-    def _ensure_cloud_directory(self):
-        """클라우드 데이터 디렉토리 생성"""
-        try:
-            if not os.path.exists(self.cloud_data_dir):
-                os.makedirs(self.cloud_data_dir, exist_ok=True)
-        except Exception as e:
-            print(f"⚠️ 클라우드 디렉토리 생성 실패: {e}")
     
     def save(self, key: str, data: Any) -> bool:
-        """세션 상태와 파일에 데이터 저장"""
+        """세션 상태에 데이터 저장"""
         try:
-            # 세션 상태에 저장
             self.data[key] = {
                 'data': data,
                 'timestamp': datetime.now().isoformat()
             }
-            
-            # 파일에도 저장 (영구 보존)
-            file_path = os.path.join(self.cloud_data_dir, f"{key}.json")
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump({
-                    'data': data,
-                    'timestamp': datetime.now().isoformat()
-                }, f, ensure_ascii=False, indent=2)
-            
             return True
         except Exception as e:
             print(f"❌ 클라우드 저장 실패: {e}")
             return False
     
     def load(self, key: str) -> Any:
-        """세션 상태 또는 파일에서 데이터 로드"""
-        # 먼저 세션 상태에서 확인
-        if key in self.data:
-            return self.data[key].get('data', None)
-        
-        # 세션 상태에 없으면 파일에서 로드
-        try:
-            file_path = os.path.join(self.cloud_data_dir, f"{key}.json")
-            if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    file_data = json.load(f)
-                    # 세션 상태에도 복원
-                    self.data[key] = file_data
-                    return file_data.get('data', None)
-        except Exception as e:
-            print(f"⚠️ 파일에서 데이터 로드 실패: {e}")
-        
-        return None
+        """세션 상태에서 데이터 로드"""
+        return self.data.get(key, {}).get('data', None)
     
     def get_all_keys(self) -> List[str]:
-        """저장된 모든 키 반환 (세션 + 파일)"""
-        keys = set(self.data.keys())
-        
-        # 파일에서도 키 확인
-        try:
-            if os.path.exists(self.cloud_data_dir):
-                for filename in os.listdir(self.cloud_data_dir):
-                    if filename.endswith('.json'):
-                        key = filename[:-5]  # .json 제거
-                        keys.add(key)
-        except Exception as e:
-            print(f"⚠️ 파일 키 확인 실패: {e}")
-        
-        return list(keys)
-    
-    def clear_all(self):
-        """모든 데이터 삭제 (세션 + 파일)"""
-        try:
-            # 세션 상태 클리어
-            self.data.clear()
-            
-            # 파일도 삭제
-            if os.path.exists(self.cloud_data_dir):
-                for filename in os.listdir(self.cloud_data_dir):
-                    if filename.endswith('.json'):
-                        file_path = os.path.join(self.cloud_data_dir, filename)
-                        os.remove(file_path)
-            
-            return True
-        except Exception as e:
-            print(f"❌ 클라우드 데이터 삭제 실패: {e}")
-            return False
+        """저장된 모든 키 반환"""
+        return list(self.data.keys())
 
 class MultiUserHistoryDB:
     def __init__(self, data_dir: str = "user_data"):
@@ -107,7 +39,7 @@ class MultiUserHistoryDB:
         self.is_cloud = self._is_streamlit_cloud()
         
         if self.is_cloud:
-            print("☁️ Streamlit Cloud 환경 감지 - 영구 저장소 사용")
+            print("☁️ Streamlit Cloud 환경 감지 - 임시 저장소 사용")
             self.cloud_storage = CloudDataStorage()
         else:
             print("💻 로컬 환경 감지 - 파일 시스템 사용")
@@ -148,13 +80,13 @@ class MultiUserHistoryDB:
         return hashlib.md5(user_string.encode()).hexdigest()[:8]
     
     def _get_user_history_file(self, user_id: str) -> str:
-        """사용자별 이력 파일 경로"""
+        """사용자별 이력 파일 경로 (로컬 환경만)"""
         if self.is_cloud:
             return f"cloud_history_{user_id}"
         return os.path.join(self.data_dir, f"history_{user_id}.json")
     
     def _get_global_history_file(self) -> str:
-        """전체 이력 파일 경로"""
+        """전체 이력 파일 경로 (로컬 환경만)"""
         if self.is_cloud:
             return "cloud_global_history"
         return os.path.join(self.data_dir, "global_history.json")
@@ -168,42 +100,63 @@ class MultiUserHistoryDB:
             try:
                 with open(file_path, 'w', encoding='utf-8') as f:
                     json.dump([], f, ensure_ascii=False, indent=2)
-                print(f"✅ 이력 파일 생성: {file_path}")
             except Exception as e:
-                print(f"⚠️ 이력 파일 생성 실패: {e}")
+                print(f"⚠️ 파일 생성 실패: {e}")
     
     def _load_history(self, file_path: str) -> List[Dict]:
         """이력 데이터 로드"""
+        if self.is_cloud:
+            # 클라우드 환경에서는 세션 상태에서 로드
+            cloud_key = file_path
+            data = self.cloud_storage.load(cloud_key)
+            return data if data else []
+        
         try:
-            if self.is_cloud:
-                # 클라우드 환경에서는 CloudDataStorage 사용
-                data = self.cloud_storage.load(file_path)
-                return data if data is not None else []
-            else:
-                # 로컬 환경에서는 파일에서 로드
-                if not os.path.exists(file_path):
-                    self._ensure_history_file(file_path)
-                    return []
-                
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+            self._ensure_history_file(file_path)
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
         except Exception as e:
-            print(f"⚠️ 이력 로드 실패: {e}")
+            print(f"❌ 이력 로드 실패: {e}")
             return []
     
-    def _save_history(self, history: List[Dict], file_path: str) -> bool:
+    def _save_history(self, history_data: List[Dict], file_path: str) -> bool:
         """이력 데이터 저장"""
+        if self.is_cloud:
+            # 클라우드 환경에서는 세션 상태에 저장
+            cloud_key = file_path
+            return self.cloud_storage.save(cloud_key, history_data)
+        
         try:
-            if self.is_cloud:
-                # 클라우드 환경에서는 CloudDataStorage 사용
-                return self.cloud_storage.save(file_path, history)
-            else:
-                # 로컬 환경에서는 파일에 저장
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    json.dump(history, f, ensure_ascii=False, indent=2)
-                return True
+            # 디렉토리가 존재하는지 확인
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            
+            # 임시 파일에 먼저 저장
+            temp_file = file_path + '.tmp'
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(history_data, f, ensure_ascii=False, indent=2)
+            
+            # 성공적으로 저장되면 원본 파일로 이동
+            if os.path.exists(file_path):
+                backup_file = file_path + '.backup'
+                try:
+                    os.rename(file_path, backup_file)
+                except Exception as e:
+                    print(f"⚠️ 백업 파일 생성 실패: {e}")
+            
+            os.rename(temp_file, file_path)
+            return True
+            
+        except PermissionError as e:
+            print(f"❌ 파일 권한 오류: {e}")
+            print(f"파일 경로: {file_path}")
+            return False
+        except OSError as e:
+            print(f"❌ 파일 시스템 오류: {e}")
+            print(f"파일 경로: {file_path}")
+            return False
         except Exception as e:
             print(f"❌ 이력 저장 실패: {e}")
+            print(f"파일 경로: {file_path}")
             return False
     
     def save_analysis(self, analysis_result: Dict, inquiry_data: Dict):
@@ -413,7 +366,7 @@ class MultiUserHistoryDB:
             user_history_file = self._get_user_history_file(user_id)
             
             if self.is_cloud:
-                # 클라우드 환경에서는 CloudDataStorage 사용
+                # 클라우드 환경에서는 세션 상태에서 삭제
                 cloud_key = user_history_file
                 self.cloud_storage.data.pop(cloud_key, None)
                 print(f"✅ 사용자 이력 삭제 완료 (클라우드): {user_name} ({user_id})")
@@ -493,8 +446,8 @@ class MultiUserHistoryDB:
         """전체 이력 삭제"""
         try:
             if self.is_cloud:
-                # 클라우드 환경에서는 CloudDataStorage 사용
-                self.cloud_storage.clear_all()
+                # 클라우드 환경에서는 세션 상태 데이터 모두 삭제
+                self.cloud_storage.data.clear()
                 print("✅ 전체 이력 삭제 완료 (클라우드)")
                 return {"success": True}
             else:
