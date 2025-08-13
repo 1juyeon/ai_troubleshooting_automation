@@ -308,17 +308,6 @@ st.markdown("""
         padding: 0.25rem 0.5rem !important;
         border-radius: 0 3px 3px 0 !important;
     }
-
-    .history-table-header {
-        font-weight: bold;
-        padding: 0.5rem;
-        background-color: #f0f0f0;
-    }
-
-    .history-table-cell {
-        padding: 0.5rem;
-        border-bottom: 1px solid #e0e0e0;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -441,50 +430,16 @@ def show_ai_analysis_modal(selected_row):
         
         # 선택된 데이터 정보 표시 (간격 줄임)
         with st.expander("📋 입력된 문의 정보", expanded=True):
-            # 헤더 행
-            header_cols = st.columns(2)
-            with header_cols[0]:
-                st.markdown('<div class="history-table-header">고객사명</div>', unsafe_allow_html=True)
-            with header_cols[1]:
-                st.markdown('<div class="history-table-header">담당자</div>', unsafe_allow_html=True)
-            
-            # 데이터 행
-            data_cols = st.columns(2)
-            with data_cols[0]:
+            col1, col2 = st.columns(2)
+            with col1:
                 customer_name = selected_row.get('고객사명', '')
-                st.markdown(f'<div class="history-table-cell">{customer_name if customer_name else ""}</div>', unsafe_allow_html=True)
-            with data_cols[1]:
-                st.markdown(f'<div class="history-table-cell">{selected_row.get("담당자", "N/A")}</div>', unsafe_allow_html=True)
-            
-            st.markdown("---")
-            
-            # 두 번째 행
-            header_cols2 = st.columns(2)
-            with header_cols2[0]:
-                st.markdown('<div class="history-table-header">문의유형</div>', unsafe_allow_html=True)
-            with header_cols2[1]:
-                st.markdown('<div class="history-table-header">역할</div>', unsafe_allow_html=True)
-            
-            data_cols2 = st.columns(2)
-            with data_cols2[0]:
-                st.markdown(f'<div class="history-table-cell">{selected_row.get("문의유형", "N/A")}</div>', unsafe_allow_html=True)
-            with data_cols2[1]:
-                st.markdown(f'<div class="history-table-cell">{selected_row.get("역할", "N/A")}</div>', unsafe_allow_html=True)
-            
-            st.markdown("---")
-            
-            # 세 번째 행
-            header_cols3 = st.columns(2)
-            with header_cols3[0]:
-                st.markdown('<div class="history-table-header">우선순위</div>', unsafe_allow_html=True)
-            with header_cols3[1]:
-                st.markdown('<div class="history-table-header">날짜</div>', unsafe_allow_html=True)
-            
-            data_cols3 = st.columns(2)
-            with data_cols3[0]:
-                st.markdown(f'<div class="history-table-cell">{selected_row.get("우선순위", "N/A")}</div>', unsafe_allow_html=True)
-            with data_cols3[1]:
-                st.markdown(f'<div class="history-table-cell">{selected_row.get("날짜", "N/A")}</div>', unsafe_allow_html=True)
+                st.write(f"**고객사명:** {customer_name if customer_name else ''}")
+                st.write(f"**문의유형:** {selected_row.get('문의유형', 'N/A')}")
+                st.write(f"**우선순위:** {selected_row.get('우선순위', 'N/A')}")
+            with col2:
+                st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')}")
+                st.write(f"**역할:** {selected_row.get('역할', 'N/A')}")
+                st.write(f"**날짜:** {selected_row.get('날짜', 'N/A')}")
         
         # 실제 분석 결과 조회 시도
         try:
