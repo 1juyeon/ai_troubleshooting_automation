@@ -848,53 +848,6 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # 디버깅 정보 (Streamlit Cloud 환경 확인)
-    st.markdown("## 🔍 시스템 정보")
-    
-    # 환경 정보
-    is_cloud = os.getenv('STREAMLIT_SERVER_RUNNING') == 'true'
-    if is_cloud:
-        st.success("☁️ Streamlit Cloud 환경")
-        st.info("데이터는 임시 저장소에 저장됩니다.")
-    else:
-        st.info("💻 로컬 환경")
-        st.info("데이터는 파일 시스템에 저장됩니다.")
-    
-    # 데이터 저장 상태 확인
-    if 'components' in st.session_state and 'multi_user_db' in st.session_state.components:
-        multi_user_db = st.session_state.components['multi_user_db']
-        
-        if hasattr(multi_user_db, 'is_cloud') and multi_user_db.is_cloud:
-            # 클라우드 환경에서 저장된 데이터 확인
-            if hasattr(multi_user_db, 'cloud_storage'):
-                stored_keys = multi_user_db.cloud_storage.get_all_keys()
-                st.info(f"📊 저장된 데이터: {len(stored_keys)}개")
-                if stored_keys:
-                    st.write("저장된 키:")
-                    for key in stored_keys[:5]:  # 처음 5개만 표시
-                        st.write(f"• {key}")
-                    if len(stored_keys) > 5:
-                        st.write(f"... 외 {len(stored_keys) - 5}개")
-                else:
-                    st.warning("저장된 데이터가 없습니다.")
-        else:
-            # 로컬 환경에서 파일 상태 확인
-            try:
-                if hasattr(multi_user_db, 'data_dir') and os.path.exists(multi_user_db.data_dir):
-                    files = os.listdir(multi_user_db.data_dir)
-                    json_files = [f for f in files if f.endswith('.json')]
-                    st.info(f"📁 데이터 파일: {len(json_files)}개")
-                    if json_files:
-                        st.write("파일 목록:")
-                        for file in json_files[:5]:  # 처음 5개만 표시
-                            st.write(f"• {file}")
-                        if len(json_files) > 5:
-                            st.write(f"... 외 {len(json_files) - 5}개")
-                else:
-                    st.warning("데이터 디렉토리를 찾을 수 없습니다.")
-            except Exception as e:
-                st.error(f"파일 상태 확인 실패: {e}")
-    
     # 데이터 초기화 버튼
     st.markdown("---")
     st.markdown("## 🗑️ 데이터 관리")
