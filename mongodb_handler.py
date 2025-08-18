@@ -15,7 +15,16 @@ class MongoDBHandler:
             # Streamlit Secrets에서 MongoDB 연결 문자열 가져오기
             self.connection_string = st.secrets["MONGODB_URI"]
             self.client = MongoClient(self.connection_string, serverSelectionTimeoutMS=5000)
-            self.db = self.client.privkeeper_db
+            
+            # 연결 문자열에서 데이터베이스 이름 추출
+            if '/sample_mflix' in self.connection_string:
+                self.db = self.client.sample_mflix
+            elif '/privkeeper_db' in self.connection_string:
+                self.db = self.client.privkeeper_db
+            else:
+                # 기본값으로 privkeeper_db 사용
+                self.db = self.client.privkeeper_db
+            
             self.history_collection = self.db.analysis_history
             self.users_collection = self.db.users
             
