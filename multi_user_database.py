@@ -6,186 +6,31 @@ from typing import Dict, List, Any, Optional
 import pytz
 
 class CloudDataStorage:
-    """Streamlit Cloud 환경용 영구 데이터 저장소"""
+    """Streamlit Cloud 환경용 임시 데이터 저장소"""
     
     def __init__(self):
-        # Streamlit Cloud에서 영구 저장소 경로 설정
-        self.cloud_data_dir = self._get_cloud_data_dir()
         self.data = {}
         self.timestamp = datetime.now().isoformat()
-        self._load_persistent_data()
-    
-    def _get_cloud_data_dir(self) -> str:
-        """Streamlit Cloud에서 영구 데이터 저장 가능한 디렉토리 경로 반환"""
-        # 여러 가능한 영구 저장소 경로 시도
-        possible_paths = [
-            "/tmp/streamlit_data",  # Streamlit Cloud 임시 디렉토리
-            "/home/appuser/streamlit_data",  # 사용자 홈 디렉토리
-            "/app/streamlit_data",  # 앱 디렉토리
-            "./streamlit_data"  # 현재 작업 디렉토리
-        ]
-        
-        for path in possible_paths:
-            try:
-                if not os.path.exists(path):
-                    os.makedirs(path, exist_ok=True)
-                # 쓰기 권한 테스트
-                test_file = os.path.join(path, "test_write.tmp")
-                with open(test_file, 'w') as f:
-                    f.write("test")
-                os.remove(test_file)
-                print(f"✅ 영구 저장소 경로 설정: {path}")
-                return path
-            except Exception as e:
-                print(f"⚠️ 경로 {path} 사용 불가: {e}")
-                continue
-        
-        # 모든 경로가 실패하면 현재 디렉토리 사용
-        fallback_path = "./streamlit_data"
-        try:
-            os.makedirs(fallback_path, exist_ok=True)
-            print(f"⚠️ 폴백 경로 사용: {fallback_path}")
-            return fallback_path
-        except Exception as e:
-            print(f"❌ 폴백 경로도 실패: {e}")
-            return "."
-    
-    def _get_data_file_path(self, key: str) -> str:
-        """데이터 파일의 전체 경로 반환"""
-        safe_key = "".join(c for c in key if c.isalnum() or c in ('_', '-')).rstrip()
-        return os.path.join(self.cloud_data_dir, f"{safe_key}.json")
-    
-    def _load_persistent_data(self):
-        """영구 저장소에서 데이터 로드"""
-        try:
-            # 메모리 캐시 초기화
-            self.data = {}
-            
-            # 저장소 디렉토리의 모든 JSON 파일 로드
-            if os.path.exists(self.cloud_data_dir):
-                for filename in os.listdir(self.cloud_data_dir):
-                    if filename.endswith('.json'):
-                        file_path = os.path.join(self.cloud_data_dir, filename)
-                        try:
-                            with open(file_path, 'r', encoding='utf-8') as f:
-                                file_data = json.load(f)
-                                # 파일명에서 키 추출 (확장자 제거)
-                                key = filename[:-5]  # .json 제거
-                                self.data[key] = file_data
-                        except Exception as e:
-                            print(f"⚠️ 파일 {filename} 로드 실패: {e}")
-            
-            print(f"✅ 영구 저장소에서 {len(self.data)}개 데이터 로드 완료")
-            
-        except Exception as e:
-            print(f"❌ 영구 저장소 로드 실패: {e}")
     
     def save(self, key: str, data: Any) -> bool:
-        """영구 저장소에 데이터 저장"""
+        """세션 상태에 데이터 저장"""
         try:
-            # 메모리 캐시 업데이트
             self.data[key] = {
                 'data': data,
                 'timestamp': datetime.now().isoformat()
             }
-            
-            # 파일 시스템에 저장
-            file_path = self._get_data_file_path(key)
-            
-            # 임시 파일에 먼저 저장
-            temp_file = file_path + '.tmp'
-            with open(temp_file, 'w', encoding='utf-8') as f:
-                json.dump(self.data[key], f, ensure_ascii=False, indent=2)
-            
-            # 백업 파일 생성
-            if os.path.exists(file_path):
-                backup_file = file_path + '.backup'
-                try:
-                    os.rename(file_path, backup_file)
-                except:
-                    pass  # 백업 실패해도 계속 진행
-            
-            # 원본 파일로 이동
-            os.rename(temp_file, file_path)
-            
-            print(f"✅ 데이터 '{key}' 영구 저장 완료: {file_path}")
             return True
-            
         except Exception as e:
-            print(f"❌ 영구 저장 실패: {e}")
+            print(f"❌ 클라우드 저장 실패: {e}")
             return False
     
     def load(self, key: str) -> Any:
-        """영구 저장소에서 데이터 로드"""
-        try:
-            # 메모리 캐시에서 먼저 확인
-            if key in self.data:
-                return self.data[key].get('data', None)
-            
-            # 파일 시스템에서 직접 로드
-            file_path = self._get_data_file_path(key)
-            if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    file_data = json.load(f)
-                    # 메모리 캐시 업데이트
-                    self.data[key] = file_data
-                    return file_data.get('data', None)
-            
-            return None
-            
-        except Exception as e:
-            print(f"❌ 데이터 '{key}' 로드 실패: {e}")
-            return None
+        """세션 상태에서 데이터 로드"""
+        return self.data.get(key, {}).get('data', None)
     
     def get_all_keys(self) -> List[str]:
         """저장된 모든 키 반환"""
-        # 메모리 캐시와 파일 시스템 모두 확인
-        keys = set(self.data.keys())
-        
-        if os.path.exists(self.cloud_data_dir):
-            for filename in os.listdir(self.cloud_data_dir):
-                if filename.endswith('.json'):
-                    key = filename[:-5]  # .json 제거
-                    keys.add(key)
-        
-        return list(keys)
-    
-    def delete(self, key: str) -> bool:
-        """데이터 삭제"""
-        try:
-            # 메모리 캐시에서 제거
-            if key in self.data:
-                del self.data[key]
-            
-            # 파일 시스템에서 제거
-            file_path = self._get_data_file_path(key)
-            if os.path.exists(file_path):
-                os.remove(file_path)
-                print(f"✅ 데이터 '{key}' 삭제 완료")
-            
-            return True
-            
-        except Exception as e:
-            print(f"❌ 데이터 '{key}' 삭제 실패: {e}")
-            return False
-    
-    def backup_all_data(self) -> bool:
-        """모든 데이터 백업"""
-        try:
-            backup_dir = os.path.join(self.cloud_data_dir, "backup")
-            os.makedirs(backup_dir, exist_ok=True)
-            
-            backup_file = os.path.join(backup_dir, f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
-            
-            with open(backup_file, 'w', encoding='utf-8') as f:
-                json.dump(self.data, f, ensure_ascii=False, indent=2)
-            
-            print(f"✅ 전체 데이터 백업 완료: {backup_file}")
-            return True
-            
-        except Exception as e:
-            print(f"❌ 백업 실패: {e}")
-            return False
+        return list(self.data.keys())
 
 class MultiUserHistoryDB:
     def __init__(self, data_dir: str = "user_data"):
@@ -194,7 +39,7 @@ class MultiUserHistoryDB:
         self.is_cloud = self._is_streamlit_cloud()
         
         if self.is_cloud:
-            print("☁️ Streamlit Cloud 환경 감지 - 영구 저장소 사용")
+            print("☁️ Streamlit Cloud 환경 감지 - 임시 저장소 사용")
             self.cloud_storage = CloudDataStorage()
         else:
             print("💻 로컬 환경 감지 - 파일 시스템 사용")
@@ -207,16 +52,7 @@ class MultiUserHistoryDB:
     
     def _is_streamlit_cloud(self) -> bool:
         """Streamlit Cloud 환경인지 확인"""
-        # 더 정확한 Streamlit Cloud 감지
-        cloud_indicators = [
-            os.getenv('STREAMLIT_SERVER_RUNNING') == 'true',
-            os.getenv('STREAMLIT_CLOUD') == 'true',
-            os.getenv('STREAMLIT_SERVER_PORT') == '8501',
-            'streamlit.app' in os.getenv('STREAMLIT_SERVER_HEADLESS', ''),
-            os.path.exists('/tmp/streamlit_data'),
-            os.path.exists('/home/appuser')
-        ]
-        return any(cloud_indicators)
+        return os.getenv('STREAMLIT_SERVER_RUNNING') == 'true'
     
     def _ensure_data_directory(self):
         """데이터 디렉토리 생성 (로컬 환경만)"""
