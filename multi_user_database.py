@@ -4,6 +4,7 @@ import hashlib
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 import pytz
+import streamlit as st
 
 class CloudDataStorage:
     """Streamlit Cloud 환경용 임시 데이터 저장소"""
@@ -39,8 +40,8 @@ class MultiUserHistoryDB:
         self.is_cloud = self._is_streamlit_cloud()
         
         if self.is_cloud:
-            print("☁️ Streamlit Cloud 환경 감지 - 임시 저장소 사용")
-            self.cloud_storage = CloudDataStorage()
+            print("☁️ Streamlit Cloud 환경 감지 - 클라우드 저장소 확인 중...")
+            self.storage_handler = self._get_cloud_storage()
         else:
             print("💻 로컬 환경 감지 - 파일 시스템 사용")
             # 절대 경로로 변환
@@ -53,6 +54,23 @@ class MultiUserHistoryDB:
     def _is_streamlit_cloud(self) -> bool:
         """Streamlit Cloud 환경인지 확인"""
         return os.getenv('STREAMLIT_SERVER_RUNNING') == 'true'
+    
+    def _get_cloud_storage(self):
+        """클라우드 환경용 저장소 선택"""
+        try:
+            # MongoDB 우선 시도
+            if "MONGODB_URI" in st.secrets:
+                print("✅ MongoDB Atlas 연결 시도 중...")
+                from mongodb_handler import MongoDBHandler
+                return MongoDBHandler()
+            else:
+                # MongoDB 설정이 없으면 임시 저장소 사용
+                print("⚠️ MongoDB 설정이 없습니다. 임시 저장소를 사용합니다.")
+                return CloudDataStorage()
+        except Exception as e:
+            print(f"⚠️ 클라우드 저장소 초기화 실패: {e}")
+            print("임시 저장소로 폴백합니다.")
+            return CloudDataStorage()
     
     def _ensure_data_directory(self):
         """데이터 디렉토리 생성 (로컬 환경만)"""
