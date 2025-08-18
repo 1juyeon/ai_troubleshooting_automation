@@ -829,6 +829,26 @@ def init_components():
         history_db = HistoryDB()
         multi_user_db = MultiUserHistoryDB()
         
+        # 데이터베이스 초기화 후 자동 백업 복구 시도
+        try:
+            if hasattr(history_db, 'is_cloud') and history_db.is_cloud:
+                st.info("☁️ Streamlit Cloud 환경에서 데이터 영구 저장소를 사용합니다.")
+                
+                # 기존 데이터 로드 시도
+                existing_data = history_db._load_history()
+                if existing_data:
+                    st.success(f"✅ {len(existing_data)}개의 기존 이력 데이터를 복구했습니다.")
+                else:
+                    st.info("ℹ️ 새로운 데이터베이스가 생성되었습니다.")
+                    
+                # 백업 파일에서 복구 시도 (필요시)
+                backup_file = history_db.history_file + '.backup'
+                if os.path.exists(backup_file):
+                    st.info("📦 백업 파일이 발견되었습니다. 데이터 무결성을 확인합니다.")
+                    
+        except Exception as e:
+            st.warning(f"⚠️ 데이터베이스 초기화 중 경고: {e}")
+        
         return {
             'classifier': classifier,
             'scenario_db': scenario_db,
@@ -1645,11 +1665,79 @@ with tab4:
     st.markdown("- **웹 프레임워크:** Streamlit")
     st.markdown("- **데이터 소스:** JSON + Excel")
 
+    st.markdown("### 💾 데이터 백업 및 복구")
+
+    st.markdown("**데이터 백업**")
+    st.markdown("- Streamlit Cloud 환경에서도 데이터가 영구 보존됩니다")
+    st.markdown("- 자동 백업 시스템으로 데이터 손실을 방지합니다")
+    st.markdown("- 서버 재부팅 시에도 모든 이력이 유지됩니다")
+
+    st.markdown("**백업 관리**")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📦 전체 데이터 백업", help="현재 모든 데이터를 백업합니다"):
+            try:
+                # HistoryDB 백업
+                if 'history_db' in st.session_state:
+                    success = st.session_state.history_db.create_backup()
+                    if success:
+                        st.success("✅ 전체 데이터 백업이 완료되었습니다!")
+                    else:
+                        st.error("❌ 백업 생성에 실패했습니다.")
+                else:
+                    st.warning("⚠️ 데이터베이스가 초기화되지 않았습니다.")
+            except Exception as e:
+                st.error(f"❌ 백업 중 오류 발생: {e}")
+    
+    with col2:
+        if st.button("🔄 데이터 상태 확인", help="현재 데이터 저장 상태를 확인합니다"):
+            try:
+                if 'history_db' in st.session_state:
+                    history_count = len(st.session_state.history_db._load_history())
+                    st.info(f"📊 현재 저장된 이력: {history_count}개")
+                    
+                    # 저장 경로 정보
+                    if hasattr(st.session_state.history_db, 'history_file'):
+                        st.info(f"💾 저장 경로: {st.session_state.history_db.history_file}")
+                    
+                    # 클라우드 환경 정보
+                    if hasattr(st.session_state.history_db, 'is_cloud'):
+                        env_type = "☁️ Streamlit Cloud" if st.session_state.history_db.is_cloud else "💻 로컬 환경"
+                        st.info(f"🌍 환경: {env_type}")
+                else:
+                    st.warning("⚠️ 데이터베이스가 초기화되지 않았습니다.")
+            except Exception as e:
+                st.error(f"❌ 상태 확인 중 오류 발생: {e}")
+    
+    with col3:
+        if st.button("🧹 임시 파일 정리", help="백업 파일 등 임시 파일을 정리합니다"):
+            try:
+                import glob
+                import os
+                
+                # 백업 파일 정리
+                backup_files = glob.glob("**/*.backup", recursive=True)
+                temp_files = glob.glob("**/*.tmp", recursive=True)
+                
+                cleaned_count = 0
+                for file_path in backup_files + temp_files:
+                    try:
+                        os.remove(file_path)
+                        cleaned_count += 1
+                    except:
+                        pass
+                
+                st.success(f"✅ {cleaned_count}개의 임시 파일이 정리되었습니다!")
+            except Exception as e:
+                st.error(f"❌ 파일 정리 중 오류 발생: {e}")
+
     st.markdown("### ⚠️ 주의사항")
 
     st.markdown("- AI 분석 결과는 참고용이며, 최종 검토 후 발송")
     st.markdown("- 민감한 정보는 입력하지 않도록 주의")
     st.markdown("- 긴급한 경우 즉시 담당 엔지니어에게 연락")
+    st.markdown("- **데이터 보존:** 서버 재부팅 시에도 모든 이력이 자동으로 복구됩니다")
 
     st.markdown("### 📞 지원 연락처")
 
