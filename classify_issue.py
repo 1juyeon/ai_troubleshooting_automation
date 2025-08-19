@@ -5,7 +5,7 @@ import time
 from typing import Dict, Any, List
 
 class IssueClassifier:
-    def __init__(self, api_key: str = "AIzaSyA9xgvZ2Ks5Ae2wXiGUsFfI6stW31j-Bn8"):
+    def __init__(self, api_key: str = None):
         """문제 유형 분류기 초기화"""
         self.issue_types = [
             "현재 비밀번호가 맞지 않습니다",

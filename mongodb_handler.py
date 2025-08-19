@@ -5,6 +5,15 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 import pytz
+import os
+
+# .env 파일 로딩 (로컬 환경에서만)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print("✅ .env 파일 로드 완료")
+except ImportError:
+    print("⚠️ python-dotenv가 설치되지 않았습니다. 환경변수를 직접 설정해주세요.")
 
 class MongoDBHandler:
     """MongoDB Atlas 연동 핸들러"""
@@ -12,9 +21,24 @@ class MongoDBHandler:
     def __init__(self):
         """MongoDB 연결 초기화"""
         try:
-            # Streamlit Secrets에서 MongoDB 연결 문자열 가져오기
-            self.connection_string = st.secrets["MONGODB_URI"]
-            self.client = MongoClient(self.connection_string, serverSelectionTimeoutMS=5000)
+            # 연결 문자열 가져오기 (Streamlit Secrets 우선, 환경변수 차선)
+            if "MONGODB_URI" in st.secrets:
+                self.connection_string = st.secrets["MONGODB_URI"]
+                print("✅ MongoDB URI를 Streamlit Secrets에서 로드했습니다.")
+            else:
+                # 환경변수에서 로드
+                import os
+                self.connection_string = os.getenv("MONGODB_URI")
+                if not self.connection_string:
+                    raise ValueError("MONGODB_URI가 설정되지 않았습니다.")
+                print("✅ MongoDB URI를 환경변수에서 로드했습니다.")
+            
+            # 연결 문자열 인코딩 문제 해결
+            if self.connection_string:
+                # 특수문자 인코딩 처리
+                self.connection_string = self.connection_string.replace('%40', '@')
+                
+            self.client = MongoClient(self.connection_string, serverSelectionTimeoutMS=10000)
             
             # 연결 문자열에서 데이터베이스 이름 추출
             if '/sample_mflix' in self.connection_string:
@@ -37,12 +61,16 @@ class MongoDBHandler:
             
         except KeyError:
             print("❌ MONGODB_URI가 Streamlit Secrets에 설정되지 않았습니다.")
+            print("💡 환경변수 MONGODB_URI를 설정하거나 Streamlit Secrets에 추가해주세요.")
             raise
         except (ConnectionFailure, ServerSelectionTimeoutError) as e:
             print(f"❌ MongoDB 연결 실패: {e}")
+            print("💡 MongoDB Atlas 네트워크 접근 설정을 확인해주세요.")
+            print("💡 IP 화이트리스트에 0.0.0.0/0 추가를 고려해주세요.")
             raise
         except Exception as e:
             print(f"❌ MongoDB 초기화 오류: {e}")
+            print("💡 연결 문자열 형식과 인증 정보를 확인해주세요.")
             raise
     
     def _create_indexes(self):
@@ -59,6 +87,32 @@ class MongoDBHandler:
             print("✅ MongoDB 인덱스 생성 완료")
         except Exception as e:
             print(f"⚠️ 인덱스 생성 실패: {e}")
+    
+    def test_connection(self) -> Dict[str, Any]:
+        """MongoDB 연결 테스트"""
+        try:
+            # 연결 상태 확인
+            self.client.admin.command('ping')
+            
+            # 데이터베이스 목록 조회
+            db_list = self.client.list_database_names()
+            
+            # 컬렉션 목록 조회
+            collections = self.db.list_collection_names()
+            
+            return {
+                "success": True,
+                "message": "MongoDB 연결 성공",
+                "databases": db_list,
+                "collections": collections,
+                "current_db": self.db.name
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"MongoDB 연결 실패: {str(e)}",
+                "error": str(e)
+            }
     
     def save_analysis(self, analysis_data: Dict, inquiry_data: Dict) -> Dict:
         """분석 결과 저장"""

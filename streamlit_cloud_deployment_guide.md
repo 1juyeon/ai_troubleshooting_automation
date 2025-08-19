@@ -34,7 +34,10 @@ Streamlit Cloud 대시보드에서 다음 환경변수 설정:
 ```toml
 # .streamlit/secrets.toml
 GEMINI_API_KEY = "your_actual_api_key_here"
+MONGODB_URI = "mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority"
 ```
+
+**중요**: MongoDB URI는 반드시 Streamlit Secrets에 설정해야 합니다.
 
 ### 3. **requirements.txt 확인**
 ```txt
@@ -65,6 +68,7 @@ requests>=2.31.0
 ### 3. **Secrets 설정**
 - "Secrets" 탭에서 환경변수 설정
 - `GEMINI_API_KEY` 값 입력
+- `MONGODB_URI` 값 입력 (MongoDB Atlas 연결 문자열)
 
 ### 4. **배포 실행**
 - "Deploy!" 버튼 클릭
@@ -89,6 +93,11 @@ Streamlit Cloud 대시보드의 "Logs" 탭에서 오류 확인
 - **중요**: Streamlit Cloud는 앱 재시작 시 모든 데이터가 손실됩니다
 - 프로덕션 환경에서는 외부 데이터베이스 사용 권장
 - MongoDB Atlas, PostgreSQL 등 클라우드 데이터베이스 연동 고려
+
+### **MongoDB Atlas 연결**
+- **네트워크 접근**: IP 화이트리스트에 `0.0.0.0/0` 추가 (모든 IP 허용)
+- **사용자 권한**: 데이터베이스 사용자에게 `readWrite` 권한 부여
+- **연결 문자열**: Streamlit Secrets에 `MONGODB_URI`로 설정
 
 ### **API 키 보안**
 - `GEMINI_API_KEY`는 반드시 Streamlit Secrets에 설정
