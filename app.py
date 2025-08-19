@@ -721,39 +721,6 @@ def show_ai_analysis_modal(selected_row):
                     # 전체 응답 복사 버튼
                     if st.button("📋 전체 응답 복사", key=f"copy_full_{selected_row.get('번호', 'unknown')}"):
                         st.write("✅ 전체 AI 응답이 클립보드에 복사되었습니다.")
-                    
-                    # 추가 정보 섹션 - 데이터베이스에 저장된 모든 정보 표시
-                    st.markdown("---")
-                    st.markdown("### 🔍 추가 상세 정보")
-                    
-                    col7, col8 = st.columns(2)
-                    
-                    with col7:
-                        st.markdown("#### 👤 사용자 정보")
-                        st.write(f"**담당자:** {analysis_data.get('user_name', 'N/A')}")
-                        st.write(f"**역할:** {analysis_data.get('user_role', 'N/A')}")
-                        st.write(f"**시스템 버전:** {analysis_data.get('system_version', 'N/A')}")
-                        st.write(f"**브라우저:** {analysis_data.get('browser_info', 'N/A')}")
-                        st.write(f"**운영체제:** {analysis_data.get('os_info', 'N/A')}")
-                        st.write(f"**오류 코드:** {analysis_data.get('error_code', 'N/A')}")
-                    
-                    with col8:
-                        st.markdown("#### 📅 시간 정보")
-                        st.write(f"**타임스탬프:** {analysis_data.get('timestamp', 'N/A')}")
-                        st.write(f"**생성 시간:** {analysis_data.get('created_at', 'N/A')}")
-                        st.write(f"**수정 시간:** {analysis_data.get('updated_at', 'N/A')}")
-                        
-                        st.markdown("#### 🆔 데이터 정보")
-                        st.write(f"**데이터베이스 ID:** {analysis_data.get('_id', 'N/A')}")
-                        st.write(f"**데이터 소스:** {actual_analysis.get('source', 'N/A')}")
-                    
-                    # 원본 데이터 표시 (디버깅용)
-                    with st.expander("🔧 원본 데이터 (디버깅용)", expanded=False):
-                        st.json(analysis_data)
-                    
-                    # MongoDB에서 가져온 경우 추가 정보 표시
-                    if actual_analysis.get('source') == 'mongodb':
-                        st.info("💾 MongoDB에서 로드된 데이터입니다.")
                 else:
                     # 데이터가 비어있는 경우
                     st.warning("⚠️ 분석 데이터가 비어있습니다.")
@@ -1099,41 +1066,7 @@ with st.sidebar:
     st.session_state.role = role
     st.session_state.ai_model = ai_model
     
-    # MongoDB 연결 상태 표시
-    st.markdown("---")
-    st.markdown("## 🔌 데이터베이스 상태")
-    
-    if st.session_state.get('mongodb_connected'):
-        st.success("✅ MongoDB Atlas 연결됨")
-        st.info("💾 이력이 영구 저장됩니다")
-        
-        # MongoDB 연결 테스트 버튼
-        if st.button("🔍 MongoDB 연결 테스트", use_container_width=True):
-            try:
-                test_result = st.session_state.mongo_handler.test_connection()
-                if test_result.get('success'):
-                    st.success("✅ MongoDB 연결 정상")
-                    st.json({
-                        "데이터베이스": test_result.get('current_db'),
-                        "컬렉션 수": len(test_result.get('collections', [])),
-                        "전체 DB 수": len(test_result.get('databases', []))
-                    })
-                else:
-                    st.error(f"❌ MongoDB 연결 실패: {test_result.get('message')}")
-            except Exception as e:
-                st.error(f"❌ 연결 테스트 실패: {e}")
-    else:
-        st.warning("⚠️ MongoDB 연결 실패")
-        st.info("💾 이력이 임시 저장됩니다 (앱 재시작 시 손실)")
-        
-        # MongoDB 재연결 시도 버튼
-        if st.button("🔄 MongoDB 재연결", use_container_width=True):
-            mongodb_status = init_mongodb_connection()
-            if mongodb_status:
-                st.success("✅ MongoDB 재연결 성공!")
-                st.rerun()
-            else:
-                st.error("❌ MongoDB 재연결 실패")
+
     
     # 데이터 관리 섹션 (UI에서 숨김)
     # st.markdown("---")
