@@ -567,66 +567,66 @@ def show_ai_analysis_modal(selected_row):
                     if analysis_data:
                         # AI 분석 결과 (실제 데이터) - 간격 줄임
                         st.markdown("### 🔍 AI 분석 결과")
-                    
-                    col3, col4 = st.columns(2)
-                    
-                    with col3:
-                        st.markdown("#### 📊 문제 유형 분류")
-                        issue_type = analysis_data.get('issue_type', selected_row.get('문의유형', 'N/A'))
-                        st.write(f"**분류된 문제 유형:** {issue_type}")
                         
-                        # 분류 방법과 신뢰도 정보 표시
-                        classification_method = analysis_data.get('classification_method', 'AI 자동 분류')
-                        confidence = analysis_data.get('confidence', '높음')
-                        st.write(f"**분류 방법:** {classification_method}")
-                        st.write(f"**신뢰도:** {confidence}")
+                        col3, col4 = st.columns(2)
                         
-                        # 우선순위 정보
-                        priority = analysis_data.get('priority', 'N/A')
-                        st.write(f"**우선순위:** {priority}")
+                        with col3:
+                            st.markdown("#### 📊 문제 유형 분류")
+                            issue_type = analysis_data.get('issue_type', selected_row.get('문의유형', 'N/A'))
+                            st.write(f"**분류된 문제 유형:** {issue_type}")
+                            
+                            # 분류 방법과 신뢰도 정보 표시
+                            classification_method = analysis_data.get('classification_method', 'AI 자동 분류')
+                            confidence = analysis_data.get('confidence', '높음')
+                            st.write(f"**분류 방법:** {classification_method}")
+                            st.write(f"**신뢰도:** {confidence}")
+                            
+                            # 우선순위 정보
+                            priority = analysis_data.get('priority', 'N/A')
+                            st.write(f"**우선순위:** {priority}")
+                            
+                            # 계약 유형
+                            contract_type = analysis_data.get('contract_type', 'N/A')
+                            st.write(f"**계약 유형:** {contract_type}")
                         
-                        # 계약 유형
-                        contract_type = analysis_data.get('contract_type', 'N/A')
-                        st.write(f"**계약 유형:** {contract_type}")
-                    
-                    with col4:
-                        st.markdown("#### 🎯 응답 정보")
-                        response_type = analysis_data.get('response_type', '해결안')
-                        st.write(f"**응답 유형:** {response_type}")
+                        with col4:
+                            st.markdown("#### 🎯 응답 정보")
+                            response_type = analysis_data.get('response_type', '해결안')
+                            st.write(f"**응답 유형:** {response_type}")
+                            
+                            # 사용자 정보
+                            user_name = analysis_data.get('user_name', 'N/A')
+                            user_role = analysis_data.get('user_role', 'N/A')
+                            st.write(f"**담당자:** {user_name}")
+                            st.write(f"**역할:** {user_role}")
                         
-                        # 사용자 정보
-                        user_name = analysis_data.get('user_name', 'N/A')
-                        user_role = analysis_data.get('user_role', 'N/A')
-                        st.write(f"**담당자:** {user_name}")
-                        st.write(f"**역할:** {user_role}")
-                    
-                    # AI 응답 결과 - 간격 줄임
-                    st.markdown("### 🤖 AI 응답")
-                    
-                    col5, col6 = st.columns(2)
-                    
-                    with col5:
-                        st.markdown("#### 📝 요약")
-                        summary = analysis_data.get('summary', '')
-                        if summary:
-                            st.write(summary)
-                        else:
-                            st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
+                        # AI 응답 결과 - 간격 줄임
+                        st.markdown("### 🤖 AI 응답")
                         
-                        st.markdown("#### 🔧 조치 흐름")
-                        action_flow = analysis_data.get('action_flow', '')
-                        if action_flow:
-                            st.write(action_flow)
-                        else:
-                            st.write("해당 문의에 대한 조치 흐름이 없습니다.")
-                    
-                    with col6:
-                        st.markdown("#### 📧 이메일 초안")
-                        email_draft = analysis_data.get('email_draft', '')
-                        if email_draft:
-                            email_content = email_draft
-                        else:
-                            email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
+                        col5, col6 = st.columns(2)
+                        
+                        with col5:
+                            st.markdown("#### 📝 요약")
+                            summary = analysis_data.get('summary', '')
+                            if summary:
+                                st.write(summary)
+                            else:
+                                st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
+                            
+                            st.markdown("#### 🔧 조치 흐름")
+                            action_flow = analysis_data.get('action_flow', '')
+                            if action_flow:
+                                st.write(action_flow)
+                            else:
+                                st.write("해당 문의에 대한 조치 흐름이 없습니다.")
+                        
+                        with col6:
+                            st.markdown("#### 📧 이메일 초안")
+                            email_draft = analysis_data.get('email_draft', '')
+                            if email_draft:
+                                email_content = email_draft
+                            else:
+                                email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
 
 고객님 안녕하세요.
 
@@ -644,19 +644,19 @@ def show_ai_analysis_modal(selected_row):
 추가 문의사항이 있으시면 언제든 연락 주세요.
 
 감사합니다."""
+                            
+                            st.text_area("이메일 내용", email_content, height=150, disabled=True)
+                            
+                            # 이메일 복사 버튼
+                            if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
+                                st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
                         
-                        st.text_area("이메일 내용", email_content, height=150, disabled=True)
+                        # 전체 AI 응답 섹션 추가
+                        st.markdown("---")
+                        st.markdown("### 📄 전체 AI 응답")
                         
-                        # 이메일 복사 버튼
-                        if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
-                            st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
-                    
-                    # 전체 AI 응답 섹션 추가
-                    st.markdown("---")
-                    st.markdown("### 📄 전체 AI 응답")
-                    
-                    # MongoDB 데이터 구조에 맞게 전체 AI 응답 구성
-                    full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
+                        # MongoDB 데이터 구조에 맞게 전체 AI 응답 구성
+                        full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
 
 [응답내용]
 - 요약: {analysis_data.get('summary', '')}
@@ -666,17 +666,20 @@ def show_ai_analysis_modal(selected_row):
 
 - 이메일 초안:
 {analysis_data.get('email_draft', '')}"""
-                    
-                    # 전체 AI 응답 표시
-                    st.text_area("전체 AI 응답", full_response, height=200, disabled=True)
-                    
-                    # 전체 응답 복사 버튼
-                    if st.button("📋 전체 응답 복사", key=f"copy_full_{selected_row.get('번호', 'unknown')}"):
-                        st.write("✅ 전체 AI 응답이 클립보드에 복사되었습니다.")
-                    
-                    # MongoDB에서 가져온 경우 추가 정보 표시
-                    if actual_analysis.get('source') == 'mongodb':
-                        st.info("💾 MongoDB에서 로드된 데이터입니다.")
+                        
+                        # 전체 AI 응답 표시
+                        st.text_area("전체 AI 응답", full_response, height=200, disabled=True)
+                        
+                        # 전체 응답 복사 버튼
+                        if st.button("📋 전체 응답 복사", key=f"copy_full_{selected_row.get('번호', 'unknown')}"):
+                            st.write("✅ 전체 AI 응답이 클립보드에 복사되었습니다.")
+                        
+                        # MongoDB에서 가져온 경우 추가 정보 표시
+                        if actual_analysis.get('source') == 'mongodb':
+                            st.info("💾 MongoDB에서 로드된 데이터입니다.")
+                    else:
+                        # 데이터가 비어있는 경우
+                        st.warning("⚠️ 분석 데이터가 비어있습니다.")
                 else:
                     # 실제 분석 결과가 없는 경우 기본 정보만 표시
                     st.warning("⚠️ 해당 문의의 실제 AI 분석 결과를 찾을 수 없습니다.")
