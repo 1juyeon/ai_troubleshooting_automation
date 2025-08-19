@@ -241,6 +241,72 @@ class MongoDBHandler:
             print(f"❌ MongoDB 이력 삭제 실패: {e}")
             return {"success": False, "error": str(e)}
     
+    def get_analysis_by_criteria(self, customer_name: str = None, issue_type: str = None, user_name: str = None, date: str = None) -> Dict:
+        """특정 조건에 맞는 AI 분석 결과 조회"""
+        try:
+            # 쿼리 조건 구성
+            query = {}
+            
+            if customer_name and customer_name.strip():
+                query['customer_name'] = customer_name.strip()
+            
+            if issue_type and issue_type.strip():
+                query['issue_type'] = issue_type.strip()
+            
+            if user_name and user_name.strip():
+                query['user_name'] = user_name.strip()
+            
+            if date and date.strip():
+                # 날짜 형식 변환 (YYYY-MM-DD -> YYYY-MM-DDTHH:MM:SS)
+                try:
+                    date_obj = datetime.strptime(date.strip(), '%Y-%m-%d')
+                    start_date = date_obj.replace(hour=0, minute=0, second=0, microsecond=0)
+                    end_date = date_obj.replace(hour=23, minute=59, second=59, microsecond=999999)
+                    
+                    # ISO 형식으로 변환
+                    query['timestamp'] = {
+                        '$gte': start_date.isoformat(),
+                        '$lte': end_date.isoformat()
+                    }
+                except ValueError:
+                    # 날짜 파싱 실패 시 원본 문자열로 검색
+                    query['timestamp'] = {'$regex': date.strip()}
+            
+            # MongoDB에서 데이터 조회
+            cursor = self.history_collection.find(query).sort("timestamp", -1).limit(1)
+            
+            results = []
+            for doc in cursor:
+                doc['_id'] = str(doc['_id'])
+                if 'created_at' in doc:
+                    doc['created_at'] = doc['created_at'].isoformat()
+                if 'updated_at' in doc:
+                    doc['updated_at'] = doc['updated_at'].isoformat()
+                results.append(doc)
+            
+            if results:
+                print(f"✅ MongoDB에서 조건별 분석 결과 조회 완료: {len(results)}개")
+                return {
+                    "success": True,
+                    "data": results[0],  # 가장 최근 결과 반환
+                    "source": "mongodb"
+                }
+            else:
+                print(f"⚠️ 조건에 맞는 분석 결과를 찾을 수 없습니다")
+                return {
+                    "success": False,
+                    "error": "조건에 맞는 분석 결과를 찾을 수 없습니다",
+                    "source": "mongodb"
+                }
+            
+        except Exception as e:
+            print(f"❌ MongoDB 조건별 분석 결과 조회 실패: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "source": "mongodb"
+            }
+    
     def get_statistics(self) -> Dict:
         """통계 정보 조회"""
         try:

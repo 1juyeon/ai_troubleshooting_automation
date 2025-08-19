@@ -495,20 +495,60 @@ def show_ai_analysis_modal(selected_row):
         
         # 실제 분석 결과 조회 시도
         try:
-            # 데이터베이스에서 해당 문의의 실제 분석 결과 조회
-            if 'components' in st.session_state:
-                # 고객사명과 날짜를 기준으로 실제 분석 결과 조회
-                customer_name = selected_row.get('고객사명', '')
-                inquiry_date = selected_row.get('날짜', '')
-                
-                # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
-                if inquiry_date and ' ' in inquiry_date:
-                    inquiry_date = inquiry_date.split(' ')[0]
-                
-                # 실제 분석 결과 조회
-                actual_analysis = st.session_state.components['multi_user_db'].get_analysis_by_customer_and_date(
-                    customer_name, inquiry_date
-                )
+            # MongoDB에서 실제 분석 결과 조회 시도
+            actual_analysis = None
+            
+            # MongoDB 연결이 되어 있는 경우 우선 시도
+            if st.session_state.get('mongodb_connected') and st.session_state.get('mongo_handler'):
+                try:
+                    # 고객사명과 날짜를 기준으로 MongoDB에서 조회
+                    customer_name = selected_row.get('고객사명', '')
+                    inquiry_date = selected_row.get('날짜', '')
+                    user_name = selected_row.get('담당자', '')
+                    issue_type = selected_row.get('문의유형', '')
+                    
+                    # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
+                    if inquiry_date and ' ' in inquiry_date:
+                        inquiry_date = inquiry_date.split(' ')[0]
+                    
+                    # MongoDB에서 해당 문의의 실제 분석 결과 조회
+                    mongo_result = st.session_state.mongo_handler.get_analysis_by_criteria(
+                        customer_name=customer_name,
+                        issue_type=issue_type,
+                        user_name=user_name,
+                        date=inquiry_date
+                    )
+                    
+                    if mongo_result and mongo_result.get('success'):
+                        actual_analysis = mongo_result
+                        st.success("✅ MongoDB에서 AI 분석 결과를 조회했습니다.")
+                    else:
+                        st.warning("⚠️ MongoDB에서 해당 문의의 분석 결과를 찾을 수 없습니다.")
+                        
+                except Exception as mongo_error:
+                    st.warning(f"⚠️ MongoDB 조회 실패: {mongo_error}")
+            
+            # MongoDB에서 조회 실패한 경우 로컬 데이터베이스로 폴백
+            if not actual_analysis and 'components' in st.session_state:
+                try:
+                    # 고객사명과 날짜를 기준으로 실제 분석 결과 조회
+                    customer_name = selected_row.get('고객사명', '')
+                    inquiry_date = selected_row.get('날짜', '')
+                    
+                    # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
+                    if inquiry_date and ' ' in inquiry_date:
+                        inquiry_date = inquiry_date.split(' ')[0]
+                    
+                    # 실제 분석 결과 조회
+                    actual_analysis = st.session_state.components['multi_user_db'].get_analysis_by_customer_and_date(
+                        customer_name, inquiry_date
+                    )
+                    
+                    if actual_analysis and actual_analysis.get('success'):
+                        st.info("📋 로컬 데이터베이스에서 AI 분석 결과를 조회했습니다.")
+                        
+                except Exception as local_error:
+                    st.warning(f"⚠️ 로컬 데이터베이스 조회 실패: {local_error}")
                 
                 if actual_analysis and actual_analysis.get('success'):
                     analysis_data = actual_analysis.get('data', {})
@@ -524,25 +564,29 @@ def show_ai_analysis_modal(selected_row):
                         st.write(f"**분류된 문제 유형:** {issue_type}")
                         
                         # 분류 방법과 신뢰도 정보 표시
-                        classification = analysis_data.get('classification', {})
-                        classification_method = classification.get('method', 'AI 자동 분류')
-                        confidence = classification.get('confidence', '높음')
+                        classification_method = analysis_data.get('classification_method', 'AI 자동 분류')
+                        confidence = analysis_data.get('confidence', '높음')
                         st.write(f"**분류 방법:** {classification_method}")
                         st.write(f"**신뢰도:** {confidence}")
+                        
+                        # 우선순위 정보
+                        priority = analysis_data.get('priority', 'N/A')
+                        st.write(f"**우선순위:** {priority}")
+                        
+                        # 계약 유형
+                        contract_type = analysis_data.get('contract_type', 'N/A')
+                        st.write(f"**계약 유형:** {contract_type}")
                     
                     with col4:
-                        st.markdown("#### 🎯 시나리오 매칭")
-                        if 'best_scenario' in analysis_data and analysis_data['best_scenario']:
-                            scenario = analysis_data['best_scenario']
-                            st.write(f"**조건 1:** {scenario.get('condition_1', 'N/A')}")
-                            st.write(f"**조건 2:** {scenario.get('condition_2', 'N/A')}")
-                            st.write(f"**해결책:** {scenario.get('solution', 'N/A')}")
-                            st.write(f"**현장 출동 필요:** {scenario.get('onsite_needed', 'N')}")
-                        else:
-                            st.write("**조건 1:** 해당 시나리오 없음")
-                            st.write("**조건 2:** 해당 시나리오 없음")
-                            st.write("**해결책:** 기본 가이드 제공")
-                            st.write("**현장 출동 필요:** N")
+                        st.markdown("#### 🎯 응답 정보")
+                        response_type = analysis_data.get('response_type', '해결안')
+                        st.write(f"**응답 유형:** {response_type}")
+                        
+                        # 사용자 정보
+                        user_name = analysis_data.get('user_name', 'N/A')
+                        user_role = analysis_data.get('user_role', 'N/A')
+                        st.write(f"**담당자:** {user_name}")
+                        st.write(f"**역할:** {user_role}")
                     
                     # AI 응답 결과 - 간격 줄임
                     st.markdown("### 🤖 AI 응답")
@@ -551,31 +595,24 @@ def show_ai_analysis_modal(selected_row):
                     
                     with col5:
                         st.markdown("#### 📝 요약")
-                        if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
-                            parsed = analysis_data['gemini_result'].get('parsed_response', {})
-                            
-                            summary = parsed.get('summary', '')
-                            if summary:
-                                st.write(summary)
-                            else:
-                                st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
-                            
-                            st.markdown("#### 🔧 조치 흐름")
-                            action_flow = parsed.get('action_flow', '')
-                            if action_flow:
-                                st.write(action_flow)
-                            else:
-                                st.write("해당 문의에 대한 조치 흐름이 없습니다.")
+                        summary = analysis_data.get('summary', '')
+                        if summary:
+                            st.write(summary)
                         else:
                             st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
-                            st.markdown("#### 🔧 조치 흐름")
+                        
+                        st.markdown("#### 🔧 조치 흐름")
+                        action_flow = analysis_data.get('action_flow', '')
+                        if action_flow:
+                            st.write(action_flow)
+                        else:
                             st.write("해당 문의에 대한 조치 흐름이 없습니다.")
                     
                     with col6:
                         st.markdown("#### 📧 이메일 초안")
-                        if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
-                            parsed = analysis_data['gemini_result'].get('parsed_response', {})
-                            email_content = parsed.get('email_draft', '해당 문의에 대한 이메일 초안이 없습니다.')
+                        email_draft = analysis_data.get('email_draft', '')
+                        if email_draft:
+                            email_content = email_draft
                         else:
                             email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
 
@@ -606,35 +643,35 @@ def show_ai_analysis_modal(selected_row):
                     st.markdown("---")
                     st.markdown("### 📄 전체 AI 응답")
                     
-                    if 'gemini_result' in analysis_data and analysis_data['gemini_result'].get('success'):
-                        gemini_data = analysis_data['gemini_result']
-                        parsed = gemini_data.get('parsed_response', {})
-                        
-                        # 전체 AI 응답을 요청하신 형식대로 표시
-                        full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
+                    # MongoDB 데이터 구조에 맞게 전체 AI 응답 구성
+                    full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
 
 [응답내용]
-- 요약: {parsed.get('summary', '')}
+- 요약: {analysis_data.get('summary', '')}
 
 - 조치 흐름:
-{parsed.get('action_flow', '')}
+{analysis_data.get('action_flow', '')}
 
 - 이메일 초안:
-{parsed.get('email_draft', '')}"""
-                        
-                        # 전체 AI 응답을 텍스트 영역에 표시
-                        st.text_area("전체 AI 응답", full_response, height=400, disabled=True)
-                        
-                        # 복사 버튼 추가
-                        if st.button("📋 전체 AI 응답 복사", key=f"copy_full_response_{selected_row.get('번호', 'unknown')}"):
-                            st.success("전체 AI 응답이 클립보드에 복사되었습니다!")
-                        
-                        # 원본 AI 응답이 있는 경우 별도로 표시 (선택사항)
-                        if 'raw_response' in gemini_data:
-                            with st.expander("🔍 원본 AI 응답 보기"):
-                                st.text_area("원본 응답", gemini_data['raw_response'], height=200, disabled=True)
-                    else:
-                        st.info("해당 문의에 대한 전체 AI 응답 데이터가 없습니다.")
+{analysis_data.get('email_draft', '')}"""
+                    
+                    # 전체 AI 응답을 텍스트 영역에 표시
+                    st.text_area("전체 AI 응답", full_response, height=400, disabled=True)
+                    
+                    # 복사 버튼 추가
+                    if st.button("📋 전체 AI 응답 복사", key=f"copy_full_response_{selected_row.get('번호', 'unknown')}"):
+                        st.success("전체 AI 응답이 클립보드에 복사되었습니다!")
+                    
+                    # 원본 문의 내용 표시
+                    inquiry_content = analysis_data.get('inquiry_content', '')
+                    if inquiry_content:
+                        with st.expander("🔍 원본 문의 내용 보기"):
+                            st.text_area("원본 문의", inquiry_content, height=200, disabled=True)
+                    
+                    # 추가 정보 표시
+                    if 'full_analysis_result' in analysis_data:
+                        with st.expander("🔍 전체 분석 결과 보기"):
+                            st.json(analysis_data['full_analysis_result'])
                 
                 else:
                     # 실제 분석 결과가 없는 경우 기본 정보만 표시
