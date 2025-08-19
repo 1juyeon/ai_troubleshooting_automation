@@ -344,8 +344,8 @@ class MultiUserHistoryDB:
                 user_history_file = self._get_user_history_file(user_id)
                 history = self._load_history(user_history_file)
                 
-                issue_types = list(set([entry.get('issue_type', '') for entry in history]))
-                response_types = list(set([entry.get('response_type', '') for entry in history]))
+                issue_types = list(set([entry.get('issue_type', '') for entry in history if entry.get('issue_type')]))
+                response_types = list(set([entry.get('response_type', '') for entry in history if entry.get('response_type')]))
                 
                 return {
                     "success": True,
@@ -361,9 +361,41 @@ class MultiUserHistoryDB:
                 global_history_file = self._get_global_history_file()
                 history = self._load_history(global_history_file)
                 
-                users = list(set([f"{entry.get('user_name', '')}_{entry.get('user_role', '')}" for entry in history]))
-                issue_types = list(set([entry.get('issue_type', '') for entry in history]))
-                response_types = list(set([entry.get('response_type', '') for entry in history]))
+                # 사용자 정보 추출 (user_name과 user_role이 모두 있는 경우만)
+                users = []
+                for entry in history:
+                    user_name_val = entry.get('user_name', '')
+                    user_role_val = entry.get('user_role', '')
+                    if user_name_val and user_role_val:
+                        user_key = f"{user_name_val}_{user_role_val}"
+                        if user_key not in users:
+                            users.append(user_key)
+                
+                # 문제 유형 추출 (issue_type이 있는 경우만)
+                issue_types = []
+                for entry in history:
+                    issue_type = entry.get('issue_type', '')
+                    if issue_type and issue_type not in issue_types:
+                        issue_types.append(issue_type)
+                
+                # 응답 유형 추출 (response_type이 있는 경우만)
+                response_types = []
+                for entry in history:
+                    response_type = entry.get('response_type', '')
+                    if response_type and response_type not in response_types:
+                        response_types.append(response_type)
+                
+                # full_analysis_result에서 response_type 추출 시도
+                for entry in history:
+                    full_result = entry.get('full_analysis_result', {})
+                    if full_result:
+                        gemini_result = full_result.get('gemini_result', {})
+                        if gemini_result:
+                            parsed_response = gemini_result.get('parsed_response', {})
+                            if parsed_response:
+                                response_type = parsed_response.get('response_type', '')
+                                if response_type and response_type not in response_types:
+                                    response_types.append(response_type)
                 
                 return {
                     "success": True,

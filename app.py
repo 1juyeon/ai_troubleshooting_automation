@@ -1019,7 +1019,7 @@ init_session_state()
 if 'mongodb_connected' not in st.session_state:
     mongodb_status = init_mongodb_connection()
     if mongodb_status:
-        st.sidebar.success("✅ DB 연결됨됨")
+        st.sidebar.success("✅ DB 연결됨")
     else:
         st.sidebar.warning("⚠️ DB 연결 실패 - 로컬 저장소 사용")
         st.sidebar.info("💡 Streamlit Cloud Secrets에서 MONGODB_URI를 설정하세요")
@@ -1710,27 +1710,69 @@ with tab3:
 
                     
                     # 통계 정보
-                    stats = components['multi_user_db'].get_statistics()
+                    # MongoDB와 로컬 데이터를 모두 고려한 통계 계산
+                    total_analyses = len(history_data)
+                    
+                    # 디버깅을 위한 데이터 구조 확인
+                    with st.expander("🔍 통계 계산 디버깅 정보", expanded=False):
+                        st.write(f"**총 데이터 수:** {total_analyses}")
+                        if history_data:
+                            st.write("**첫 번째 데이터 샘플:**")
+                            st.json(history_data[0])
+                    
+                    # 사용자 수 계산
+                    users = set()
+                    for entry in history_data:
+                        user_name = entry.get('user_name', '')
+                        user_role = entry.get('user_role', '')
+                        if user_name and user_role:
+                            users.add(f"{user_name}_{user_role}")
+                    
+                    # 문제 유형 수 계산
+                    issue_types = set()
+                    for entry in history_data:
+                        issue_type = entry.get('issue_type', '')
+                        if issue_type:
+                            issue_types.add(issue_type)
+                    
+                    # 응답 유형 수 계산
+                    response_types = set()
+                    for entry in history_data:
+                        # 직접 response_type 필드 확인
+                        response_type = entry.get('response_type', '')
+                        if response_type:
+                            response_types.add(response_type)
+                        
+                        # full_analysis_result에서 response_type 추출
+                        full_result = entry.get('full_analysis_result', {})
+                        if full_result:
+                            gemini_result = full_result.get('gemini_result', {})
+                            if gemini_result:
+                                parsed_response = gemini_result.get('parsed_response', {})
+                                if parsed_response:
+                                    response_type = parsed_response.get('response_type', '')
+                                    if response_type:
+                                        response_types.add(response_type)
                     
                     col19, col20, col21, col22 = st.columns(4)
                     
                     with col19:
-                        st.metric("총 문의 건수", stats.get('total_analyses', 0))
+                        st.metric("총 문의 건수", total_analyses)
                     
                     with col20:
-                        st.metric("총 사용자 수", stats.get('total_users', 0))
+                        st.metric("총 사용자 수", len(users))
                     
                     with col21:
-                        st.metric("문제 유형 수", len(stats.get('issue_types', [])))
+                        st.metric("문제 유형 수", len(issue_types))
                     
                     with col22:
-                        st.metric("응답 유형 수", len(stats.get('response_types', [])))
+                        st.metric("응답 유형 수", len(response_types))
                     
                     # 문제 유형별 분포
-                    if stats.get('issue_types'):
+                    if issue_types:
                         st.markdown("### 📊 문제 유형별 분포")
                         issue_data = []
-                        for issue_type in stats['issue_types']:
+                        for issue_type in issue_types:
                             if issue_type:  # 빈 문자열 제외
                                 count = len([entry for entry in history_data if entry.get('issue_type') == issue_type])
                                 issue_data.append({"문제 유형": issue_type, "건수": count})
