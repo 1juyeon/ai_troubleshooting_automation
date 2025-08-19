@@ -1510,10 +1510,12 @@ with tab3:
         # 검색 진행 상태 표시
         with st.spinner("🔍 이력을 검색하고 있습니다..."):
             try:
-                # 종료 날짜를 포함하도록 23:59:59 추가
+                # 종료 날짜는 포함하지 않음 (다음 날 00:00:00 이전까지만)
                 date_to_with_time = None
                 if filter_date_to:
-                    date_to_with_time = f"{filter_date_to.isoformat()}T23:59:59"
+                    # 종료 날짜 다음 날 00:00:00을 기준으로 설정 (종료 날짜는 포함하지 않음)
+                    next_day = filter_date_to + timedelta(days=1)
+                    date_to_with_time = next_day.isoformat()
                 
                 # MongoDB 우선 이력 조회 시도
                 history_result = None
@@ -1538,7 +1540,7 @@ with tab3:
                             'data': history_data,
                             'source': 'mongodb'
                         }
-                        st.success("✅ MongoDB에서 이력을 조회했습니다.")
+                                                 # MongoDB 조회 성공 (메시지 제거)
                         
                     except Exception as e:
                         st.warning(f"⚠️ MongoDB 조회 실패: {e}")
@@ -1713,12 +1715,7 @@ with tab3:
                     # MongoDB와 로컬 데이터를 모두 고려한 통계 계산
                     total_analyses = len(history_data)
                     
-                    # 디버깅을 위한 데이터 구조 확인
-                    with st.expander("🔍 통계 계산 디버깅 정보", expanded=False):
-                        st.write(f"**총 데이터 수:** {total_analyses}")
-                        if history_data:
-                            st.write("**첫 번째 데이터 샘플:**")
-                            st.json(history_data[0])
+                                         # 디버깅 정보 제거
                     
                     # 사용자 수 계산
                     users = set()
