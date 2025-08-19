@@ -584,35 +584,29 @@ def show_ai_analysis_modal(selected_row):
                         gemini_data = analysis_data['gemini_result']
                         parsed = gemini_data.get('parsed_response', {})
                         
-                        # 대응유형 표시
-                        response_type = parsed.get('response_type', '')
-                        if response_type:
-                            st.markdown(f"**[대응유형]** {response_type}")
+                        # 전체 AI 응답을 요청하신 형식대로 표시
+                        full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
+
+[응답내용]
+- 요약: {parsed.get('summary', '')}
+
+- 조치 흐름:
+{parsed.get('action_flow', '')}
+
+- 이메일 초안:
+{parsed.get('email_draft', '')}"""
                         
-                        # 응답내용 섹션
-                        st.markdown("**[응답내용]**")
+                        # 전체 AI 응답을 텍스트 영역에 표시
+                        st.text_area("전체 AI 응답", full_response, height=400, disabled=True)
                         
-                        # 요약
-                        summary = parsed.get('summary', '')
-                        if summary:
-                            st.markdown(f"**- 요약:** {summary}")
+                        # 복사 버튼 추가
+                        if st.button("📋 전체 AI 응답 복사", key=f"copy_full_response_{selected_row.get('번호', 'unknown')}"):
+                            st.success("전체 AI 응답이 클립보드에 복사되었습니다!")
                         
-                        # 조치 흐름
-                        action_flow = parsed.get('action_flow', '')
-                        if action_flow:
-                            st.markdown("**- 조치 흐름:**")
-                            st.write(action_flow)
-                        
-                        # 이메일 초안
-                        email_draft = parsed.get('email_draft', '')
-                        if email_draft:
-                            st.markdown("**- 이메일 초안:**")
-                            st.write(email_draft)
-                        
-                        # 원본 AI 응답이 있는 경우 표시
+                        # 원본 AI 응답이 있는 경우 별도로 표시 (선택사항)
                         if 'raw_response' in gemini_data:
-                            st.markdown("**- 원본 AI 응답:**")
-                            st.text_area("원본 응답", gemini_data['raw_response'], height=200, disabled=True)
+                            with st.expander("🔍 원본 AI 응답 보기"):
+                                st.text_area("원본 응답", gemini_data['raw_response'], height=200, disabled=True)
                     else:
                         st.info("해당 문의에 대한 전체 AI 응답 데이터가 없습니다.")
                 
