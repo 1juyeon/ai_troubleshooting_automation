@@ -529,32 +529,44 @@ def show_ai_analysis_modal(selected_row):
                     st.warning(f"⚠️ MongoDB 조회 실패: {mongo_error}")
             
             # MongoDB에서 조회 실패한 경우 로컬 데이터베이스로 폴백
-            if not actual_analysis and 'components' in st.session_state:
+            if not actual_analysis:
                 try:
-                    # 고객사명과 날짜를 기준으로 실제 분석 결과 조회
-                    customer_name = selected_row.get('고객사명', '')
-                    inquiry_date = selected_row.get('날짜', '')
-                    
-                    # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
-                    if inquiry_date and ' ' in inquiry_date:
-                        inquiry_date = inquiry_date.split(' ')[0]
-                    
-                    # 실제 분석 결과 조회
-                    actual_analysis = st.session_state.components['multi_user_db'].get_analysis_by_customer_and_date(
-                        customer_name, inquiry_date
-                    )
-                    
-                    if actual_analysis and actual_analysis.get('success'):
-                        st.info("📋 로컬 데이터베이스에서 AI 분석 결과를 조회했습니다.")
+                    # components가 초기화되었는지 확인
+                    if 'components' in st.session_state and 'multi_user_db' in st.session_state.components:
+                        # 고객사명과 날짜를 기준으로 실제 분석 결과 조회
+                        customer_name = selected_row.get('고객사명', '')
+                        inquiry_date = selected_row.get('날짜', '')
+                        
+                        # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
+                        if inquiry_date and ' ' in inquiry_date:
+                            inquiry_date = inquiry_date.split(' ')[0]
+                        
+                        # 실제 분석 결과 조회
+                        actual_analysis = st.session_state.components['multi_user_db'].get_analysis_by_customer_and_date(
+                            customer_name, inquiry_date
+                        )
+                        
+                        if actual_analysis and actual_analysis.get('success'):
+                            st.info("📋 로컬 데이터베이스에서 AI 분석 결과를 조회했습니다.")
+                    else:
+                        st.warning("⚠️ 로컬 데이터베이스 컴포넌트가 초기화되지 않았습니다.")
                         
                 except Exception as local_error:
                     st.warning(f"⚠️ 로컬 데이터베이스 조회 실패: {local_error}")
                 
-                if actual_analysis and actual_analysis.get('success'):
-                    analysis_data = actual_analysis.get('data', {})
+                # MongoDB에서 가져온 데이터인지 로컬 데이터베이스에서 가져온 데이터인지 확인
+                if actual_analysis:
+                    if actual_analysis.get('source') == 'mongodb':
+                        # MongoDB에서 가져온 데이터
+                        analysis_data = actual_analysis
+                    else:
+                        # 로컬 데이터베이스에서 가져온 데이터
+                        analysis_data = actual_analysis.get('data', {})
                     
-                    # AI 분석 결과 (실제 데이터) - 간격 줄임
-                    st.markdown("### 🔍 AI 분석 결과")
+                    # 데이터가 성공적으로 로드되었는지 확인
+                    if analysis_data:
+                        # AI 분석 결과 (실제 데이터) - 간격 줄임
+                        st.markdown("### 🔍 AI 분석 결과")
                     
                     col3, col4 = st.columns(2)
                     
@@ -655,30 +667,22 @@ def show_ai_analysis_modal(selected_row):
 - 이메일 초안:
 {analysis_data.get('email_draft', '')}"""
                     
-                    # 전체 AI 응답을 텍스트 영역에 표시
-                    st.text_area("전체 AI 응답", full_response, height=400, disabled=True)
+                    # 전체 AI 응답 표시
+                    st.text_area("전체 AI 응답", full_response, height=200, disabled=True)
                     
-                    # 복사 버튼 추가
-                    if st.button("📋 전체 AI 응답 복사", key=f"copy_full_response_{selected_row.get('번호', 'unknown')}"):
-                        st.success("전체 AI 응답이 클립보드에 복사되었습니다!")
+                    # 전체 응답 복사 버튼
+                    if st.button("📋 전체 응답 복사", key=f"copy_full_{selected_row.get('번호', 'unknown')}"):
+                        st.write("✅ 전체 AI 응답이 클립보드에 복사되었습니다.")
                     
-                    # 원본 문의 내용 표시
-                    inquiry_content = analysis_data.get('inquiry_content', '')
-                    if inquiry_content:
-                        with st.expander("🔍 원본 문의 내용 보기"):
-                            st.text_area("원본 문의", inquiry_content, height=200, disabled=True)
-                    
-                    # 추가 정보 표시
-                    if 'full_analysis_result' in analysis_data:
-                        with st.expander("🔍 전체 분석 결과 보기"):
-                            st.json(analysis_data['full_analysis_result'])
-                
+                    # MongoDB에서 가져온 경우 추가 정보 표시
+                    if actual_analysis.get('source') == 'mongodb':
+                        st.info("💾 MongoDB에서 로드된 데이터입니다.")
                 else:
                     # 실제 분석 결과가 없는 경우 기본 정보만 표시
                     st.warning("⚠️ 해당 문의의 실제 AI 분석 결과를 찾을 수 없습니다.")
                     st.info("이는 다음과 같은 이유일 수 있습니다:")
                     st.info("1. 분석이 완료되지 않았거나 저장되지 않음")
-                    st.info("2. Streamlit Cloud 환경에서 데이터 저장 문제")
+                    st.info("2. MongoDB 또는 로컬 데이터베이스에서 데이터를 찾을 수 없음")
                     st.info("3. 검색 조건이 정확하지 않음")
                     
                     # 기본 정보 표시
@@ -687,9 +691,7 @@ def show_ai_analysis_modal(selected_row):
                     st.write(f"**문의 유형:** {selected_row.get('문의유형', 'N/A')}")
                     st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')}")
                     
-            else:
-                st.error("❌ 컴포넌트가 초기화되지 않았습니다.")
-                st.info("페이지를 새로고침하거나 다시 시도해주세요.")
+                    st.info("페이지를 새로고침하거나 다시 시도해주세요.")
                 
         except Exception as e:
             st.error(f"❌ 분석 결과 조회 중 오류가 발생했습니다: {str(e)}")
