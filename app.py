@@ -15,6 +15,7 @@ from vector_search import VectorSearchWrapper
 from gpt_handler import GPTHandler
 from database import HistoryDB
 from multi_user_database import MultiUserHistoryDB
+from mongodb_handler import MongoDBHandler
 
 # 페이지 설정
 st.set_page_config(
@@ -336,6 +337,31 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+# MongoDB 연결 상태 확인 및 초기화
+def init_mongodb_connection():
+    """MongoDB 연결 초기화 및 상태 확인"""
+    try:
+        # MongoDB 핸들러 초기화
+        mongo_handler = MongoDBHandler()
+        
+        # 연결 테스트
+        connection_test = mongo_handler.test_connection()
+        
+        if connection_test.get('success'):
+            st.session_state.mongodb_connected = True
+            st.session_state.mongo_handler = mongo_handler
+            print("✅ MongoDB 연결 성공")
+            return True
+        else:
+            st.session_state.mongodb_connected = False
+            print(f"❌ MongoDB 연결 실패: {connection_test.get('message')}")
+            return False
+            
+    except Exception as e:
+        st.session_state.mongodb_connected = False
+        print(f"❌ MongoDB 초기화 실패: {e}")
+        return False
 
 # 안전한 타임스탬프 생성 함수
 def get_safe_timestamp():
@@ -838,6 +864,15 @@ def init_components():
 # 세션 상태 초기화 (가장 먼저 실행)
 init_session_state()
 
+# MongoDB 연결 초기화
+if 'mongodb_connected' not in st.session_state:
+    mongodb_status = init_mongodb_connection()
+    if mongodb_status:
+        st.sidebar.success("✅ MongoDB 연결됨")
+    else:
+        st.sidebar.warning("⚠️ MongoDB 연결 실패 - 로컬 저장소 사용")
+        st.sidebar.info("💡 Streamlit Cloud Secrets에서 MONGODB_URI를 설정하세요")
+
 # 메인 애플리케이션 시작
 #st.success("✅ 애플리케이션 시작")
 
@@ -879,6 +914,42 @@ with st.sidebar:
     st.session_state.contact_name = contact_name
     st.session_state.role = role
     st.session_state.ai_model = ai_model
+    
+    # MongoDB 연결 상태 표시
+    st.markdown("---")
+    st.markdown("## 🔌 데이터베이스 상태")
+    
+    if st.session_state.get('mongodb_connected'):
+        st.success("✅ MongoDB Atlas 연결됨")
+        st.info("💾 이력이 영구 저장됩니다")
+        
+        # MongoDB 연결 테스트 버튼
+        if st.button("🔍 MongoDB 연결 테스트", use_container_width=True):
+            try:
+                test_result = st.session_state.mongo_handler.test_connection()
+                if test_result.get('success'):
+                    st.success("✅ MongoDB 연결 정상")
+                    st.json({
+                        "데이터베이스": test_result.get('current_db'),
+                        "컬렉션 수": len(test_result.get('collections', [])),
+                        "전체 DB 수": len(test_result.get('databases', []))
+                    })
+                else:
+                    st.error(f"❌ MongoDB 연결 실패: {test_result.get('message')}")
+            except Exception as e:
+                st.error(f"❌ 연결 테스트 실패: {e}")
+    else:
+        st.warning("⚠️ MongoDB 연결 실패")
+        st.info("💾 이력이 임시 저장됩니다 (앱 재시작 시 손실)")
+        
+        # MongoDB 재연결 시도 버튼
+        if st.button("🔄 MongoDB 재연결", use_container_width=True):
+            mongodb_status = init_mongodb_connection()
+            if mongodb_status:
+                st.success("✅ MongoDB 재연결 성공!")
+                st.rerun()
+            else:
+                st.error("❌ MongoDB 재연결 실패")
     
     # 데이터 관리 섹션 (UI에서 숨김)
     # st.markdown("---")
@@ -1065,30 +1136,37 @@ with tab1:
                         "user_role": st.session_state.role
                     }
                     
-                    # 다중 사용자 데이터베이스에 저장
+                    # MongoDB 우선 저장 시도
                     try:
                         # inquiry_data에 사용자 정보 추가
                         inquiry_data_with_user = st.session_state.inquiry_data.copy()
                         inquiry_data_with_user['user_email'] = f"{st.session_state.contact_name}_{st.session_state.role}@privkeeper.com"
                         
-                        # 저장 시도
-                        save_result = components['multi_user_db'].save_analysis(analysis_result, inquiry_data_with_user)
-                        
-                        if save_result.get('success'):
-                            st.success(f"✅ 분석 결과가 저장되었습니다. (사용자: {save_result.get('user_name', 'Unknown')}, ID: {save_result.get('user_id', 'Unknown')})")
-                        else:
-                            error_msg = save_result.get('error', '알 수 없는 오류')
-                            st.warning(f"⚠️ 분석 결과 저장에 실패했습니다: {error_msg}")
+                        # MongoDB 연결 상태 확인
+                        if st.session_state.get('mongodb_connected') and st.session_state.get('mongo_handler'):
+                            # MongoDB에 저장
+                            mongo_result = st.session_state.mongo_handler.save_analysis(analysis_result, inquiry_data_with_user)
                             
-                            # 백업 저장 시도
-                            try:
-                                backup_result = components['history_db'].save_analysis(analysis_result, inquiry_data_with_user)
-                                if backup_result.get('success'):
-                                    st.info("📋 백업 저장소에 저장되었습니다.")
+                            if mongo_result.get('success'):
+                                st.success(f"✅ MongoDB에 분석 결과가 저장되었습니다. (ID: {mongo_result.get('id', 'Unknown')})")
+                            else:
+                                st.warning(f"⚠️ MongoDB 저장 실패: {mongo_result.get('error', '알 수 없는 오류')}")
+                                # 로컬 백업 저장 시도
+                                save_result = components['multi_user_db'].save_analysis(analysis_result, inquiry_data_with_user)
+                                if save_result.get('success'):
+                                    st.info("📋 로컬 백업 저장소에 저장되었습니다.")
                                 else:
-                                    st.error("❌ 백업 저장도 실패했습니다.")
-                            except Exception as backup_e:
-                                st.error(f"❌ 백업 저장 중 오류: {backup_e}")
+                                    st.error("❌ 로컬 백업 저장도 실패했습니다.")
+                        else:
+                            # MongoDB 연결 실패 시 로컬 저장
+                            st.warning("⚠️ MongoDB 연결 실패 - 로컬 저장소에 저장합니다.")
+                            save_result = components['multi_user_db'].save_analysis(analysis_result, inquiry_data_with_user)
+                            
+                            if save_result.get('success'):
+                                st.success(f"✅ 로컬 저장소에 분석 결과가 저장되었습니다. (사용자: {save_result.get('user_name', 'Unknown')}, ID: {save_result.get('user_id', 'Unknown')})")
+                            else:
+                                error_msg = save_result.get('error', '알 수 없는 오류')
+                                st.error(f"❌ 로컬 저장도 실패했습니다: {error_msg}")
                                 
                     except Exception as e:
                         st.error(f"❌ 데이터 저장 중 오류: {e}")
@@ -1320,14 +1398,52 @@ with tab3:
                 if filter_date_to:
                     date_to_with_time = f"{filter_date_to.isoformat()}T23:59:59"
                 
-                # 전체 이력 조회
-                history_result = components['multi_user_db'].get_global_history(
-                    limit=50,
-                    issue_type=filter_type if filter_type != "전체" else None,
-                    date_from=filter_date_from.isoformat() if filter_date_from else None,
-                    date_to=date_to_with_time,
-                    user_name=filter_user if filter_user else None
-                )
+                # MongoDB 우선 이력 조회 시도
+                history_result = None
+                
+                if st.session_state.get('mongodb_connected') and st.session_state.get('mongo_handler'):
+                    try:
+                        # MongoDB에서 이력 조회
+                        if filter_type != "전체":
+                            # 문제 유형별 필터링은 MongoDB에서 직접 지원하지 않으므로 전체 조회 후 필터링
+                            history_data = st.session_state.mongo_handler.get_history(limit=100)
+                            # 클라이언트 사이드에서 필터링
+                            filtered_data = []
+                            for entry in history_data:
+                                if entry.get('issue_type') == filter_type:
+                                    filtered_data.append(entry)
+                            history_data = filtered_data[:50]  # 최대 50개
+                        else:
+                            history_data = st.session_state.mongo_handler.get_history(limit=50)
+                        
+                        history_result = {
+                            'success': True,
+                            'data': history_data,
+                            'source': 'mongodb'
+                        }
+                        st.success("✅ MongoDB에서 이력을 조회했습니다.")
+                        
+                    except Exception as e:
+                        st.warning(f"⚠️ MongoDB 조회 실패: {e}")
+                        # 로컬 데이터베이스로 폴백
+                        history_result = components['multi_user_db'].get_global_history(
+                            limit=50,
+                            issue_type=filter_type if filter_type != "전체" else None,
+                            date_from=filter_date_from.isoformat() if filter_date_from else None,
+                            date_to=date_to_with_time,
+                            user_name=filter_user if filter_user else None
+                        )
+                        st.info("📋 로컬 데이터베이스에서 이력을 조회했습니다.")
+                else:
+                    # MongoDB 연결 실패 시 로컬 데이터베이스 사용
+                    st.warning("⚠️ MongoDB 연결 실패 - 로컬 데이터베이스를 사용합니다.")
+                    history_result = components['multi_user_db'].get_global_history(
+                        limit=50,
+                        issue_type=filter_type if filter_type != "전체" else None,
+                        date_from=filter_date_from.isoformat() if filter_date_from else None,
+                        date_to=date_to_with_time,
+                        user_name=filter_user if filter_user else None
+                    )
                 
                 if history_result.get('success') and history_result.get('data'):
                     history_data = history_result['data']
