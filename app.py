@@ -478,19 +478,24 @@ PKP 웹 접속 불가 현상에 대한 문의 주셔서 감사합니다.
 def show_ai_analysis_modal(selected_row):
     """선택된 행의 AI 분석 결과를 모달 형태로 표시"""
     with st.container():
-        st.markdown("## 🔍 AI 분석 상세 결과")
+        st.markdown("## 🤖 AI 분석 결과")
+        st.success("✅ AI 분석이 완료되었습니다! 아래에서 상세한 결과를 확인하세요.")
         
-        # 선택된 데이터 정보 표시 (간격 줄임)
+        # 선택된 데이터 정보 표시
         with st.expander("📋 입력된 문의 정보", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
                 customer_name = selected_row.get('고객사명', '')
                 st.write(f"**고객사명:** {customer_name if customer_name else ''}")
-                st.write(f"**문의유형:** {selected_row.get('문의유형', 'N/A')}")
+                st.write(f"**고객 담당자:** {selected_row.get('고객담당자', '')}")
+                st.write(f"**문의 내용:** {selected_row.get('문의내용', 'N/A')}")
                 st.write(f"**우선순위:** {selected_row.get('우선순위', 'N/A')}")
+                st.write(f"**계약 유형:** {selected_row.get('계약유형', 'N/A')}")
             with col2:
-                st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')}")
-                st.write(f"**역할:** {selected_row.get('역할', 'N/A')}")
+                st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')} ({selected_row.get('역할', 'N/A')})")
+                st.write(f"**시스템 버전:** {selected_row.get('시스템버전', '')}")
+                st.write(f"**브라우저:** {selected_row.get('브라우저', '')}")
+                st.write(f"**운영체제:** {selected_row.get('운영체제', '')}")
                 st.write(f"**날짜:** {selected_row.get('날짜', 'N/A')}")
         
         # 실제 분석 결과 조회 시도
@@ -558,14 +563,17 @@ def show_ai_analysis_modal(selected_row):
                 if actual_analysis:
                     if actual_analysis.get('source') == 'mongodb':
                         # MongoDB에서 가져온 데이터
-                        analysis_data = actual_analysis
+                        analysis_data = actual_analysis.get('data', {})
+                        # full_analysis_result에서 전체 AI 분석 데이터 추출
+                        full_result = analysis_data.get('full_analysis_result', {})
                     else:
                         # 로컬 데이터베이스에서 가져온 데이터
                         analysis_data = actual_analysis.get('data', {})
+                        full_result = analysis_data.get('full_analysis_result', {})
                     
                     # 데이터가 성공적으로 로드되었는지 확인
                     if analysis_data:
-                        # AI 분석 결과 (실제 데이터) - 간격 줄임
+                        # AI 분석 결과 (실제 데이터)
                         st.markdown("### 🔍 AI 분석 결과")
                         
                         col3, col4 = st.columns(2)
@@ -580,32 +588,41 @@ def show_ai_analysis_modal(selected_row):
                             confidence = analysis_data.get('confidence', '높음')
                             st.write(f"**분류 방법:** {classification_method}")
                             st.write(f"**신뢰도:** {confidence}")
-                            
-                            # 우선순위 정보
-                            priority = analysis_data.get('priority', 'N/A')
-                            st.write(f"**우선순위:** {priority}")
-                            
-                            # 계약 유형
-                            contract_type = analysis_data.get('contract_type', 'N/A')
-                            st.write(f"**계약 유형:** {contract_type}")
                         
                         with col4:
-                            st.markdown("#### 🎯 응답 정보")
-                            response_type = analysis_data.get('response_type', '해결안')
-                            st.write(f"**응답 유형:** {response_type}")
-                            
-                            # 사용자 정보
-                            user_name = analysis_data.get('user_name', 'N/A')
-                            user_role = analysis_data.get('user_role', 'N/A')
-                            st.write(f"**담당자:** {user_name}")
-                            st.write(f"**역할:** {user_role}")
+                            st.markdown("#### 🎯 시나리오 매칭")
+                            # 시나리오 매칭 정보 표시
+                            if full_result and 'best_scenario' in full_result:
+                                scenario = full_result['best_scenario']
+                                st.write(f"**조건 1:** {scenario.get('condition1', 'N/A')}")
+                                st.write(f"**조건 2:** {scenario.get('condition2', 'N/A')}")
+                                st.write(f"**해결책:** {scenario.get('solution', 'N/A')}")
+                                st.write(f"**현장 출동 필요:** {scenario.get('on_site_required', 'N/A')}")
+                            else:
+                                st.write("시나리오 매칭 정보가 없습니다.")
                         
-                        # AI 응답 결과 - 간격 줄임
+                        # AI 응답 결과
                         st.markdown("### 🤖 AI 응답")
                         
                         col5, col6 = st.columns(2)
                         
                         with col5:
+                            st.markdown("#### ❓ 질문")
+                            # 질문 정보 표시
+                            if full_result and 'gemini_result' in full_result:
+                                gemini_result = full_result['gemini_result']
+                                if 'parsed_response' in gemini_result:
+                                    parsed = gemini_result['parsed_response']
+                                    question = parsed.get('question', '')
+                                    if question:
+                                        st.write(question)
+                                    else:
+                                        st.write("질문 정보가 없습니다.")
+                                else:
+                                    st.write("질문 정보가 없습니다.")
+                            else:
+                                st.write("질문 정보가 없습니다.")
+                            
                             st.markdown("#### 📝 요약")
                             summary = analysis_data.get('summary', '')
                             if summary:
@@ -656,9 +673,39 @@ def show_ai_analysis_modal(selected_row):
                         st.markdown("### 📄 전체 AI 응답")
                         
                         # MongoDB 데이터 구조에 맞게 전체 AI 응답 구성
-                        full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
+                        if full_result and 'gemini_result' in full_result:
+                            gemini_result = full_result['gemini_result']
+                            if 'parsed_response' in gemini_result:
+                                parsed = gemini_result['parsed_response']
+                                
+                                full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
 
 [응답내용]
+
+- 요약: {parsed.get('summary', '')}
+
+- 조치 흐름:
+{parsed.get('action_flow', '')}
+
+- 이메일 초안:
+{parsed.get('email_draft', '')}"""
+                            else:
+                                full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
+
+[응답내용]
+
+- 요약: {analysis_data.get('summary', '')}
+
+- 조치 흐름:
+{analysis_data.get('action_flow', '')}
+
+- 이메일 초안:
+{analysis_data.get('email_draft', '')}"""
+                        else:
+                            full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
+
+[응답내용]
+
 - 요약: {analysis_data.get('summary', '')}
 
 - 조치 흐름:
