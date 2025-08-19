@@ -588,6 +588,14 @@ def show_ai_analysis_modal(selected_row):
                             confidence = analysis_data.get('confidence', '높음')
                             st.write(f"**분류 방법:** {classification_method}")
                             st.write(f"**신뢰도:** {confidence}")
+                            
+                            # 우선순위 정보
+                            priority = analysis_data.get('priority', 'N/A')
+                            st.write(f"**우선순위:** {priority}")
+                            
+                            # 계약 유형
+                            contract_type = analysis_data.get('contract_type', 'N/A')
+                            st.write(f"**계약 유형:** {contract_type}")
                         
                         with col4:
                             st.markdown("#### 🎯 시나리오 매칭")
@@ -720,6 +728,35 @@ def show_ai_analysis_modal(selected_row):
                         # 전체 응답 복사 버튼
                         if st.button("📋 전체 응답 복사", key=f"copy_full_{selected_row.get('번호', 'unknown')}"):
                             st.write("✅ 전체 AI 응답이 클립보드에 복사되었습니다.")
+                        
+                        # 추가 정보 섹션 - 데이터베이스에 저장된 모든 정보 표시
+                        st.markdown("---")
+                        st.markdown("### 🔍 추가 상세 정보")
+                        
+                        col7, col8 = st.columns(2)
+                        
+                        with col7:
+                            st.markdown("#### 👤 사용자 정보")
+                            st.write(f"**담당자:** {analysis_data.get('user_name', 'N/A')}")
+                            st.write(f"**역할:** {analysis_data.get('user_role', 'N/A')}")
+                            st.write(f"**시스템 버전:** {analysis_data.get('system_version', 'N/A')}")
+                            st.write(f"**브라우저:** {analysis_data.get('browser_info', 'N/A')}")
+                            st.write(f"**운영체제:** {analysis_data.get('os_info', 'N/A')}")
+                            st.write(f"**오류 코드:** {analysis_data.get('error_code', 'N/A')}")
+                        
+                        with col8:
+                            st.markdown("#### 📅 시간 정보")
+                            st.write(f"**타임스탬프:** {analysis_data.get('timestamp', 'N/A')}")
+                            st.write(f"**생성 시간:** {analysis_data.get('created_at', 'N/A')}")
+                            st.write(f"**수정 시간:** {analysis_data.get('updated_at', 'N/A')}")
+                            
+                            st.markdown("#### 🆔 데이터 정보")
+                            st.write(f"**데이터베이스 ID:** {analysis_data.get('_id', 'N/A')}")
+                            st.write(f"**데이터 소스:** {actual_analysis.get('source', 'N/A')}")
+                        
+                        # 원본 데이터 표시 (디버깅용)
+                        with st.expander("🔧 원본 데이터 (디버깅용)", expanded=False):
+                            st.json(analysis_data)
                         
                         # MongoDB에서 가져온 경우 추가 정보 표시
                         if actual_analysis.get('source') == 'mongodb':
