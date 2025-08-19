@@ -498,13 +498,6 @@ def show_ai_analysis_modal(selected_row):
                 st.write(f"**운영체제:** {selected_row.get('운영체제', '')}")
                 st.write(f"**날짜:** {selected_row.get('날짜', 'N/A')}")
         
-        # 디버깅 정보 표시
-        with st.expander("🔍 디버깅 정보", expanded=False):
-            st.write("**선택된 행 데이터:**")
-            st.json(selected_row)
-            st.write(f"**MongoDB 연결 상태:** {st.session_state.get('mongodb_connected', False)}")
-            st.write(f"**MongoDB 핸들러 존재:** {'mongo_handler' in st.session_state}")
-        
         # 실제 분석 결과 조회 시도
         try:
             # MongoDB에서 실제 분석 결과 조회 시도
@@ -518,8 +511,6 @@ def show_ai_analysis_modal(selected_row):
                     inquiry_date = selected_row.get('날짜', '')
                     user_name = selected_row.get('담당자', '')
                     issue_type = selected_row.get('문의유형', '')
-                    
-                    st.info(f"🔍 MongoDB 조회 시도: 고객사명={customer_name}, 날짜={inquiry_date}, 담당자={user_name}, 유형={issue_type}")
                     
                     # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
                     if inquiry_date and ' ' in inquiry_date:
@@ -535,18 +526,9 @@ def show_ai_analysis_modal(selected_row):
                     
                     if mongo_result and mongo_result.get('success'):
                         actual_analysis = mongo_result
-                        st.success("✅ MongoDB에서 AI 분석 결과를 조회했습니다.")
-                        st.write("**MongoDB 조회 결과:**")
-                        st.json(mongo_result)
-                    else:
-                        st.warning("⚠️ MongoDB에서 해당 문의의 분석 결과를 찾을 수 없습니다.")
-                        if mongo_result:
-                            st.write("**MongoDB 응답:**")
-                            st.json(mongo_result)
                         
                 except Exception as mongo_error:
-                    st.warning(f"⚠️ MongoDB 조회 실패: {mongo_error}")
-                    st.error(f"**오류 상세:** {str(mongo_error)}")
+                    pass
             
             # MongoDB에서 조회 실패한 경우 로컬 데이터베이스로 폴백
             if not actual_analysis:
@@ -557,8 +539,6 @@ def show_ai_analysis_modal(selected_row):
                         customer_name = selected_row.get('고객사명', '')
                         inquiry_date = selected_row.get('날짜', '')
                         
-                        st.info(f"🔍 로컬 DB 조회 시도: 고객사명={customer_name}, 날짜={inquiry_date}")
-                        
                         # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
                         if inquiry_date and ' ' in inquiry_date:
                             inquiry_date = inquiry_date.split(' ')[0]
@@ -568,21 +548,8 @@ def show_ai_analysis_modal(selected_row):
                             customer_name, inquiry_date
                         )
                         
-                        if actual_analysis and actual_analysis.get('success'):
-                            st.info("📋 로컬 데이터베이스에서 AI 분석 결과를 조회했습니다.")
-                            st.write("**로컬 DB 조회 결과:**")
-                            st.json(actual_analysis)
-                        else:
-                            st.warning("⚠️ 로컬 데이터베이스에서도 분석 결과를 찾을 수 없습니다.")
-                            if actual_analysis:
-                                st.write("**로컬 DB 응답:**")
-                                st.json(actual_analysis)
-                    else:
-                        st.warning("⚠️ 로컬 데이터베이스 컴포넌트가 초기화되지 않았습니다.")
-                        
                 except Exception as local_error:
-                    st.warning(f"⚠️ 로컬 데이터베이스 조회 실패: {local_error}")
-                    st.error(f"**오류 상세:** {str(local_error)}")
+                    pass
             
             # AI 분석 결과 표시 (실제 데이터가 있든 없든 기본 정보는 표시)
             st.markdown("---")
@@ -874,7 +841,6 @@ def show_ai_analysis_modal(selected_row):
         except Exception as e:
             st.error(f"❌ 분석 결과 조회 중 오류가 발생했습니다: {str(e)}")
             st.info("Streamlit Cloud 환경에서는 일시적인 데이터 접근 문제가 발생할 수 있습니다.")
-            st.error(f"**오류 상세:** {str(e)}")
 
 def create_history_table_with_buttons(df):
     """이력 조회 결과를 버튼이 포함된 테이블로 생성"""
