@@ -498,6 +498,13 @@ def show_ai_analysis_modal(selected_row):
                 st.write(f"**운영체제:** {selected_row.get('운영체제', '')}")
                 st.write(f"**날짜:** {selected_row.get('날짜', 'N/A')}")
         
+        # 디버깅 정보 표시
+        with st.expander("🔍 디버깅 정보", expanded=False):
+            st.write("**선택된 행 데이터:**")
+            st.json(selected_row)
+            st.write(f"**MongoDB 연결 상태:** {st.session_state.get('mongodb_connected', False)}")
+            st.write(f"**MongoDB 핸들러 존재:** {'mongo_handler' in st.session_state}")
+        
         # 실제 분석 결과 조회 시도
         try:
             # MongoDB에서 실제 분석 결과 조회 시도
@@ -511,6 +518,8 @@ def show_ai_analysis_modal(selected_row):
                     inquiry_date = selected_row.get('날짜', '')
                     user_name = selected_row.get('담당자', '')
                     issue_type = selected_row.get('문의유형', '')
+                    
+                    st.info(f"🔍 MongoDB 조회 시도: 고객사명={customer_name}, 날짜={inquiry_date}, 담당자={user_name}, 유형={issue_type}")
                     
                     # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
                     if inquiry_date and ' ' in inquiry_date:
@@ -527,11 +536,17 @@ def show_ai_analysis_modal(selected_row):
                     if mongo_result and mongo_result.get('success'):
                         actual_analysis = mongo_result
                         st.success("✅ MongoDB에서 AI 분석 결과를 조회했습니다.")
+                        st.write("**MongoDB 조회 결과:**")
+                        st.json(mongo_result)
                     else:
                         st.warning("⚠️ MongoDB에서 해당 문의의 분석 결과를 찾을 수 없습니다.")
+                        if mongo_result:
+                            st.write("**MongoDB 응답:**")
+                            st.json(mongo_result)
                         
                 except Exception as mongo_error:
                     st.warning(f"⚠️ MongoDB 조회 실패: {mongo_error}")
+                    st.error(f"**오류 상세:** {str(mongo_error)}")
             
             # MongoDB에서 조회 실패한 경우 로컬 데이터베이스로 폴백
             if not actual_analysis:
@@ -541,6 +556,8 @@ def show_ai_analysis_modal(selected_row):
                         # 고객사명과 날짜를 기준으로 실제 분석 결과 조회
                         customer_name = selected_row.get('고객사명', '')
                         inquiry_date = selected_row.get('날짜', '')
+                        
+                        st.info(f"🔍 로컬 DB 조회 시도: 고객사명={customer_name}, 날짜={inquiry_date}")
                         
                         # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
                         if inquiry_date and ' ' in inquiry_date:
@@ -553,105 +570,114 @@ def show_ai_analysis_modal(selected_row):
                         
                         if actual_analysis and actual_analysis.get('success'):
                             st.info("📋 로컬 데이터베이스에서 AI 분석 결과를 조회했습니다.")
+                            st.write("**로컬 DB 조회 결과:**")
+                            st.json(actual_analysis)
+                        else:
+                            st.warning("⚠️ 로컬 데이터베이스에서도 분석 결과를 찾을 수 없습니다.")
+                            if actual_analysis:
+                                st.write("**로컬 DB 응답:**")
+                                st.json(actual_analysis)
                     else:
                         st.warning("⚠️ 로컬 데이터베이스 컴포넌트가 초기화되지 않았습니다.")
                         
                 except Exception as local_error:
                     st.warning(f"⚠️ 로컬 데이터베이스 조회 실패: {local_error}")
-                
+                    st.error(f"**오류 상세:** {str(local_error)}")
+            
+            # AI 분석 결과 표시 (실제 데이터가 있든 없든 기본 정보는 표시)
+            st.markdown("---")
+            st.markdown("### 🔍 AI 분석 결과")
+            
+            if actual_analysis:
                 # MongoDB에서 가져온 데이터인지 로컬 데이터베이스에서 가져온 데이터인지 확인
-                if actual_analysis:
-                    if actual_analysis.get('source') == 'mongodb':
-                        # MongoDB에서 가져온 데이터
-                        analysis_data = actual_analysis.get('data', {})
-                        # full_analysis_result에서 전체 AI 분석 데이터 추출
-                        full_result = analysis_data.get('full_analysis_result', {})
-                    else:
-                        # 로컬 데이터베이스에서 가져온 데이터
-                        analysis_data = actual_analysis.get('data', {})
-                        full_result = analysis_data.get('full_analysis_result', {})
+                if actual_analysis.get('source') == 'mongodb':
+                    # MongoDB에서 가져온 데이터
+                    analysis_data = actual_analysis.get('data', {})
+                    # full_analysis_result에서 전체 AI 분석 데이터 추출
+                    full_result = analysis_data.get('full_analysis_result', {})
+                else:
+                    # 로컬 데이터베이스에서 가져온 데이터
+                    analysis_data = actual_analysis.get('data', {})
+                    full_result = analysis_data.get('full_analysis_result', {})
+                
+                # 데이터가 성공적으로 로드되었는지 확인
+                if analysis_data:
+                    col3, col4 = st.columns(2)
                     
-                    # 데이터가 성공적으로 로드되었는지 확인
-                    if analysis_data:
-                        # AI 분석 결과 (실제 데이터)
-                        st.markdown("### 🔍 AI 분석 결과")
+                    with col3:
+                        st.markdown("#### 📊 문제 유형 분류")
+                        issue_type = analysis_data.get('issue_type', selected_row.get('문의유형', 'N/A'))
+                        st.write(f"**분류된 문제 유형:** {issue_type}")
                         
-                        col3, col4 = st.columns(2)
+                        # 분류 방법과 신뢰도 정보 표시
+                        classification_method = analysis_data.get('classification_method', 'AI 자동 분류')
+                        confidence = analysis_data.get('confidence', '높음')
+                        st.write(f"**분류 방법:** {classification_method}")
+                        st.write(f"**신뢰도:** {confidence}")
                         
-                        with col3:
-                            st.markdown("#### 📊 문제 유형 분류")
-                            issue_type = analysis_data.get('issue_type', selected_row.get('문의유형', 'N/A'))
-                            st.write(f"**분류된 문제 유형:** {issue_type}")
-                            
-                            # 분류 방법과 신뢰도 정보 표시
-                            classification_method = analysis_data.get('classification_method', 'AI 자동 분류')
-                            confidence = analysis_data.get('confidence', '높음')
-                            st.write(f"**분류 방법:** {classification_method}")
-                            st.write(f"**신뢰도:** {confidence}")
-                            
-                            # 우선순위 정보
-                            priority = analysis_data.get('priority', 'N/A')
-                            st.write(f"**우선순위:** {priority}")
-                            
-                            # 계약 유형
-                            contract_type = analysis_data.get('contract_type', 'N/A')
-                            st.write(f"**계약 유형:** {contract_type}")
+                        # 우선순위 정보
+                        priority = analysis_data.get('priority', 'N/A')
+                        st.write(f"**우선순위:** {priority}")
                         
-                        with col4:
-                            st.markdown("#### 🎯 시나리오 매칭")
-                            # 시나리오 매칭 정보 표시
-                            if full_result and 'best_scenario' in full_result:
-                                scenario = full_result['best_scenario']
-                                st.write(f"**조건 1:** {scenario.get('condition1', 'N/A')}")
-                                st.write(f"**조건 2:** {scenario.get('condition2', 'N/A')}")
-                                st.write(f"**해결책:** {scenario.get('solution', 'N/A')}")
-                                st.write(f"**현장 출동 필요:** {scenario.get('on_site_required', 'N/A')}")
-                            else:
-                                st.write("시나리오 매칭 정보가 없습니다.")
-                        
-                        # AI 응답 결과
-                        st.markdown("### 🤖 AI 응답")
-                        
-                        col5, col6 = st.columns(2)
-                        
-                        with col5:
-                            st.markdown("#### ❓ 질문")
-                            # 질문 정보 표시
-                            if full_result and 'gemini_result' in full_result:
-                                gemini_result = full_result['gemini_result']
-                                if 'parsed_response' in gemini_result:
-                                    parsed = gemini_result['parsed_response']
-                                    question = parsed.get('question', '')
-                                    if question:
-                                        st.write(question)
-                                    else:
-                                        st.write("질문 정보가 없습니다.")
+                        # 계약 유형
+                        contract_type = analysis_data.get('contract_type', 'N/A')
+                        st.write(f"**계약 유형:** {contract_type}")
+                    
+                    with col4:
+                        st.markdown("#### 🎯 시나리오 매칭")
+                        # 시나리오 매칭 정보 표시
+                        if full_result and 'best_scenario' in full_result:
+                            scenario = full_result['best_scenario']
+                            st.write(f"**조건 1:** {scenario.get('condition1', 'N/A')}")
+                            st.write(f"**조건 2:** {scenario.get('condition2', 'N/A')}")
+                            st.write(f"**해결책:** {scenario.get('solution', 'N/A')}")
+                            st.write(f"**현장 출동 필요:** {scenario.get('on_site_required', 'N/A')}")
+                        else:
+                            st.write("시나리오 매칭 정보가 없습니다.")
+                    
+                    # AI 응답 결과
+                    st.markdown("### 🤖 AI 응답")
+                    
+                    col5, col6 = st.columns(2)
+                    
+                    with col5:
+                        st.markdown("#### ❓ 질문")
+                        # 질문 정보 표시
+                        if full_result and 'gemini_result' in full_result:
+                            gemini_result = full_result['gemini_result']
+                            if 'parsed_response' in gemini_result:
+                                parsed = gemini_result['parsed_response']
+                                question = parsed.get('question', '')
+                                if question:
+                                    st.write(question)
                                 else:
                                     st.write("질문 정보가 없습니다.")
                             else:
                                 st.write("질문 정보가 없습니다.")
-                            
-                            st.markdown("#### 📝 요약")
-                            summary = analysis_data.get('summary', '')
-                            if summary:
-                                st.write(summary)
-                            else:
-                                st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
-                            
-                            st.markdown("#### 🔧 조치 흐름")
-                            action_flow = analysis_data.get('action_flow', '')
-                            if action_flow:
-                                st.write(action_flow)
-                            else:
-                                st.write("해당 문의에 대한 조치 흐름이 없습니다.")
+                        else:
+                            st.write("질문 정보가 없습니다.")
                         
-                        with col6:
-                            st.markdown("#### 📧 이메일 초안")
-                            email_draft = analysis_data.get('email_draft', '')
-                            if email_draft:
-                                email_content = email_draft
-                            else:
-                                email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
+                        st.markdown("#### 📝 요약")
+                        summary = analysis_data.get('summary', '')
+                        if summary:
+                            st.write(summary)
+                        else:
+                            st.write("해당 문의에 대한 AI 분석 요약이 없습니다.")
+                        
+                        st.markdown("#### 🔧 조치 흐름")
+                        action_flow = analysis_data.get('action_flow', '')
+                        if action_flow:
+                            st.write(action_flow)
+                        else:
+                            st.write("해당 문의에 대한 조치 흐름이 없습니다.")
+                    
+                    with col6:
+                        st.markdown("#### 📧 이메일 초안")
+                        email_draft = analysis_data.get('email_draft', '')
+                        if email_draft:
+                            email_content = email_draft
+                        else:
+                            email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
 
 고객님 안녕하세요.
 
@@ -669,24 +695,24 @@ def show_ai_analysis_modal(selected_row):
 추가 문의사항이 있으시면 언제든 연락 주세요.
 
 감사합니다."""
-                            
-                            st.text_area("이메일 내용", email_content, height=150, disabled=True)
-                            
-                            # 이메일 복사 버튼
-                            if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
-                                st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
                         
-                        # 전체 AI 응답 섹션 추가
-                        st.markdown("---")
-                        st.markdown("### 📄 전체 AI 응답")
+                        st.text_area("이메일 내용", email_content, height=150, disabled=True)
                         
-                        # MongoDB 데이터 구조에 맞게 전체 AI 응답 구성
-                        if full_result and 'gemini_result' in full_result:
-                            gemini_result = full_result['gemini_result']
-                            if 'parsed_response' in gemini_result:
-                                parsed = gemini_result['parsed_response']
-                                
-                                full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
+                        # 이메일 복사 버튼
+                        if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
+                            st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
+                    
+                    # 전체 AI 응답 섹션 추가
+                    st.markdown("---")
+                    st.markdown("### 📄 전체 AI 응답")
+                    
+                    # MongoDB 데이터 구조에 맞게 전체 AI 응답 구성
+                    if full_result and 'gemini_result' in full_result:
+                        gemini_result = full_result['gemini_result']
+                        if 'parsed_response' in gemini_result:
+                            parsed = gemini_result['parsed_response']
+                            
+                            full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
 
 [응답내용]
 
@@ -697,18 +723,6 @@ def show_ai_analysis_modal(selected_row):
 
 - 이메일 초안:
 {parsed.get('email_draft', '')}"""
-                            else:
-                                full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
-
-[응답내용]
-
-- 요약: {analysis_data.get('summary', '')}
-
-- 조치 흐름:
-{analysis_data.get('action_flow', '')}
-
-- 이메일 초안:
-{analysis_data.get('email_draft', '')}"""
                         else:
                             full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
 
@@ -721,68 +735,146 @@ def show_ai_analysis_modal(selected_row):
 
 - 이메일 초안:
 {analysis_data.get('email_draft', '')}"""
-                        
-                        # 전체 AI 응답 표시
-                        st.text_area("전체 AI 응답", full_response, height=200, disabled=True)
-                        
-                        # 전체 응답 복사 버튼
-                        if st.button("📋 전체 응답 복사", key=f"copy_full_{selected_row.get('번호', 'unknown')}"):
-                            st.write("✅ 전체 AI 응답이 클립보드에 복사되었습니다.")
-                        
-                        # 추가 정보 섹션 - 데이터베이스에 저장된 모든 정보 표시
-                        st.markdown("---")
-                        st.markdown("### 🔍 추가 상세 정보")
-                        
-                        col7, col8 = st.columns(2)
-                        
-                        with col7:
-                            st.markdown("#### 👤 사용자 정보")
-                            st.write(f"**담당자:** {analysis_data.get('user_name', 'N/A')}")
-                            st.write(f"**역할:** {analysis_data.get('user_role', 'N/A')}")
-                            st.write(f"**시스템 버전:** {analysis_data.get('system_version', 'N/A')}")
-                            st.write(f"**브라우저:** {analysis_data.get('browser_info', 'N/A')}")
-                            st.write(f"**운영체제:** {analysis_data.get('os_info', 'N/A')}")
-                            st.write(f"**오류 코드:** {analysis_data.get('error_code', 'N/A')}")
-                        
-                        with col8:
-                            st.markdown("#### 📅 시간 정보")
-                            st.write(f"**타임스탬프:** {analysis_data.get('timestamp', 'N/A')}")
-                            st.write(f"**생성 시간:** {analysis_data.get('created_at', 'N/A')}")
-                            st.write(f"**수정 시간:** {analysis_data.get('updated_at', 'N/A')}")
-                            
-                            st.markdown("#### 🆔 데이터 정보")
-                            st.write(f"**데이터베이스 ID:** {analysis_data.get('_id', 'N/A')}")
-                            st.write(f"**데이터 소스:** {actual_analysis.get('source', 'N/A')}")
-                        
-                        # 원본 데이터 표시 (디버깅용)
-                        with st.expander("🔧 원본 데이터 (디버깅용)", expanded=False):
-                            st.json(analysis_data)
-                        
-                        # MongoDB에서 가져온 경우 추가 정보 표시
-                        if actual_analysis.get('source') == 'mongodb':
-                            st.info("💾 MongoDB에서 로드된 데이터입니다.")
                     else:
-                        # 데이터가 비어있는 경우
-                        st.warning("⚠️ 분석 데이터가 비어있습니다.")
+                        full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
+
+[응답내용]
+
+- 요약: {analysis_data.get('summary', '')}
+
+- 조치 흐름:
+{analysis_data.get('action_flow', '')}
+
+- 이메일 초안:
+{analysis_data.get('email_draft', '')}"""
+                    
+                    # 전체 AI 응답 표시
+                    st.text_area("전체 AI 응답", full_response, height=200, disabled=True)
+                    
+                    # 전체 응답 복사 버튼
+                    if st.button("📋 전체 응답 복사", key=f"copy_full_{selected_row.get('번호', 'unknown')}"):
+                        st.write("✅ 전체 AI 응답이 클립보드에 복사되었습니다.")
+                    
+                    # 추가 정보 섹션 - 데이터베이스에 저장된 모든 정보 표시
+                    st.markdown("---")
+                    st.markdown("### 🔍 추가 상세 정보")
+                    
+                    col7, col8 = st.columns(2)
+                    
+                    with col7:
+                        st.markdown("#### 👤 사용자 정보")
+                        st.write(f"**담당자:** {analysis_data.get('user_name', 'N/A')}")
+                        st.write(f"**역할:** {analysis_data.get('user_role', 'N/A')}")
+                        st.write(f"**시스템 버전:** {analysis_data.get('system_version', 'N/A')}")
+                        st.write(f"**브라우저:** {analysis_data.get('browser_info', 'N/A')}")
+                        st.write(f"**운영체제:** {analysis_data.get('os_info', 'N/A')}")
+                        st.write(f"**오류 코드:** {analysis_data.get('error_code', 'N/A')}")
+                    
+                    with col8:
+                        st.markdown("#### 📅 시간 정보")
+                        st.write(f"**타임스탬프:** {analysis_data.get('timestamp', 'N/A')}")
+                        st.write(f"**생성 시간:** {analysis_data.get('created_at', 'N/A')}")
+                        st.write(f"**수정 시간:** {analysis_data.get('updated_at', 'N/A')}")
+                        
+                        st.markdown("#### 🆔 데이터 정보")
+                        st.write(f"**데이터베이스 ID:** {analysis_data.get('_id', 'N/A')}")
+                        st.write(f"**데이터 소스:** {actual_analysis.get('source', 'N/A')}")
+                    
+                    # 원본 데이터 표시 (디버깅용)
+                    with st.expander("🔧 원본 데이터 (디버깅용)", expanded=False):
+                        st.json(analysis_data)
+                    
+                    # MongoDB에서 가져온 경우 추가 정보 표시
+                    if actual_analysis.get('source') == 'mongodb':
+                        st.info("💾 MongoDB에서 로드된 데이터입니다.")
                 else:
-                    # 실제 분석 결과가 없는 경우 기본 정보만 표시
-                    st.warning("⚠️ 해당 문의의 실제 AI 분석 결과를 찾을 수 없습니다.")
-                    st.info("이는 다음과 같은 이유일 수 있습니다:")
-                    st.info("1. 분석이 완료되지 않았거나 저장되지 않음")
-                    st.info("2. MongoDB 또는 로컬 데이터베이스에서 데이터를 찾을 수 없음")
-                    st.info("3. 검색 조건이 정확하지 않음")
-                    
-                    # 기본 정보 표시
-                    st.markdown("### 📋 기본 문의 정보")
-                    st.write(f"**문의 내용:** {selected_row.get('문의내용', 'N/A')}")
-                    st.write(f"**문의 유형:** {selected_row.get('문의유형', 'N/A')}")
-                    st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')}")
-                    
-                    st.info("페이지를 새로고침하거나 다시 시도해주세요.")
+                    # 데이터가 비어있는 경우
+                    st.warning("⚠️ 분석 데이터가 비어있습니다.")
+            else:
+                # 실제 분석 결과가 없는 경우에도 기본 정보 표시
+                st.warning("⚠️ 해당 문의의 실제 AI 분석 결과를 찾을 수 없습니다.")
+                st.info("이는 다음과 같은 이유일 수 있습니다:")
+                st.info("1. 분석이 완료되지 않았거나 저장되지 않음")
+                st.info("2. MongoDB 또는 로컬 데이터베이스에서 데이터를 찾을 수 없음")
+                st.info("3. 검색 조건이 정확하지 않음")
+                
+                # 기본 정보 표시
+                st.markdown("### 📋 기본 문의 정보")
+                st.write(f"**문의 내용:** {selected_row.get('문의내용', 'N/A')}")
+                st.write(f"**문의 유형:** {selected_row.get('문의유형', 'N/A')}")
+                st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')}")
+                
+                # 기본 AI 응답 표시 (샘플 데이터)
+                st.markdown("### 🤖 기본 AI 응답 (샘플)")
+                st.markdown("#### 📊 문제 유형 분류")
+                st.write(f"**분류된 문제 유형:** {selected_row.get('문의유형', 'N/A')}")
+                st.write("**분류 방법:** keyword_based")
+                st.write("**신뢰도:** medium")
+                
+                st.markdown("#### 🎯 시나리오 매칭")
+                st.write("**조건 1:** 해당 문제 유형에 대한 시나리오가 정의되어 있는가?")
+                st.write("**조건 2:** 시나리오 매칭이 성공했는가?")
+                st.write("**해결책:** AI 분석 결과에 따른 해결 방안")
+                st.write("**현장 출동 필요:** 상황에 따라 결정")
+                
+                st.markdown("#### 📝 요약")
+                st.write(f"고객님께서 {selected_row.get('문의유형', '문의')}에 대한 문의를 주셨습니다.")
+                
+                st.markdown("#### 🔧 조치 흐름")
+                st.write("1. 문제 상황 파악 및 분석")
+                st.write("2. 적절한 해결 방안 제시")
+                st.write("3. 필요시 추가 정보 요청")
+                st.write("4. 해결 완료 확인")
+                
+                st.markdown("#### 📧 이메일 초안")
+                basic_email = f"""제목: {selected_row.get('문의유형', '문의')} 답변
+
+고객님 안녕하세요.
+
+{selected_row.get('문의유형', '문의')}에 대한 문의 주셔서 감사합니다.
+
+현재 상황을 분석한 결과, 추가 정보가 필요한 상황입니다.
+
+**필요한 정보:**
+1. 구체적인 오류 메시지
+2. 발생 시점 및 빈도
+3. 사용 환경 정보
+
+자세한 내용은 담당 엔지니어가 확인 후 답변 드리겠습니다.
+
+추가 문의사항이 있으시면 언제든 연락 주세요.
+
+감사합니다."""
+                
+                st.text_area("이메일 내용", basic_email, height=150, disabled=True)
+                
+                # 전체 AI 응답 표시
+                st.markdown("---")
+                st.markdown("### 📄 전체 AI 응답")
+                
+                full_basic_response = f"""[대응유형] 해결안
+
+[응답내용]
+
+- 요약: 고객님께서 {selected_row.get('문의유형', '문의')}에 대한 문의를 주셨습니다.
+
+- 조치 흐름:
+1. 문제 상황 파악 및 분석
+2. 적절한 해결 방안 제시
+3. 필요시 추가 정보 요청
+4. 해결 완료 확인
+
+- 이메일 초안:
+{basic_email}"""
+                
+                st.text_area("전체 AI 응답", full_basic_response, height=200, disabled=True)
+                
+                st.info("페이지를 새로고침하거나 다시 시도해주세요.")
                 
         except Exception as e:
             st.error(f"❌ 분석 결과 조회 중 오류가 발생했습니다: {str(e)}")
             st.info("Streamlit Cloud 환경에서는 일시적인 데이터 접근 문제가 발생할 수 있습니다.")
+            st.error(f"**오류 상세:** {str(e)}")
 
 def create_history_table_with_buttons(df):
     """이력 조회 결과를 버튼이 포함된 테이블로 생성"""
