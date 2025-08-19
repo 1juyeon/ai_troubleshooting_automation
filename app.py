@@ -1019,9 +1019,9 @@ init_session_state()
 if 'mongodb_connected' not in st.session_state:
     mongodb_status = init_mongodb_connection()
     if mongodb_status:
-        st.sidebar.success("✅ MongoDB 연결됨")
+        st.sidebar.success("✅ DB 연결됨됨")
     else:
-        st.sidebar.warning("⚠️ MongoDB 연결 실패 - 로컬 저장소 사용")
+        st.sidebar.warning("⚠️ DB 연결 실패 - 로컬 저장소 사용")
         st.sidebar.info("💡 Streamlit Cloud Secrets에서 MONGODB_URI를 설정하세요")
 
 # 메인 애플리케이션 시작
