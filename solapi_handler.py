@@ -189,16 +189,8 @@ class SOLAPIHandler:
                 "data": data
             }
             
-            st.write(f"🔍 {api_format['name']} 시도 중...")
-            st.write(f"📡 URL: {url}")
-            st.write(f"📡 Authorization: {headers['Authorization'][:50]}...")
-            
             # API 호출 - HMAC-SHA256 인증 사용
             response = requests.post(url, headers=headers, json=data, timeout=30)
-            
-            # 응답 로깅
-            st.write(f"📡 응답 상태: {response.status_code}")
-            st.write(f"📡 응답 내용: {response.text[:500]}...")
             
             if response.status_code == 200:
                 result = response.json()

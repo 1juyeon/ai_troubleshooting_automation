@@ -740,6 +740,13 @@ def show_ai_analysis_modal(selected_row):
                             placeholder="01012345678",
                             key=f"sms_recipient_phone_{selected_row.get('번호', 'unknown')}"
                         )
+                        sender_phone = st.text_input(
+                            "발신자 번호",
+                            value="01012345678",
+                            placeholder="01012345678",
+                            help="SMS 발송 시 표시될 발신자 번호입니다",
+                            key=f"sms_sender_phone_{selected_row.get('번호', 'unknown')}"
+                        )
                     
                     with col_sms2:
                         sms_message = st.text_area(
@@ -1130,113 +1137,19 @@ with st.sidebar:
     
     st.markdown("---")
     
-    st.markdown("## 📱 SMS 설정")
-    
-    # API 키 형식 안내
-    st.info("💡 **SOLAPI API 키 형식**: API 키와 Secret은 각각 최소 16자리 이상이어야 합니다.")
-    
-    # SOLAPI API 키 설정 (secrets 우선, 사용자 입력으로 덮어쓰기 가능)
-    default_api_key = ""
-    default_api_secret = ""
-    
+    # SOLAPI API 키를 세션 상태에 저장 (secrets에서 자동 로드)
     try:
         if hasattr(st, 'secrets') and st.secrets:
-            default_api_key = st.secrets.get("SOLAPI_API_KEY", "")
-            default_api_secret = st.secrets.get("SOLAPI_API_SECRET", "")
+            st.session_state['solapi_api_key'] = st.secrets.get("SOLAPI_API_KEY", "")
+            st.session_state['solapi_api_secret'] = st.secrets.get("SOLAPI_API_SECRET", "")
+            st.session_state['sender_phone'] = "01012345678"
     except:
         pass
-    
-    solapi_api_key = st.text_input(
-        "SOLAPI API Key",
-        value=default_api_key,
-        type="password",
-        placeholder="SOLAPI API 키를 입력하세요",
-        help="Streamlit Cloud Secrets에 설정된 값이 자동으로 로드됩니다. 필요시 덮어쓸 수 있습니다."
-    )
-    
-    # SOLAPI API Secret 설정
-    solapi_api_secret = st.text_input(
-        "SOLAPI API Secret",
-        value=default_api_secret,
-        type="password",
-        placeholder="SOLAPI API Secret을 입력하세요",
-        help="Streamlit Cloud Secrets에 설정된 값이 자동으로 로드됩니다. 필요시 덮어쓸 수 있습니다."
-    )
-    
-    # 발신자 번호 설정
-    sender_phone = st.text_input(
-        "발신자 번호",
-        value="01012345678",
-        placeholder="01012345678",
-        help="SMS 발송 시 표시될 발신자 번호입니다"
-    )
-    
-    # SOLAPI 연결 테스트
-    if st.button("🔗 SOLAPI 연결 테스트", use_container_width=True):
-        if solapi_api_key and solapi_api_secret:
-            try:
-                # API 키 형식 검증 (SOLAPI는 다양한 길이의 키를 지원)
-                if len(solapi_api_key) < 16 or len(solapi_api_secret) < 16:
-                    st.error("❌ API 키 형식 오류: API 키와 Secret은 각각 최소 16자리 이상이어야 합니다.")
-                    st.info(f"현재 API 키: {len(solapi_api_key)}자, Secret: {len(solapi_api_secret)}자")
-                    st.info("💡 SOLAPI는 다양한 길이의 API 키를 지원합니다.")
-                else:
-                    # 연결 테스트 실행
-                    with st.spinner("SOLAPI 연결 테스트 중..."):
-                        test_handler = SOLAPIHandler(solapi_api_key, solapi_api_secret)
-                        test_result = test_handler.test_connection()
-                    
-                    if test_result["success"]:
-                        st.success("✅ SOLAPI 연결 성공!")
-                        st.info(f"연결 정보: {test_result['message']}")
-                    else:
-                        st.error(f"❌ SOLAPI 연결 실패: {test_result['message']}")
-                        
-                        # 오류별 해결 방법 제시
-                        if "HTTP 400" in test_result['message']:
-                            st.warning("🔧 HTTP 400 오류 해결 방법:")
-                            st.markdown("""
-                            1. **API 키 확인**: SOLAPI 대시보드에서 API 키가 올바른지 확인
-                            2. **발신자 번호**: SOLAPI에 등록된 발신자 번호인지 확인
-                            3. **권한 설정**: API 키에 계정 조회 권한이 있는지 확인
-                            4. **IP 제한**: API 키의 IP 제한 설정 확인
-                            """)
-                        elif "HTTP 401" in test_result['message']:
-                            st.warning("🔧 HTTP 401 오류 해결 방법:")
-                            st.markdown("""
-                            1. **API 키 재확인**: API 키와 Secret을 정확히 입력했는지 확인
-                            2. **새로운 키 생성**: SOLAPI 대시보드에서 새로운 API 키 생성
-                            3. **대소문자 확인**: API 키와 Secret의 대소문자 정확히 입력
-                            """)
-                        elif "HTTP 403" in test_result['message']:
-                            st.warning("🔧 HTTP 403 오류 해결 방법:")
-                            st.markdown("""
-                            1. **권한 확인**: API 키에 필요한 권한이 부여되었는지 확인
-                            2. **프로젝트 설정**: 올바른 프로젝트에서 API 키를 생성했는지 확인
-                            3. **계정 상태**: SOLAPI 계정이 정상 상태인지 확인
-                            """)
-                        
-                        # 디버깅 정보 표시
-                        with st.expander("🔍 디버깅 정보"):
-                            st.code(f"""
-API 키: {solapi_api_key[:8]}...{solapi_api_key[-8:]}
-API Secret: {solapi_api_secret[:8]}...{solapi_api_secret[-8:]}
-발신자 번호: {sender_phone}
-                            """)
-                        
-            except Exception as e:
-                st.error(f"❌ 연결 테스트 중 오류: {e}")
-                st.exception(e)
-        else:
-            st.warning("⚠️ API 키와 Secret을 모두 입력해주세요.")
     
     # 세션 상태에 저장
     st.session_state.contact_name = contact_name
     st.session_state.role = role
     st.session_state.ai_model = ai_model
-    st.session_state.solapi_api_key = solapi_api_key
-    st.session_state.solapi_api_secret = solapi_api_secret
-    st.session_state.sender_phone = sender_phone
     
 
     
@@ -1595,6 +1508,13 @@ with tab2:
                     "수신자 전화번호",
                     placeholder="01012345678",
                     key="sms_recipient_phone"
+                )
+                sender_phone = st.text_input(
+                    "발신자 번호",
+                    value="01012345678",
+                    placeholder="01012345678",
+                    help="SMS 발송 시 표시될 발신자 번호입니다",
+                    key="sms_sender_phone"
                 )
             
             with col_sms2:
