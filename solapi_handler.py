@@ -213,7 +213,7 @@ class SOLAPIHandler:
         self.sender = phone_number
     
     def test_connection(self) -> Dict[str, Any]:
-        """SOLAPI 연결 테스트 (계정 잔액 조회)"""
+        """SOLAPI 연결 테스트 (프로젝트 목록 조회)"""
         if not self.api_key or not self.api_secret:
             return {
                 "success": False,
@@ -221,7 +221,8 @@ class SOLAPIHandler:
             }
         
         try:
-            path = "/account/v1/balance"
+            # 더 간단한 API 엔드포인트로 연결 테스트
+            path = "/projects/v1/list"
             url = f"{self.base_url}{path}"
             
             headers = self._get_auth_headers("GET", path)
@@ -234,7 +235,7 @@ class SOLAPIHandler:
                 return {
                     "success": True,
                     "message": "✅ SOLAPI 연결 성공",
-                    "balance": data.get("balance", "알 수 없음"),
+                    "projects": data.get("projects", []),
                     "response": data
                 }
             else:
