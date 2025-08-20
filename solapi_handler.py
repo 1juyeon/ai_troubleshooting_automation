@@ -117,6 +117,9 @@ class SOLAPIHandler:
                 "message_length": len(message)
             }
             
+            # 발신자 번호 디버깅 (임시 주석)
+            # st.write(f"🔍 디버깅: 발신자 번호 = {self.sender}")
+            
             # 메시지 내용 구성
             if recipient_name:
                 full_message = f"[{sender_name}]\n{recipient_name}님, {message}"
@@ -146,7 +149,7 @@ class SOLAPIHandler:
                     "messages": [
                         {
                             "to": phone_number,
-                            "from": self.sender,
+                            "from": "placeholder",  # _try_single_api_format에서 실제 값으로 교체
                             "text": message
                         }
                     ]
@@ -175,7 +178,11 @@ class SOLAPIHandler:
         try:
             path = api_format["path"]
             url = f"{self.base_url}{path}"
-            data = api_format["data"]
+            # 발신자 번호를 현재 설정된 값으로 업데이트
+            data = api_format["data"].copy()
+            if "messages" in data and len(data["messages"]) > 0:
+                data["messages"][0]["from"] = self.sender
+                # st.write(f"🔍 디버깅: API 요청 발신자 번호 = {data['messages'][0]['from']}")
             
             # HMAC-SHA256 인증 헤더 생성
             headers = self._get_auth_headers("POST", path)

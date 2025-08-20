@@ -742,7 +742,7 @@ def show_ai_analysis_modal(selected_row):
                         )
                         sender_phone = st.text_input(
                             "발신자 번호",
-                            value="01012345678",
+                            value=st.session_state.get('sender_phone', '01012345678'),
                             placeholder="01012345678",
                             help="SMS 발송 시 표시될 발신자 번호입니다",
                             key=f"sms_sender_phone_{selected_row.get('번호', 'unknown')}"
@@ -764,7 +764,8 @@ def show_ai_analysis_modal(selected_row):
                                     # 세션 상태에서 API 키 가져오기
                                     api_key = st.session_state.get('solapi_api_key', '')
                                     api_secret = st.session_state.get('solapi_api_secret', '')
-                                    sender_phone = st.session_state.get('sender_phone', '01012345678')
+                                    # 사용자가 입력한 발신자 번호 사용
+                                    sender_phone = sender_phone
                                     
                                     if api_key and api_secret:
                                         # SOLAPI 핸들러 생성
@@ -1511,7 +1512,7 @@ with tab2:
                 )
                 sender_phone = st.text_input(
                     "발신자 번호",
-                    value="01012345678",
+                    value=st.session_state.get('sender_phone', '01012345678'),
                     placeholder="01012345678",
                     help="SMS 발송 시 표시될 발신자 번호입니다",
                     key="sms_sender_phone"
@@ -1533,7 +1534,8 @@ with tab2:
                             # 세션 상태에서 API 키 가져오기
                             api_key = st.session_state.get('solapi_api_key', '')
                             api_secret = st.session_state.get('solapi_api_secret', '')
-                            sender_phone = st.session_state.get('sender_phone', '01012345678')
+                            # 사용자가 입력한 발신자 번호 사용
+                            sender_phone = sender_phone
                             
                             if api_key and api_secret:
                                 # SOLAPI 핸들러 생성
