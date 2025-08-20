@@ -68,10 +68,15 @@ class SOLAPIHandler:
             # SOLAPI SMS 발송 API 엔드포인트
             url = f"{self.base_url}/messages/v4/send"
             
-            # 헤더 설정 (SOLAPI는 Bearer 토큰 사용)
+            # 헤더 설정 (SOLAPI는 API Key와 Secret을 쿼리 파라미터로 전달)
             headers = {
-                "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
+            }
+            
+            # 쿼리 파라미터에 API 키와 Secret 추가
+            params = {
+                "api_key": self.api_key,
+                "api_secret": self.api_secret
             }
             
             # 메시지 내용 구성
@@ -89,8 +94,8 @@ class SOLAPIHandler:
                 }
             }
             
-            # API 호출
-            response = requests.post(url, headers=headers, json=data, timeout=30)
+            # API 호출 (쿼리 파라미터 포함)
+            response = requests.post(url, headers=headers, json=data, params=params, timeout=30)
             
             if response.status_code == 200:
                 result = response.json()
@@ -199,11 +204,16 @@ class SOLAPIHandler:
             # SOLAPI 계정 정보 조회 API로 연결 테스트 (더 안정적)
             url = f"{self.base_url}/account/v1/balance"
             headers = {
-                "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             }
             
-            response = requests.get(url, headers=headers, timeout=10)
+            # 쿼리 파라미터에 API 키와 Secret 추가
+            params = {
+                "api_key": self.api_key,
+                "api_secret": self.api_secret
+            }
+            
+            response = requests.get(url, headers=headers, params=params, timeout=10)
             
             if response.status_code == 200:
                 result = response.json()
