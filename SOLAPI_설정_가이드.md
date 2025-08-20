@@ -3,6 +3,33 @@
 ## 📱 SOLAPI란?
 SOLAPI는 국내 최고의 SMS/MMS 발송 서비스로, 안정적이고 빠른 문자 발송이 가능합니다.
 
+## 🔐 인증 방식
+
+SOLAPI는 HMAC-SHA256 기반 인증 방식을 사용합니다:
+
+### HMAC-SHA256 인증
+- **방식**: API Key와 Secret을 사용한 HMAC-SHA256 서명
+- **헤더**: `Authorization: hmac-sha256 {API_KEY}:{SIGNATURE}`
+- **타임스탬프**: `X-Timestamp` 헤더에 Unix timestamp 포함
+- **보안**: 높은 보안성을 제공하는 서명 기반 인증
+
+### 기존 인증 방식 (지원 중단)
+- Basic Authentication
+- Bearer Token
+- Query Parameters
+- Custom Headers
+
+### HMAC 인증 작동 원리
+1. **타임스탬프 생성**: 현재 Unix timestamp 생성
+2. **메시지 구성**: `{METHOD} {PATH}\n{TIMESTAMP}\n{BODY}` 형식
+3. **서명 생성**: HMAC-SHA256으로 메시지 서명
+4. **헤더 전송**: Authorization과 X-Timestamp 헤더에 포함
+
+### 보안 장점
+- **재생 공격 방지**: 타임스탬프로 요청 유효성 검증
+- **무결성 보장**: HMAC 서명으로 데이터 변조 방지
+- **인증 강화**: API Key와 Secret의 조합으로 이중 인증
+
 ## 🔑 API 키 발급 방법
 
 ### 1. SOLAPI 계정 생성
@@ -67,8 +94,11 @@ SOLAPI_API_SECRET = "HQGV2DZ4CC0UV7LZ2TWLW0O3VSHX53VO"
 
 #### 2. 인증 방식 오류
 - **증상**: HTTP 400 또는 401 오류
-- **원인**: API Key와 Secret을 쿼리 파라미터로 전달
-- **해결**: 자동으로 쿼리 파라미터 방식으로 처리됨
+- **원인**: HMAC-SHA256 인증 실패
+- **해결 방법**:
+  - API Key와 Secret이 정확한지 확인
+  - 시스템 시간이 정확한지 확인
+  - SOLAPI 대시보드에서 API 키 상태 확인
 
 #### 3. 발신자 번호 미등록
 - **증상**: SMS 발송 시 HTTP 400 오류
@@ -79,6 +109,14 @@ SOLAPI_API_SECRET = "HQGV2DZ4CC0UV7LZ2TWLW0O3VSHX53VO"
 - **증상**: HTTP 403 오류
 - **원인**: API 키에 필요한 권한이 없음
 - **해결**: SOLAPI 대시보드에서 API 키 권한 확인 및 수정
+
+#### 5. HMAC 인증 관련 오류
+- **증상**: HTTP 400 ValidationError
+- **원인**: 타임스탬프 오차 또는 서명 생성 실패
+- **해결 방법**:
+  - 시스템 시간 동기화 확인
+  - API Key와 Secret 재입력
+  - SOLAPI 대시보드에서 API 키 재생성
 
 ## 📱 SMS 발송 방법
 

@@ -1,4 +1,7 @@
 import requests
+import hashlib
+import hmac
+import time
 import json
 import streamlit as st
 from typing import Dict, Any, Optional
@@ -51,6 +54,27 @@ class SOLAPIHandler:
             st.warning("⚠️ SOLAPI API 키 또는 시크릿이 설정되지 않았습니다.")
             st.info("Streamlit Cloud Secrets 또는 환경변수에 SOLAPI_API_KEY와 SOLAPI_API_SECRET을 설정해주세요.")
     
+    def _generate_hmac_signature(self, method: str, path: str, timestamp: str, body: str = "") -> str:
+        """HMAC-SHA256 서명 생성"""
+        message = f"{method} {path}\n{timestamp}\n{body}"
+        signature = hmac.new(
+            self.api_secret.encode('utf-8'),
+            message.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        return signature
+    
+    def _get_auth_headers(self, method: str, path: str, body: str = "") -> Dict[str, str]:
+        """인증 헤더 생성"""
+        timestamp = str(int(time.time()))
+        signature = self._generate_hmac_signature(method, path, timestamp, body)
+        
+        return {
+            "Content-Type": "application/json",
+            "Authorization": f"hmac-sha256 {self.api_key}:{signature}",
+            "X-Timestamp": timestamp
+        }
+    
     def send_sms(self, 
                  phone_number: str, 
                  message: str, 
@@ -66,18 +90,14 @@ class SOLAPIHandler:
         
         try:
             # SOLAPI SMS 발송 API 엔드포인트
-            url = f"{self.base_url}/messages/v4/send"
+            path = "/messages/v4/send"
+            url = f"{self.base_url}{path}"
             
-            # 헤더 설정
-            headers = {
-                "Content-Type": "application/json"
-            }
-            
-            # 쿼리 파라미터에 API 키와 Secret 추가
-            params = {
-                "api_key": self.api_key,
-                "api_secret": self.api_secret
-            }
+            # 메시지 내용 구성
+            if recipient_name:
+                full_message = f"[{sender_name}]\n{recipient_name}님, {message}"
+            else:
+                full_message = f"[{sender_name}]\n{message}"
             
             # 요청 데이터
             data = {
@@ -88,14 +108,12 @@ class SOLAPIHandler:
                 }
             }
             
-            # 메시지 내용 구성
-            if recipient_name:
-                full_message = f"[{sender_name}]\n{recipient_name}님, {message}"
-            else:
-                full_message = f"[{sender_name}]\n{message}"
+            # HMAC 인증 헤더 생성
+            body = json.dumps(data, ensure_ascii=False)
+            headers = self._get_auth_headers("POST", path, body)
             
-            # API 호출 (쿼리 파라미터에 API 키와 Secret 포함)
-            response = requests.post(url, headers=headers, json=data, params=params, timeout=30)
+            # API 호출
+            response = requests.post(url, headers=headers, json=data, timeout=30)
             
             if response.status_code == 200:
                 result = response.json()
@@ -193,7 +211,7 @@ class SOLAPIHandler:
         self.sender = phone_number
     
     def test_connection(self) -> Dict[str, Any]:
-        """SOLAPI 연결 테스트"""
+        """SOLAPI 연결 테스트 (계정 잔액 조회)"""
         if not self.api_key or not self.api_secret:
             return {
                 "success": False,
@@ -201,57 +219,53 @@ class SOLAPIHandler:
             }
         
         try:
-            # SOLAPI 계정 정보 조회 API로 연결 테스트 (더 안정적)
-            url = f"{self.base_url}/account/v1/balance"
-            headers = {
-                "Content-Type": "application/json"
-            }
+            path = "/account/v1/balance"
+            url = f"{self.base_url}{path}"
             
-            # 쿼리 파라미터에 API 키와 Secret 추가
-            params = {
-                "api_key": self.api_key,
-                "api_secret": self.api_secret
-            }
+            headers = self._get_auth_headers("GET", path)
             
-            response = requests.get(url, headers=headers, params=params, timeout=10)
+            response = requests.get(url, headers=headers, timeout=10)
             
             if response.status_code == 200:
-                result = response.json()
-                balance = result.get('balance', 0)
+                data = response.json()
                 return {
                     "success": True,
-                    "message": f"SOLAPI 연결 성공 (잔액: {balance:,}원)"
-                }
-            elif response.status_code == 401:
-                return {
-                    "success": False,
-                    "message": "SOLAPI 인증 실패: API 키 또는 Secret이 올바르지 않습니다."
-                }
-            elif response.status_code == 403:
-                return {
-                    "success": False,
-                    "message": "SOLAPI 권한 없음: API 키에 계정 조회 권한이 없습니다."
+                    "message": "✅ SOLAPI 연결 성공",
+                    "balance": data.get("balance", "알 수 없음"),
+                    "response": data
                 }
             else:
+                error_msg = f"HTTP {response.status_code}"
+                try:
+                    error_data = response.json()
+                    error_msg += f" - {json.dumps(error_data, ensure_ascii=False)}"
+                except:
+                    error_msg += f" - {response.text}"
+                
                 return {
                     "success": False,
-                    "message": f"SOLAPI 연결 실패: HTTP {response.status_code} - {response.text}"
+                    "message": f"❌ SOLAPI 연결 실패: {error_msg}",
+                    "status_code": response.status_code,
+                    "response": response.text
                 }
                 
         except requests.exceptions.Timeout:
             return {
                 "success": False,
-                "message": "SOLAPI 연결 시간 초과: 네트워크 상태를 확인해주세요."
+                "message": "❌ SOLAPI 연결 실패: 요청 시간 초과",
+                "error": "timeout"
             }
         except requests.exceptions.ConnectionError:
             return {
                 "success": False,
-                "message": "SOLAPI 서버 연결 실패: 인터넷 연결을 확인해주세요."
+                "message": "❌ SOLAPI 연결 실패: 네트워크 연결 오류",
+                "error": "connection_error"
             }
         except Exception as e:
             return {
                 "success": False,
-                "message": f"SOLAPI 연결 테스트 실패: {str(e)}"
+                "message": f"❌ SOLAPI 연결 실패: {str(e)}",
+                "error": str(e)
             }
 
 # 사용 예시
