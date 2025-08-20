@@ -67,8 +67,8 @@ SOLAPI_API_SECRET = "HQGV2DZ4CC0UV7LZ2TWLW0O3VSHX53VO"
 
 #### 2. 인증 방식 오류
 - **증상**: HTTP 400 또는 401 오류
-- **원인**: Bearer 토큰 대신 Basic 인증 사용 필요
-- **해결**: 자동으로 Basic 인증으로 처리됨
+- **원인**: Bearer 토큰 인증 방식 사용
+- **해결**: 자동으로 Bearer 토큰으로 처리됨
 
 #### 3. 발신자 번호 미등록
 - **증상**: SMS 발송 시 HTTP 400 오류

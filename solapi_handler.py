@@ -68,11 +68,9 @@ class SOLAPIHandler:
             # SOLAPI SMS 발송 API 엔드포인트
             url = f"{self.base_url}/messages/v4/send"
             
-            # 헤더 설정 (SOLAPI는 Basic 인증 사용)
-            import base64
-            credentials = base64.b64encode(f"{self.api_key}:{self.api_secret}".encode()).decode()
+            # 헤더 설정 (SOLAPI는 Bearer 토큰 사용)
             headers = {
-                "Authorization": f"Basic {credentials}",
+                "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             }
             
@@ -200,10 +198,8 @@ class SOLAPIHandler:
         try:
             # SOLAPI 계정 정보 조회 API로 연결 테스트 (더 안정적)
             url = f"{self.base_url}/account/v1/balance"
-            import base64
-            credentials = base64.b64encode(f"{self.api_key}:{self.api_secret}".encode()).decode()
             headers = {
-                "Authorization": f"Basic {credentials}",
+                "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             }
             

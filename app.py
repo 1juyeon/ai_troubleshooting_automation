@@ -1220,7 +1220,7 @@ with st.sidebar:
                         with st.expander("🔍 디버깅 정보"):
                             st.code(f"""
 API 키: {solapi_api_key[:8]}...{solapi_api_key[-8:]}
-API Secret: {solapi_secret[:8]}...{solapi_secret[-8:]}
+API Secret: {solapi_api_secret[:8]}...{solapi_api_secret[-8:]}
 발신자 번호: {sender_phone}
                             """)
                         
