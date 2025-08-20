@@ -68,15 +68,20 @@ class SOLAPIHandler:
             # SOLAPI SMS 발송 API 엔드포인트
             url = f"{self.base_url}/messages/v4/send"
             
-            # 헤더 설정 (SOLAPI는 API Key와 Secret을 쿼리 파라미터로 전달)
+            # 헤더 설정
             headers = {
                 "Content-Type": "application/json"
             }
             
-            # 쿼리 파라미터에 API 키와 Secret 추가
-            params = {
+            # 요청 본문에 API 키와 Secret 추가
+            data = {
                 "api_key": self.api_key,
-                "api_secret": self.api_secret
+                "api_secret": self.api_secret,
+                "message": {
+                    "to": phone_number,
+                    "from": self.sender,
+                    "text": full_message
+                }
             }
             
             # 메시지 내용 구성
@@ -85,17 +90,8 @@ class SOLAPIHandler:
             else:
                 full_message = f"[{sender_name}]\n{message}"
             
-            # 요청 데이터
-            data = {
-                "message": {
-                    "to": phone_number,
-                    "from": self.sender,
-                    "text": full_message
-                }
-            }
-            
-            # API 호출 (쿼리 파라미터 포함)
-            response = requests.post(url, headers=headers, json=data, params=params, timeout=30)
+            # API 호출 (요청 본문에 API 키와 Secret 포함)
+            response = requests.post(url, headers=headers, json=data, timeout=30)
             
             if response.status_code == 200:
                 result = response.json()
@@ -207,13 +203,13 @@ class SOLAPIHandler:
                 "Content-Type": "application/json"
             }
             
-            # 쿼리 파라미터에 API 키와 Secret 추가
-            params = {
+            # 요청 본문에 API 키와 Secret 추가
+            data = {
                 "api_key": self.api_key,
                 "api_secret": self.api_secret
             }
             
-            response = requests.get(url, headers=headers, params=params, timeout=10)
+            response = requests.post(url, headers=headers, json=data, timeout=10)
             
             if response.status_code == 200:
                 result = response.json()
