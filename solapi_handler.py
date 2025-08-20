@@ -135,9 +135,9 @@ class SOLAPIHandler:
             }
     
     def _try_multiple_sms_apis(self, phone_number: str, message: str, debug_info: Dict) -> Dict[str, Any]:
-        """여러 SOLAPI API 형식 시도"""
+        """SOLAPI v4 공식 엔드포인트만 시도 (성공 확인됨)"""
         
-        # SOLAPI v4 공식 엔드포인트와 형식 사용
+        # SOLAPI v4 공식 엔드포인트만 사용 (성공 확인됨)
         api_formats = [
             {
                 "name": "SOLAPI v4 (공식 엔드포인트)",
@@ -151,66 +151,24 @@ class SOLAPIHandler:
                         }
                     ]
                 }
-            },
-            {
-                "name": "SOLAPI v4 (기본)",
-                "path": "/messages/v4/send",
-                "data": {
-                    "messages": [
-                        {
-                            "to": phone_number,
-                            "from": self.sender,
-                            "text": message
-                        }
-                    ]
-                }
             }
         ]
         
-        # 각 API 형식별로 상세한 오류 정보 수집
-        detailed_errors = []
-        
-        for api_format in api_formats:
-            try:
-                result = self._try_single_api_format(api_format, debug_info)
-                if result["success"]:
-                    return result
-                else:
-                    # 오류 정보 수집
-                    error_info = {
-                        "api_format": api_format["name"],
-                        "error": result.get("error", "알 수 없는 오류"),
-                        "status_code": result.get("status_code", "N/A"),
-                        "response": result.get("response", "N/A")
-                    }
-                    detailed_errors.append(error_info)
-                    
-            except Exception as e:
-                detailed_errors.append({
-                    "api_format": api_format["name"],
-                    "error": f"예외 발생: {str(e)}",
-                    "status_code": "N/A",
-                    "response": "N/A"
-                })
-                continue
-        
-        # 모든 API 형식이 실패한 경우 - 상세한 오류 정보 제공
-        return {
-            "success": False,
-            "error": "모든 SOLAPI API 형식에서 SMS 발송 실패",
-            "message": "SOLAPI 고객센터에 문의하거나 계정 상태를 확인해주세요.",
-            "note": "v4 API 모두 시도했으나 실패했습니다.",
-            "debug_info": debug_info,
-            "tried_apis": [fmt["name"] for fmt in api_formats],
-            "detailed_errors": detailed_errors,
-            "recommendations": [
-                "1. SOLAPI 대시보드에서 SMS 발송 권한 확인",
-                "2. 계정 본인인증 완료 여부 확인", 
-                "3. 프로젝트 설정에서 SMS 기능 활성화 확인",
-                "4. API 키의 IP 제한 설정 확인",
-                "5. SOLAPI 고객센터에 문의"
-            ]
-        }
+        # 첫 번째 API 형식만 시도 (이미 성공 확인됨)
+        try:
+            result = self._try_single_api_format(api_formats[0], debug_info)
+            return result
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"SOLAPI v4 API 호출 실패: {str(e)}",
+                "message": "SOLAPI 고객센터에 문의해주세요.",
+                "debug_info": debug_info,
+                "request_info": {
+                    "api_format": api_formats[0]["name"],
+                    "error": str(e)
+                }
+            }
     
     def _try_single_api_format(self, api_format: Dict, debug_info: Dict) -> Dict[str, Any]:
         """단일 API 형식으로 SMS 발송 시도"""
