@@ -120,21 +120,32 @@ class SOLAPIHandler:
     def _try_multiple_sms_apis(self, phone_number: str, message: str, debug_info: Dict) -> Dict[str, Any]:
         """여러 SOLAPI API 형식 시도"""
         
-        # 시도할 API 형식들
+        # 시도할 API 형식들 (SOLAPI 공식 문서 기반)
         api_formats = [
             {
-                "name": "SOLAPI v4 (표준)",
+                "name": "SOLAPI 공식 형식 (sendMany)",
                 "path": "/messages/v4/send",
                 "data": {
-                    "message": {
-                        "to": phone_number,
-                        "from": self.sender,
-                        "text": message
-                    }
+                    "messages": [
+                        {
+                            "to": phone_number,
+                            "from": self.sender,
+                            "text": message
+                        }
+                    ]
                 }
             },
             {
-                "name": "SOLAPI v3 (레거시)",
+                "name": "SOLAPI 단일 메시지",
+                "path": "/messages/v4/send",
+                "data": {
+                    "to": phone_number,
+                    "from": self.sender,
+                    "text": message
+                }
+            },
+            {
+                "name": "SOLAPI v3 형식",
                 "path": "/messages/v3/send",
                 "data": {
                     "to": phone_number,
@@ -143,16 +154,7 @@ class SOLAPIHandler:
                 }
             },
             {
-                "name": "SOLAPI v2 (구형)",
-                "path": "/messages/v2/send",
-                "data": {
-                    "to": phone_number,
-                    "from": self.sender,
-                    "text": message
-                }
-            },
-            {
-                "name": "SOLAPI 기본",
+                "name": "SOLAPI 기본 형식",
                 "path": "/messages/send",
                 "data": {
                     "to": phone_number,
@@ -178,7 +180,7 @@ class SOLAPIHandler:
             "success": False,
             "error": "모든 SOLAPI API 형식에서 SMS 발송 실패",
             "message": "SOLAPI 고객센터에 문의하거나 계정 상태를 확인해주세요.",
-            "note": "v4, v3, v2, 기본 API 모두 시도했으나 실패했습니다.",
+            "note": "v4, v3, 기본 API 모두 시도했으나 실패했습니다.",
             "debug_info": debug_info,
             "tried_apis": [fmt["name"] for fmt in api_formats]
         }
