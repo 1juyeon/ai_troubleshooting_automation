@@ -202,12 +202,27 @@ class SOLAPIHandler:
             if response.status_code == 200:
                 result = response.json()
                 
-                # 성공 여부 확인
-                if result.get("status") == "SUCCESS":
+                # SOLAPI v4 응답 구조에 따른 성공 여부 확인
+                success = False
+                message_id = ""
+                
+                # groupInfo.count.registeredSuccess 확인 (SOLAPI v4)
+                if "groupInfo" in result and "count" in result["groupInfo"]:
+                    count_info = result["groupInfo"]["count"]
+                    if count_info.get("registeredSuccess", 0) > 0:
+                        success = True
+                        message_id = result["groupInfo"].get("_id", "")
+                
+                # 기존 status 필드 확인 (다른 API 형식)
+                elif result.get("status") == "SUCCESS":
+                    success = True
+                    message_id = result.get("messageId", "")
+                
+                if success:
                     return {
                         "success": True,
                         "message": f"SMS가 성공적으로 발송되었습니다. ({api_format['name']})",
-                        "message_id": result.get("messageId", ""),
+                        "message_id": message_id,
                         "recipient": debug_info["to"],
                         "timestamp": datetime.now().isoformat(),
                         "debug_info": debug_info,
@@ -217,7 +232,7 @@ class SOLAPIHandler:
                     return {
                         "success": False,
                         "error": f"SMS 발송 실패: {result.get('errorMessage', '알 수 없는 오류')}",
-                        "status": result.get("status", "UNKNOWN"),
+                        "status": "FAILED",
                         "debug_info": debug_info,
                         "request_info": request_info
                     }
