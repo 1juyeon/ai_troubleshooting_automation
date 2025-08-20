@@ -234,92 +234,101 @@ class SOLAPIHandler:
             url = f"{self.base_url}{path}"
             data = api_format["data"]
             
-            # 인증 파라미터 생성
-            params = self._get_auth_params()
-            headers = self._get_auth_headers("POST", path)
-            
             # 디버깅: 요청 정보 로깅
             request_info = {
                 "api_format": api_format["name"],
                 "url": url,
                 "method": "POST",
-                "headers": headers,
-                "params": {k: f"{v[:8]}..." if k == "apiSecret" else v for k, v in params.items()},
+                "headers": {"Content-Type": "application/json"},
                 "data": data
             }
             
-            # API 호출 - 쿼리 파라미터 인증만 사용 (Basic Auth 제거)
-            response = requests.post(url, headers=headers, json=data, params=params, timeout=30)
+            # 여러 인증 방식 시도
+            auth_methods = [
+                {
+                    "name": "쿼리 파라미터",
+                    "params": {"apiKey": self.api_key, "apiSecret": self.api_secret},
+                    "headers": {"Content-Type": "application/json"}
+                },
+                {
+                    "name": "헤더 인증",
+                    "params": {},
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "X-API-KEY": self.api_key,
+                        "X-API-SECRET": self.api_secret
+                    }
+                }
+            ]
             
-            if response.status_code == 200:
-                result = response.json()
-                
-                # 성공 여부 확인
-                if result.get("status") == "SUCCESS":
-                    return {
-                        "success": True,
-                        "message": f"SMS가 성공적으로 발송되었습니다. ({api_format['name']})",
-                        "message_id": result.get("messageId", ""),
-                        "recipient": debug_info["to"],
-                        "timestamp": datetime.now().isoformat(),
-                        "debug_info": debug_info,
-                        "request_info": request_info
-                    }
-                else:
-                    return {
-                        "success": False,
-                        "error": f"SMS 발송 실패: {result.get('errorMessage', '알 수 없는 오류')}",
-                        "status": result.get("status", "UNKNOWN"),
-                        "debug_info": debug_info,
-                        "request_info": request_info
-                    }
-            elif response.status_code == 401:
-                # 권한 부족 오류
+            for auth_method in auth_methods:
                 try:
-                    error_data = response.json()
-                    error_msg = error_data.get("errorMessage", "권한이 없습니다")
-                except:
-                    error_msg = "권한이 없습니다"
-                
-                return {
-                    "success": False,
-                    "error": f"SMS 발송 권한 부족 ({api_format['name']}): {error_msg}",
-                    "message": "SOLAPI 대시보드에서 SMS 발송 권한을 확인해주세요.",
-                    "status_code": 401,
-                    "response": response.text,
-                    "debug_info": debug_info,
-                    "request_info": request_info
-                }
-            else:
-                error_msg = f"HTTP {response.status_code}"
-                try:
-                    error_data = response.json()
-                    error_msg += f" - {json.dumps(error_data, ensure_ascii=False)}"
-                except:
-                    error_msg += f" - {response.text}"
-                
-                return {
-                    "success": False,
-                    "error": f"API 호출 실패 ({api_format['name']}): {error_msg}",
-                    "response": response.text,
-                    "debug_info": debug_info,
-                    "request_info": request_info
-                }
-                
-        except requests.exceptions.Timeout:
+                    st.write(f"🔍 {api_format['name']} - {auth_method['name']} 시도 중...")
+                    
+                    response = requests.post(
+                        url, 
+                        headers=auth_method["headers"], 
+                        json=data, 
+                        params=auth_method["params"], 
+                        timeout=30
+                    )
+                    
+                    # 응답 로깅
+                    st.write(f"📡 응답 상태: {response.status_code}")
+                    st.write(f"📡 응답 헤더: {dict(response.headers)}")
+                    st.write(f"📡 응답 내용: {response.text[:500]}...")
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        
+                        # 성공 여부 확인
+                        if result.get("status") == "SUCCESS":
+                            return {
+                                "success": True,
+                                "message": f"SMS가 성공적으로 발송되었습니다. ({api_format['name']} - {auth_method['name']})",
+                                "message_id": result.get("messageId", ""),
+                                "recipient": debug_info["to"],
+                                "timestamp": datetime.now().isoformat(),
+                                "debug_info": debug_info,
+                                "request_info": {**request_info, "auth_method": auth_method["name"]}
+                            }
+                        else:
+                            st.write(f"❌ API 응답 실패: {result}")
+                            continue
+                    elif response.status_code == 401:
+                        # 권한 부족 오류
+                        try:
+                            error_data = response.json()
+                            error_msg = error_data.get("errorMessage", "권한이 없습니다")
+                        except:
+                            error_msg = "권한이 없습니다"
+                        
+                        st.write(f"❌ 권한 부족: {error_msg}")
+                        continue
+                    else:
+                        error_msg = f"HTTP {response.status_code}"
+                        try:
+                            error_data = response.json()
+                            error_msg += f" - {json.dumps(error_data, ensure_ascii=False)}"
+                        except:
+                            error_msg += f" - {response.text}"
+                        
+                        st.write(f"❌ API 호출 실패: {error_msg}")
+                        continue
+                        
+                except Exception as e:
+                    st.write(f"❌ {auth_method['name']} 시도 중 오류: {str(e)}")
+                    continue
+            
+            # 모든 인증 방식 실패
             return {
                 "success": False,
-                "error": f"API 호출 시간 초과 ({api_format['name']})",
-                "message": "네트워크 상태를 확인하고 다시 시도해주세요.",
-                "debug_info": debug_info
+                "error": f"모든 인증 방식 실패 ({api_format['name']})",
+                "message": "SOLAPI 대시보드에서 SMS 발송 권한을 확인해주세요.",
+                "debug_info": debug_info,
+                "request_info": request_info
             }
-        except requests.exceptions.RequestException as e:
-            return {
-                "success": False,
-                "error": f"네트워크 오류 ({api_format['name']}): {str(e)}",
-                "message": "인터넷 연결을 확인하고 다시 시도해주세요.",
-                "debug_info": debug_info
-            }
+                
         except Exception as e:
             return {
                 "success": False,
