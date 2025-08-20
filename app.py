@@ -16,6 +16,7 @@ from gpt_handler import GPTHandler
 from database import HistoryDB
 from multi_user_database import MultiUserHistoryDB
 from mongodb_handler import MongoDBHandler
+from solapi_handler import SOLAPIHandler
 
 # 페이지 설정
 st.set_page_config(
@@ -721,6 +722,68 @@ def show_ai_analysis_modal(selected_row):
                     # 전체 응답 복사 버튼
                     if st.button("📋 전체 응답 복사", key=f"copy_full_{selected_row.get('번호', 'unknown')}"):
                         st.write("✅ 전체 AI 응답이 클립보드에 복사되었습니다.")
+                    
+                    # SMS 발송 섹션 추가
+                    st.markdown("---")
+                    st.markdown("### 📱 SMS 발송")
+                    
+                    col_sms1, col_sms2 = st.columns(2)
+                    
+                    with col_sms1:
+                        recipient_name = st.text_input(
+                            "수신자 이름",
+                            placeholder="수신자 이름을 입력하세요",
+                            key=f"sms_recipient_name_{selected_row.get('번호', 'unknown')}"
+                        )
+                        recipient_phone = st.text_input(
+                            "수신자 전화번호",
+                            placeholder="01012345678",
+                            key=f"sms_recipient_phone_{selected_row.get('번호', 'unknown')}"
+                        )
+                    
+                    with col_sms2:
+                        sms_message = st.text_area(
+                            "SMS 메시지",
+                            value=f"[{selected_row.get('문의유형', 'AI')}] {summary[:100] if summary else '분석 완료'}...",
+                            height=100,
+                            key=f"sms_message_{selected_row.get('번호', 'unknown')}"
+                        )
+                        
+                        # SMS 발송 버튼
+                        if st.button("📱 SMS 발송", use_container_width=True, type="primary", key=f"sms_send_{selected_row.get('번호', 'unknown')}"):
+                            if recipient_name and recipient_phone and sms_message:
+                                # SOLAPI 핸들러로 SMS 발송
+                                try:
+                                    # 세션 상태에서 API 키 가져오기
+                                    api_key = st.session_state.get('solapi_api_key', '')
+                                    api_secret = st.session_state.get('solapi_api_secret', '')
+                                    sender_phone = st.session_state.get('sender_phone', '01012345678')
+                                    
+                                    if api_key and api_secret:
+                                        # SOLAPI 핸들러 생성
+                                        sms_handler = SOLAPIHandler(api_key, api_secret)
+                                        sms_handler.set_sender(sender_phone)
+                                        
+                                        # SMS 발송
+                                        sms_result = sms_handler.send_sms(
+                                            phone_number=recipient_phone,
+                                            message=sms_message,
+                                            recipient_name=recipient_name
+                                        )
+                                        
+                                        if sms_result["success"]:
+                                            st.success(f"✅ SMS가 성공적으로 발송되었습니다!")
+                                            st.info(f"수신자: {recipient_name} ({recipient_phone})")
+                                            st.info(f"메시지 ID: {sms_result.get('message_id', 'N/A')}")
+                                        else:
+                                            st.error(f"❌ SMS 발송 실패: {sms_result.get('error', '알 수 없는 오류')}")
+                                    else:
+                                        st.error("❌ SOLAPI API 키가 설정되지 않았습니다.")
+                                        st.info("사이드바에서 SOLAPI API 키를 설정해주세요.")
+                                except Exception as e:
+                                    st.error(f"❌ SMS 발송 중 오류: {e}")
+                            else:
+                                st.warning("⚠️ 수신자 정보와 메시지를 모두 입력해주세요.")
                 else:
                     # 데이터가 비어있는 경우
                     st.warning("⚠️ 분석 데이터가 비어있습니다.")
@@ -996,6 +1059,9 @@ def init_components():
             st.info("사이드바에서 API 키를 설정하거나, 관리자가 Streamlit Cloud Secrets 또는 환경변수 GOOGLE_API_KEY를 설정하면 AI 분석이 가능합니다.")
             st.stop()
         
+        # SOLAPI 핸들러 초기화
+        solapi_handler = SOLAPIHandler()
+        
         # 기존 데이터베이스 (호환성 유지)
         history_db = HistoryDB()
         multi_user_db = MultiUserHistoryDB()
@@ -1005,6 +1071,7 @@ def init_components():
             'scenario_db': scenario_db,
             'vector_search': vector_search,
             'gpt_handler': gpt_handler,
+            'solapi_handler': solapi_handler,
             'history_db': history_db,
             'multi_user_db': multi_user_db
         }
@@ -1061,10 +1128,68 @@ with st.sidebar:
         index=0
     )
     
+    st.markdown("---")
+    
+    st.markdown("## 📱 SMS 설정")
+    
+    # SOLAPI API 키 설정 (secrets 우선, 사용자 입력으로 덮어쓰기 가능)
+    default_api_key = ""
+    default_api_secret = ""
+    
+    try:
+        if hasattr(st, 'secrets') and st.secrets:
+            default_api_key = st.secrets.get("SOLAPI_API_KEY", "")
+            default_api_secret = st.secrets.get("SOLAPI_API_SECRET", "")
+    except:
+        pass
+    
+    solapi_api_key = st.text_input(
+        "SOLAPI API Key",
+        value=default_api_key,
+        type="password",
+        placeholder="SOLAPI API 키를 입력하세요",
+        help="Streamlit Cloud Secrets에 설정된 값이 자동으로 로드됩니다. 필요시 덮어쓸 수 있습니다."
+    )
+    
+    # SOLAPI API Secret 설정
+    solapi_api_secret = st.text_input(
+        "SOLAPI API Secret",
+        value=default_api_secret,
+        type="password",
+        placeholder="SOLAPI API Secret을 입력하세요",
+        help="Streamlit Cloud Secrets에 설정된 값이 자동으로 로드됩니다. 필요시 덮어쓸 수 있습니다."
+    )
+    
+    # 발신자 번호 설정
+    sender_phone = st.text_input(
+        "발신자 번호",
+        value="01012345678",
+        placeholder="01012345678",
+        help="SMS 발송 시 표시될 발신자 번호입니다"
+    )
+    
+    # SOLAPI 연결 테스트
+    if st.button("🔗 SOLAPI 연결 테스트", use_container_width=True):
+        if solapi_api_key and solapi_api_secret:
+            try:
+                test_handler = SOLAPIHandler(solapi_api_key, solapi_api_secret)
+                test_result = test_handler.test_connection()
+                if test_result["success"]:
+                    st.success("✅ SOLAPI 연결 성공!")
+                else:
+                    st.error(f"❌ SOLAPI 연결 실패: {test_result['message']}")
+            except Exception as e:
+                st.error(f"❌ 연결 테스트 중 오류: {e}")
+        else:
+            st.warning("⚠️ API 키와 Secret을 모두 입력해주세요.")
+    
     # 세션 상태에 저장
     st.session_state.contact_name = contact_name
     st.session_state.role = role
     st.session_state.ai_model = ai_model
+    st.session_state.solapi_api_key = solapi_api_key
+    st.session_state.solapi_api_secret = solapi_api_secret
+    st.session_state.sender_phone = sender_phone
     
 
     
@@ -1406,6 +1531,68 @@ with tab2:
             # 전체 응답
             with st.expander("📄 전체 AI 응답"):
                 st.text(parsed['full_response'])
+            
+            # SMS 발송 섹션 추가
+            st.markdown("---")
+            st.markdown("### 📱 SMS 발송")
+            
+            col_sms1, col_sms2 = st.columns(2)
+            
+            with col_sms1:
+                recipient_name = st.text_input(
+                    "수신자 이름",
+                    placeholder="수신자 이름을 입력하세요",
+                    key="sms_recipient_name"
+                )
+                recipient_phone = st.text_input(
+                    "수신자 전화번호",
+                    placeholder="01012345678",
+                    key="sms_recipient_phone"
+                )
+            
+            with col_sms2:
+                sms_message = st.text_area(
+                    "SMS 메시지",
+                    value=f"[{st.session_state.get('ai_model', 'AI')}] {parsed['summary'][:100]}...",
+                    height=100,
+                    key="sms_message"
+                )
+                
+                # SMS 발송 버튼
+                if st.button("📱 SMS 발송", use_container_width=True, type="primary"):
+                    if recipient_name and recipient_phone and sms_message:
+                        # SOLAPI 핸들러로 SMS 발송
+                        try:
+                            # 세션 상태에서 API 키 가져오기
+                            api_key = st.session_state.get('solapi_api_key', '')
+                            api_secret = st.session_state.get('solapi_api_secret', '')
+                            sender_phone = st.session_state.get('sender_phone', '01012345678')
+                            
+                            if api_key and api_secret:
+                                # SOLAPI 핸들러 생성
+                                sms_handler = SOLAPIHandler(api_key, api_secret)
+                                sms_handler.set_sender(sender_phone)
+                                
+                                # SMS 발송
+                                sms_result = sms_handler.send_sms(
+                                    phone_number=recipient_phone,
+                                    message=sms_message,
+                                    recipient_name=recipient_name
+                                )
+                                
+                                if sms_result["success"]:
+                                    st.success(f"✅ SMS가 성공적으로 발송되었습니다!")
+                                    st.info(f"수신자: {recipient_name} ({recipient_phone})")
+                                    st.info(f"메시지 ID: {sms_result.get('message_id', 'N/A')}")
+                                else:
+                                    st.error(f"❌ SMS 발송 실패: {sms_result.get('error', '알 수 없는 오류')}")
+                            else:
+                                st.error("❌ SOLAPI API 키가 설정되지 않았습니다.")
+                                st.info("사이드바에서 SOLAPI API 키를 설정해주세요.")
+                        except Exception as e:
+                            st.error(f"❌ SMS 발송 중 오류: {e}")
+                    else:
+                        st.warning("⚠️ 수신자 정보와 메시지를 모두 입력해주세요.")
         
         else:
             st.error("❌ AI 응답 생성 실패")
@@ -1446,7 +1633,7 @@ with tab2:
                         st.write(f"**유사도:** {case['similarity_score']:.3f}")
         
         # 액션 버튼
-        col11, col12, col13 = st.columns(3)
+        col11, col12, col13, col14 = st.columns(4)
         
         with col11:
             if st.button("💾 결과 저장", use_container_width=True):
@@ -1467,6 +1654,10 @@ with tab2:
                 # 통계 보기 버튼 클릭시 분석 완료 알림 제거
                 st.session_state.analysis_completed = False
                 st.info("📊 이력 관리 탭으로 이동하세요.")
+        
+        with col14:
+            if st.button("📱 SMS 발송", use_container_width=True):
+                st.info("📱 위의 SMS 발송 섹션을 사용하여 SMS를 발송하세요.")
     
     else:
         st.info("📝 먼저 고객 문의 입력 탭에서 문의를 입력해주세요.")
@@ -1903,6 +2094,7 @@ with tab4:
     st.markdown("**3단계: 검토 및 발송**")
     st.markdown("- 엔지니어가 AI 분석 결과 검토")
     st.markdown("- 필요시 수정 후 고객에게 응답")
+    st.markdown("- SMS 발송으로 빠른 알림 전달 가능")
 
     st.markdown("### 🔧 기술 스택")
 
@@ -1910,6 +2102,7 @@ with tab4:
     st.markdown("- **벡터 검색:** ChromaDB")
     st.markdown("- **웹 프레임워크:** Streamlit")
     st.markdown("- **데이터 소스:** JSON + Excel")
+    st.markdown("- **SMS 발송:** SOLAPI")
 
     st.markdown("### ⚠️ 주의사항")
 
@@ -1921,6 +2114,20 @@ with tab4:
 
     st.markdown("- 기술지원: 02-678-1234 이메일: support@privkeeper.com")
     st.markdown("- 긴급상황: 010-3456-7890")
+    
+    st.markdown("### 📱 SMS 기능")
+    
+    st.markdown("- **SOLAPI 연동**: 안정적인 SMS 발송 서비스")
+    st.markdown("- **자동 메시지 생성**: AI 분석 결과 기반 SMS 내용 자동 생성")
+    st.markdown("- **즉시 발송**: 분석 완료 후 바로 SMS 발송 가능")
+    st.markdown("- **이력 관리**: SMS 발송 내역 추적 및 관리")
+    
+    st.markdown("**SMS 발송 방법:**")
+    st.markdown("1. 사이드바에서 SOLAPI API 키 설정")
+    st.markdown("2. AI 분석 결과 또는 이력 상세보기에서 SMS 발송")
+    st.markdown("3. 수신자 정보 입력 후 발송")
+    
+    st.markdown("**자세한 설정 방법:** `SOLAPI_설정_가이드.md` 파일 참조")
 
 # 푸터
 st.markdown("---")

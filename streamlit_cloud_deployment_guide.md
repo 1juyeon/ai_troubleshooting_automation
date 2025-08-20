@@ -35,9 +35,13 @@ Streamlit Cloud 대시보드에서 다음 환경변수 설정:
 # .streamlit/secrets.toml
 GEMINI_API_KEY = "your_actual_api_key_here"
 MONGODB_URI = "mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority"
+SOLAPI_API_KEY = "your_solapi_api_key_here"
+SOLAPI_API_SECRET = "your_solapi_api_secret_here"
 ```
 
-**중요**: MongoDB URI는 반드시 Streamlit Secrets에 설정해야 합니다.
+**중요**: 
+- MongoDB URI는 반드시 Streamlit Secrets에 설정해야 합니다.
+- SOLAPI API 키와 Secret도 Streamlit Secrets에 설정하면 자동으로 로드됩니다.
 
 ### 3. **requirements.txt 확인**
 ```txt
@@ -70,7 +74,14 @@ requests>=2.31.0
 - `GEMINI_API_KEY` 값 입력
 - `MONGODB_URI` 값 입력 (MongoDB Atlas 연결 문자열)
 
-### 4. **배포 실행**
+### 4. **Secrets 설정**
+- "Secrets" 탭에서 환경변수 설정
+- `GEMINI_API_KEY` 값 입력
+- `MONGODB_URI` 값 입력 (MongoDB Atlas 연결 문자열)
+- `SOLAPI_API_KEY` 값 입력 (SOLAPI API 키)
+- `SOLAPI_API_SECRET` 값 입력 (SOLAPI API Secret)
+
+### 5. **배포 실행**
 - "Deploy!" 버튼 클릭
 - 배포 완료까지 대기 (약 2-3분)
 
@@ -98,6 +109,11 @@ Streamlit Cloud 대시보드의 "Logs" 탭에서 오류 확인
 - **네트워크 접근**: IP 화이트리스트에 `0.0.0.0/0` 추가 (모든 IP 허용)
 - **사용자 권한**: 데이터베이스 사용자에게 `readWrite` 권한 부여
 - **연결 문자열**: Streamlit Secrets에 `MONGODB_URI`로 설정
+
+### **SOLAPI 설정**
+- **API 키 보안**: Streamlit Secrets에 API 키와 Secret을 안전하게 저장
+- **발신자 번호**: SOLAPI에서 등록된 발신자 번호만 사용 가능
+- **IP 제한**: 프로덕션 환경에서는 API 키의 IP 제한 설정 권장
 
 ### **API 키 보안**
 - `GEMINI_API_KEY`는 반드시 Streamlit Secrets에 설정
