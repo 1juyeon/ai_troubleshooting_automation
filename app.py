@@ -1133,7 +1133,7 @@ with st.sidebar:
     st.markdown("## 📱 SMS 설정")
     
     # API 키 형식 안내
-    st.info("💡 **SOLAPI API 키 형식**: API 키는 16자리 또는 32자리, Secret은 32자리여야 합니다.")
+    st.info("💡 **SOLAPI API 키 형식**: API 키와 Secret은 각각 최소 16자리 이상이어야 합니다.")
     
     # SOLAPI API 키 설정 (secrets 우선, 사용자 입력으로 덮어쓰기 가능)
     default_api_key = ""
@@ -1175,11 +1175,11 @@ with st.sidebar:
     if st.button("🔗 SOLAPI 연결 테스트", use_container_width=True):
         if solapi_api_key and solapi_api_secret:
             try:
-                # API 키 형식 검증 (SOLAPI는 16자리 또는 32자리 키를 지원)
-                if len(solapi_api_key) not in [16, 32] or len(solapi_api_secret) not in [16, 32]:
-                    st.error("❌ API 키 형식 오류: API 키와 Secret은 각각 16자리 또는 32자리여야 합니다.")
+                # API 키 형식 검증 (SOLAPI는 다양한 길이의 키를 지원)
+                if len(solapi_api_key) < 16 or len(solapi_api_secret) < 16:
+                    st.error("❌ API 키 형식 오류: API 키와 Secret은 각각 최소 16자리 이상이어야 합니다.")
                     st.info(f"현재 API 키: {len(solapi_api_key)}자, Secret: {len(solapi_api_secret)}자")
-                    st.info("💡 SOLAPI는 16자리 또는 32자리 API 키를 지원합니다.")
+                    st.info("💡 SOLAPI는 다양한 길이의 API 키를 지원합니다.")
                 else:
                     # 연결 테스트 실행
                     with st.spinner("SOLAPI 연결 테스트 중..."):
