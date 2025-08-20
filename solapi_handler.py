@@ -7,6 +7,7 @@ import streamlit as st
 from typing import Dict, Any, Optional
 from datetime import datetime
 import os
+import secrets
 
 class SOLAPIHandler:
     """SOLAPI를 사용하여 SMS를 발송하는 핸들러"""
@@ -54,9 +55,10 @@ class SOLAPIHandler:
             st.warning("⚠️ SOLAPI API 키 또는 시크릿이 설정되지 않았습니다.")
             st.info("Streamlit Cloud Secrets 또는 환경변수에 SOLAPI_API_KEY와 SOLAPI_API_SECRET을 설정해주세요.")
     
-    def _generate_hmac_signature(self, method: str, path: str, timestamp: str, body: str = "") -> str:
-        """HMAC-SHA256 서명 생성"""
-        message = f"{method} {path}\n{timestamp}\n{body}"
+    def _generate_hmac_signature(self, date: str, salt: str) -> str:
+        """HMAC-SHA256 서명 생성 (SOLAPI v4 공식 방식)"""
+        # signature = HMAC_SHA256( key=API_SECRET, msg=(date + salt) )
+        message = date + salt
         signature = hmac.new(
             self.api_secret.encode('utf-8'),
             message.encode('utf-8'),
@@ -65,23 +67,32 @@ class SOLAPIHandler:
         return signature
     
     def _get_auth_headers(self, method: str, path: str, body: str = "") -> Dict[str, str]:
-        """인증 헤더 생성 - SOLAPI 공식 인증 방식만 사용"""
-        # SOLAPI 공식 문서에 따른 허용된 인증 방식만 사용
-        headers = {
-            "Content-Type": "application/json"
+        """인증 헤더 생성 - SOLAPI v4 HMAC-SHA256 방식"""
+        # SOLAPI v4는 반드시 HMAC-SHA256 헤더 인증 필요
+        # 쿼리 파라미터 인증은 지원하지 않음
+        
+        # UTC 시간 생성 (로컬 타임존 금지)
+        from datetime import datetime, timezone
+        date = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+        
+        # 랜덤 salt 생성
+        salt = secrets.token_hex(16)
+        
+        # HMAC-SHA256 서명 생성
+        signature = self._generate_hmac_signature(date, salt)
+        
+        # Authorization 헤더 형식: HMAC-SHA256 apiKey=<API_KEY>, date=<ISO8601 UTC Z>, salt=<랜덤>, signature=<HMAC_HEX>
+        auth_header = f"HMAC-SHA256 apiKey={self.api_key}, date={date}, salt={salt}, signature={signature}"
+        
+        return {
+            "Content-Type": "application/json",
+            "Authorization": auth_header
         }
-        
-        # Basic Auth 제거 (ValidationError 발생)
-        # SOLAPI는 hmac-md5, hmac-sha256, user, bearer, sso만 허용
-        
-        return headers
     
     def _get_auth_params(self) -> Dict[str, str]:
-        """인증 파라미터 생성 - SOLAPI 공식 방식"""
-        return {
-            "apiKey": self.api_key,
-            "apiSecret": self.api_secret
-        }
+        """인증 파라미터 생성 - SOLAPI v4에서는 사용하지 않음"""
+        # SOLAPI v4는 쿼리 파라미터 인증을 지원하지 않음
+        return {}
     
     def send_sms(self, 
                  phone_number: str, 
@@ -126,11 +137,11 @@ class SOLAPIHandler:
     def _try_multiple_sms_apis(self, phone_number: str, message: str, debug_info: Dict) -> Dict[str, Any]:
         """여러 SOLAPI API 형식 시도"""
         
-        # 시도할 API 형식들 (SOLAPI 공식 문서 + 사용자 Node.js 코드 기반)
+        # SOLAPI v4 공식 엔드포인트와 형식 사용
         api_formats = [
             {
-                "name": "SOLAPI v4 (messages 배열)",
-                "path": "/messages/v4/send",
+                "name": "SOLAPI v4 (공식 엔드포인트)",
+                "path": "/messages/v4/send-many/detail",
                 "data": {
                     "messages": [
                         {
@@ -142,39 +153,16 @@ class SOLAPIHandler:
                 }
             },
             {
-                "name": "SOLAPI v4 (단일 메시지)",
+                "name": "SOLAPI v4 (기본)",
                 "path": "/messages/v4/send",
                 "data": {
-                    "to": phone_number,
-                    "from": self.sender,
-                    "text": message
-                }
-            },
-            {
-                "name": "SOLAPI v3 (레거시)",
-                "path": "/messages/v3/send",
-                "data": {
-                    "to": phone_number,
-                    "from": self.sender,
-                    "text": message
-                }
-            },
-            {
-                "name": "SOLAPI 기본",
-                "path": "/messages/send",
-                "data": {
-                    "to": phone_number,
-                    "from": self.sender,
-                    "text": message
-                }
-            },
-            {
-                "name": "SOLAPI 루트",
-                "path": "/",
-                "data": {
-                    "to": phone_number,
-                    "from": self.sender,
-                    "text": message
+                    "messages": [
+                        {
+                            "to": phone_number,
+                            "from": self.sender,
+                            "text": message
+                        }
+                    ]
                 }
             }
         ]
@@ -197,9 +185,6 @@ class SOLAPIHandler:
                     }
                     detailed_errors.append(error_info)
                     
-                    # 권한 부족이 아닌 다른 오류면 해당 API 형식에 문제가 있을 수 있음
-                    if "권한 부족" not in result.get("error", ""):
-                        continue
             except Exception as e:
                 detailed_errors.append({
                     "api_format": api_format["name"],
@@ -214,7 +199,7 @@ class SOLAPIHandler:
             "success": False,
             "error": "모든 SOLAPI API 형식에서 SMS 발송 실패",
             "message": "SOLAPI 고객센터에 문의하거나 계정 상태를 확인해주세요.",
-            "note": "v4, v3, 기본, 루트 API 모두 시도했으나 실패했습니다.",
+            "note": "v4 API 모두 시도했으나 실패했습니다.",
             "debug_info": debug_info,
             "tried_apis": [fmt["name"] for fmt in api_formats],
             "detailed_errors": detailed_errors,
@@ -234,100 +219,83 @@ class SOLAPIHandler:
             url = f"{self.base_url}{path}"
             data = api_format["data"]
             
+            # HMAC-SHA256 인증 헤더 생성
+            headers = self._get_auth_headers("POST", path)
+            
             # 디버깅: 요청 정보 로깅
             request_info = {
                 "api_format": api_format["name"],
                 "url": url,
                 "method": "POST",
-                "headers": {"Content-Type": "application/json"},
+                "headers": {k: v if k != "Authorization" else f"{v[:20]}..." for k, v in headers.items()},
                 "data": data
             }
             
-            # 여러 인증 방식 시도
-            auth_methods = [
-                {
-                    "name": "쿼리 파라미터",
-                    "params": {"apiKey": self.api_key, "apiSecret": self.api_secret},
-                    "headers": {"Content-Type": "application/json"}
-                },
-                {
-                    "name": "헤더 인증",
-                    "params": {},
-                    "headers": {
-                        "Content-Type": "application/json",
-                        "X-API-KEY": self.api_key,
-                        "X-API-SECRET": self.api_secret
+            st.write(f"🔍 {api_format['name']} 시도 중...")
+            st.write(f"📡 URL: {url}")
+            st.write(f"📡 Authorization: {headers['Authorization'][:50]}...")
+            
+            # API 호출 - HMAC-SHA256 인증 사용
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            
+            # 응답 로깅
+            st.write(f"📡 응답 상태: {response.status_code}")
+            st.write(f"📡 응답 내용: {response.text[:500]}...")
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                # 성공 여부 확인
+                if result.get("status") == "SUCCESS":
+                    return {
+                        "success": True,
+                        "message": f"SMS가 성공적으로 발송되었습니다. ({api_format['name']})",
+                        "message_id": result.get("messageId", ""),
+                        "recipient": debug_info["to"],
+                        "timestamp": datetime.now().isoformat(),
+                        "debug_info": debug_info,
+                        "request_info": request_info
                     }
-                }
-            ]
-            
-            for auth_method in auth_methods:
+                else:
+                    return {
+                        "success": False,
+                        "error": f"SMS 발송 실패: {result.get('errorMessage', '알 수 없는 오류')}",
+                        "status": result.get("status", "UNKNOWN"),
+                        "debug_info": debug_info,
+                        "request_info": request_info
+                    }
+            elif response.status_code == 401:
+                # 권한 부족 오류
                 try:
-                    st.write(f"🔍 {api_format['name']} - {auth_method['name']} 시도 중...")
-                    
-                    response = requests.post(
-                        url, 
-                        headers=auth_method["headers"], 
-                        json=data, 
-                        params=auth_method["params"], 
-                        timeout=30
-                    )
-                    
-                    # 응답 로깅
-                    st.write(f"📡 응답 상태: {response.status_code}")
-                    st.write(f"📡 응답 헤더: {dict(response.headers)}")
-                    st.write(f"📡 응답 내용: {response.text[:500]}...")
-                    
-                    if response.status_code == 200:
-                        result = response.json()
-                        
-                        # 성공 여부 확인
-                        if result.get("status") == "SUCCESS":
-                            return {
-                                "success": True,
-                                "message": f"SMS가 성공적으로 발송되었습니다. ({api_format['name']} - {auth_method['name']})",
-                                "message_id": result.get("messageId", ""),
-                                "recipient": debug_info["to"],
-                                "timestamp": datetime.now().isoformat(),
-                                "debug_info": debug_info,
-                                "request_info": {**request_info, "auth_method": auth_method["name"]}
-                            }
-                        else:
-                            st.write(f"❌ API 응답 실패: {result}")
-                            continue
-                    elif response.status_code == 401:
-                        # 권한 부족 오류
-                        try:
-                            error_data = response.json()
-                            error_msg = error_data.get("errorMessage", "권한이 없습니다")
-                        except:
-                            error_msg = "권한이 없습니다"
-                        
-                        st.write(f"❌ 권한 부족: {error_msg}")
-                        continue
-                    else:
-                        error_msg = f"HTTP {response.status_code}"
-                        try:
-                            error_data = response.json()
-                            error_msg += f" - {json.dumps(error_data, ensure_ascii=False)}"
-                        except:
-                            error_msg += f" - {response.text}"
-                        
-                        st.write(f"❌ API 호출 실패: {error_msg}")
-                        continue
-                        
-                except Exception as e:
-                    st.write(f"❌ {auth_method['name']} 시도 중 오류: {str(e)}")
-                    continue
-            
-            # 모든 인증 방식 실패
-            return {
-                "success": False,
-                "error": f"모든 인증 방식 실패 ({api_format['name']})",
-                "message": "SOLAPI 대시보드에서 SMS 발송 권한을 확인해주세요.",
-                "debug_info": debug_info,
-                "request_info": request_info
-            }
+                    error_data = response.json()
+                    error_msg = error_data.get("errorMessage", "권한이 없습니다")
+                except:
+                    error_msg = "권한이 없습니다"
+                
+                return {
+                    "success": False,
+                    "error": f"SMS 발송 권한 부족 ({api_format['name']}): {error_msg}",
+                    "message": "SOLAPI 대시보드에서 SMS 발송 권한을 확인해주세요.",
+                    "status_code": 401,
+                    "response": response.text,
+                    "debug_info": debug_info,
+                    "request_info": request_info
+                }
+            else:
+                error_msg = f"HTTP {response.status_code}"
+                try:
+                    error_data = response.json()
+                    error_msg += f" - {json.dumps(error_data, ensure_ascii=False)}"
+                except:
+                    error_msg += f" - {response.text}"
+                
+                return {
+                    "success": False,
+                    "error": f"API 호출 실패 ({api_format['name']}): {error_msg}",
+                    "response": response.text,
+                    "debug_info": debug_info,
+                    "request_info": request_info
+                }
                 
         except Exception as e:
             return {
