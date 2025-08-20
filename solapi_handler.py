@@ -91,7 +91,7 @@ class SOLAPIHandler:
             }
         
         try:
-            # SOLAPI SMS 발송 API 엔드포인트
+            # SOLAPI SMS 발송 API 엔드포인트 (v4)
             path = "/messages/v4/send"
             url = f"{self.base_url}{path}"
             
@@ -101,7 +101,7 @@ class SOLAPIHandler:
             else:
                 full_message = f"[{sender_name}]\n{message}"
             
-            # 요청 데이터
+            # SOLAPI v4 API 요청 데이터 형식
             data = {
                 "message": {
                     "to": phone_number,
@@ -135,10 +135,32 @@ class SOLAPIHandler:
                         "error": f"SMS 발송 실패: {result.get('errorMessage', '알 수 없는 오류')}",
                         "status": result.get("status", "UNKNOWN")
                     }
-            else:
+            elif response.status_code == 401:
+                # 권한 부족 오류
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get("errorMessage", "권한이 없습니다")
+                except:
+                    error_msg = "권한이 없습니다"
+                
                 return {
                     "success": False,
-                    "error": f"API 호출 실패: HTTP {response.status_code}",
+                    "error": f"SMS 발송 권한 부족: {error_msg}",
+                    "message": "SOLAPI 대시보드에서 SMS 발송 권한을 확인해주세요.",
+                    "status_code": 401,
+                    "response": response.text
+                }
+            else:
+                error_msg = f"HTTP {response.status_code}"
+                try:
+                    error_data = response.json()
+                    error_msg += f" - {json.dumps(error_data, ensure_ascii=False)}"
+                except:
+                    error_msg += f" - {response.text}"
+                
+                return {
+                    "success": False,
+                    "error": f"API 호출 실패: {error_msg}",
                     "response": response.text
                 }
                 
