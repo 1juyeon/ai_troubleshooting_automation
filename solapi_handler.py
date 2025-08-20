@@ -126,10 +126,10 @@ class SOLAPIHandler:
     def _try_multiple_sms_apis(self, phone_number: str, message: str, debug_info: Dict) -> Dict[str, Any]:
         """여러 SOLAPI API 형식 시도"""
         
-        # 시도할 API 형식들 (SOLAPI 공식 문서 기반)
+        # 시도할 API 형식들 (SOLAPI 공식 문서 + 사용자 Node.js 코드 기반)
         api_formats = [
             {
-                "name": "SOLAPI 공식 형식 (sendMany)",
+                "name": "SOLAPI v4 (messages 배열)",
                 "path": "/messages/v4/send",
                 "data": {
                     "messages": [
@@ -142,7 +142,7 @@ class SOLAPIHandler:
                 }
             },
             {
-                "name": "SOLAPI 단일 메시지",
+                "name": "SOLAPI v4 (단일 메시지)",
                 "path": "/messages/v4/send",
                 "data": {
                     "to": phone_number,
@@ -151,7 +151,7 @@ class SOLAPIHandler:
                 }
             },
             {
-                "name": "SOLAPI v3 형식",
+                "name": "SOLAPI v3 (레거시)",
                 "path": "/messages/v3/send",
                 "data": {
                     "to": phone_number,
@@ -160,8 +160,17 @@ class SOLAPIHandler:
                 }
             },
             {
-                "name": "SOLAPI 기본 형식",
+                "name": "SOLAPI 기본",
                 "path": "/messages/send",
+                "data": {
+                    "to": phone_number,
+                    "from": self.sender,
+                    "text": message
+                }
+            },
+            {
+                "name": "SOLAPI 루트",
+                "path": "/",
                 "data": {
                     "to": phone_number,
                     "from": self.sender,
@@ -170,25 +179,52 @@ class SOLAPIHandler:
             }
         ]
         
+        # 각 API 형식별로 상세한 오류 정보 수집
+        detailed_errors = []
+        
         for api_format in api_formats:
             try:
                 result = self._try_single_api_format(api_format, debug_info)
                 if result["success"]:
                     return result
-                elif "권한 부족" not in result.get("error", ""):
+                else:
+                    # 오류 정보 수집
+                    error_info = {
+                        "api_format": api_format["name"],
+                        "error": result.get("error", "알 수 없는 오류"),
+                        "status_code": result.get("status_code", "N/A"),
+                        "response": result.get("response", "N/A")
+                    }
+                    detailed_errors.append(error_info)
+                    
                     # 권한 부족이 아닌 다른 오류면 해당 API 형식에 문제가 있을 수 있음
-                    continue
+                    if "권한 부족" not in result.get("error", ""):
+                        continue
             except Exception as e:
+                detailed_errors.append({
+                    "api_format": api_format["name"],
+                    "error": f"예외 발생: {str(e)}",
+                    "status_code": "N/A",
+                    "response": "N/A"
+                })
                 continue
         
-        # 모든 API 형식이 실패한 경우
+        # 모든 API 형식이 실패한 경우 - 상세한 오류 정보 제공
         return {
             "success": False,
             "error": "모든 SOLAPI API 형식에서 SMS 발송 실패",
             "message": "SOLAPI 고객센터에 문의하거나 계정 상태를 확인해주세요.",
-            "note": "v4, v3, 기본 API 모두 시도했으나 실패했습니다.",
+            "note": "v4, v3, 기본, 루트 API 모두 시도했으나 실패했습니다.",
             "debug_info": debug_info,
-            "tried_apis": [fmt["name"] for fmt in api_formats]
+            "tried_apis": [fmt["name"] for fmt in api_formats],
+            "detailed_errors": detailed_errors,
+            "recommendations": [
+                "1. SOLAPI 대시보드에서 SMS 발송 권한 확인",
+                "2. 계정 본인인증 완료 여부 확인", 
+                "3. 프로젝트 설정에서 SMS 기능 활성화 확인",
+                "4. API 키의 IP 제한 설정 확인",
+                "5. SOLAPI 고객센터에 문의"
+            ]
         }
     
     def _try_single_api_format(self, api_format: Dict, debug_info: Dict) -> Dict[str, Any]:
