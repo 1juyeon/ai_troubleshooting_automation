@@ -100,24 +100,95 @@ class SOLAPIHandler:
                 "message_length": len(message)
             }
             
-            # SOLAPI SMS 발송 API 엔드포인트 (v4)
-            path = "/messages/v4/send"
-            url = f"{self.base_url}{path}"
-            
             # 메시지 내용 구성
             if recipient_name:
                 full_message = f"[{sender_name}]\n{recipient_name}님, {message}"
             else:
                 full_message = f"[{sender_name}]\n{message}"
             
-            # SOLAPI v4 API 요청 데이터 형식 (수정된 버전)
-            data = {
-                "message": {
+            # 여러 SOLAPI API 형식 시도
+            return self._try_multiple_sms_apis(phone_number, full_message, debug_info)
+                
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"예상치 못한 오류: {str(e)}",
+                "message": "잠시 후 다시 시도해주세요.",
+                "debug_info": debug_info
+            }
+    
+    def _try_multiple_sms_apis(self, phone_number: str, message: str, debug_info: Dict) -> Dict[str, Any]:
+        """여러 SOLAPI API 형식 시도"""
+        
+        # 시도할 API 형식들
+        api_formats = [
+            {
+                "name": "SOLAPI v4 (표준)",
+                "path": "/messages/v4/send",
+                "data": {
+                    "message": {
+                        "to": phone_number,
+                        "from": self.sender,
+                        "text": message
+                    }
+                }
+            },
+            {
+                "name": "SOLAPI v3 (레거시)",
+                "path": "/messages/v3/send",
+                "data": {
                     "to": phone_number,
                     "from": self.sender,
-                    "text": full_message
+                    "text": message
+                }
+            },
+            {
+                "name": "SOLAPI v2 (구형)",
+                "path": "/messages/v2/send",
+                "data": {
+                    "to": phone_number,
+                    "from": self.sender,
+                    "text": message
+                }
+            },
+            {
+                "name": "SOLAPI 기본",
+                "path": "/messages/send",
+                "data": {
+                    "to": phone_number,
+                    "from": self.sender,
+                    "text": message
                 }
             }
+        ]
+        
+        for api_format in api_formats:
+            try:
+                result = self._try_single_api_format(api_format, debug_info)
+                if result["success"]:
+                    return result
+                elif "권한 부족" not in result.get("error", ""):
+                    # 권한 부족이 아닌 다른 오류면 해당 API 형식에 문제가 있을 수 있음
+                    continue
+            except Exception as e:
+                continue
+        
+        # 모든 API 형식이 실패한 경우
+        return {
+            "success": False,
+            "error": "모든 SOLAPI API 형식에서 SMS 발송 실패",
+            "message": "SOLAPI 고객센터에 문의하거나 계정 상태를 확인해주세요.",
+            "note": "v4, v3, v2, 기본 API 모두 시도했으나 실패했습니다.",
+            "debug_info": debug_info,
+            "tried_apis": [fmt["name"] for fmt in api_formats]
+        }
+    
+    def _try_single_api_format(self, api_format: Dict, debug_info: Dict) -> Dict[str, Any]:
+        """단일 API 형식으로 SMS 발송 시도"""
+        try:
+            path = api_format["path"]
+            url = f"{self.base_url}{path}"
+            data = api_format["data"]
             
             # 인증 파라미터 생성
             params = self._get_auth_params()
@@ -125,6 +196,7 @@ class SOLAPIHandler:
             
             # 디버깅: 요청 정보 로깅
             request_info = {
+                "api_format": api_format["name"],
                 "url": url,
                 "method": "POST",
                 "headers": headers,
@@ -142,11 +214,12 @@ class SOLAPIHandler:
                 if result.get("status") == "SUCCESS":
                     return {
                         "success": True,
-                        "message": "SMS가 성공적으로 발송되었습니다.",
+                        "message": f"SMS가 성공적으로 발송되었습니다. ({api_format['name']})",
                         "message_id": result.get("messageId", ""),
-                        "recipient": phone_number,
+                        "recipient": debug_info["to"],
                         "timestamp": datetime.now().isoformat(),
-                        "debug_info": debug_info
+                        "debug_info": debug_info,
+                        "request_info": request_info
                     }
                 else:
                     return {
@@ -157,8 +230,22 @@ class SOLAPIHandler:
                         "request_info": request_info
                     }
             elif response.status_code == 401:
-                # 권한 부족 오류 - 다른 API 엔드포인트 시도
-                return self._try_alternative_sms_api(phone_number, full_message, debug_info, request_info)
+                # 권한 부족 오류
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get("errorMessage", "권한이 없습니다")
+                except:
+                    error_msg = "권한이 없습니다"
+                
+                return {
+                    "success": False,
+                    "error": f"SMS 발송 권한 부족 ({api_format['name']}): {error_msg}",
+                    "message": "SOLAPI 대시보드에서 SMS 발송 권한을 확인해주세요.",
+                    "status_code": 401,
+                    "response": response.text,
+                    "debug_info": debug_info,
+                    "request_info": request_info
+                }
             else:
                 error_msg = f"HTTP {response.status_code}"
                 try:
@@ -169,7 +256,7 @@ class SOLAPIHandler:
                 
                 return {
                     "success": False,
-                    "error": f"API 호출 실패: {error_msg}",
+                    "error": f"API 호출 실패 ({api_format['name']}): {error_msg}",
                     "response": response.text,
                     "debug_info": debug_info,
                     "request_info": request_info
@@ -178,85 +265,26 @@ class SOLAPIHandler:
         except requests.exceptions.Timeout:
             return {
                 "success": False,
-                "error": "API 호출 시간 초과",
+                "error": f"API 호출 시간 초과 ({api_format['name']})",
                 "message": "네트워크 상태를 확인하고 다시 시도해주세요.",
                 "debug_info": debug_info
             }
         except requests.exceptions.RequestException as e:
             return {
                 "success": False,
-                "error": f"네트워크 오류: {str(e)}",
+                "error": f"네트워크 오류 ({api_format['name']}): {str(e)}",
                 "message": "인터넷 연결을 확인하고 다시 시도해주세요.",
                 "debug_info": debug_info
             }
         except Exception as e:
             return {
                 "success": False,
-                "error": f"예상치 못한 오류: {str(e)}",
+                "error": f"예상치 못한 오류 ({api_format['name']}): {str(e)}",
                 "message": "잠시 후 다시 시도해주세요.",
                 "debug_info": debug_info
             }
     
-    def _try_alternative_sms_api(self, phone_number: str, message: str, debug_info: Dict, request_info: Dict) -> Dict[str, Any]:
-        """대안 SMS API 엔드포인트 시도"""
-        try:
-            # SOLAPI v3 API 엔드포인트 시도
-            path = "/messages/v3/send"
-            url = f"{self.base_url}{path}"
-            
-            # v3 API 요청 데이터 형식
-            data = {
-                "to": phone_number,
-                "from": self.sender,
-                "text": message
-            }
-            
-            params = self._get_auth_params()
-            headers = self._get_auth_headers("POST", path)
-            
-            # v3 API 요청 정보
-            v3_request_info = {
-                "url": url,
-                "method": "POST",
-                "headers": headers,
-                "params": {k: f"{v[:8]}..." if k == "apiSecret" else v for k, v in params.items()},
-                "data": data
-            }
-            
-            response = requests.post(url, headers=headers, json=data, params=params, timeout=30)
-            
-            if response.status_code == 200:
-                result = response.json()
-                return {
-                    "success": True,
-                    "message": "SMS가 성공적으로 발송되었습니다. (v3 API 사용)",
-                    "message_id": result.get("messageId", ""),
-                    "recipient": phone_number,
-                    "timestamp": datetime.now().isoformat(),
-                    "debug_info": debug_info,
-                    "v3_request_info": v3_request_info
-                }
-            else:
-                # v3도 실패하면 권한 문제로 간주
-                return {
-                    "success": False,
-                    "error": "SMS 발송 권한 부족",
-                    "message": "SOLAPI 대시보드에서 SMS 발송 권한을 확인하거나 고객센터에 문의해주세요.",
-                    "note": "v4와 v3 API 모두 권한 부족 오류가 발생했습니다.",
-                    "status_code": response.status_code,
-                    "response": response.text,
-                    "debug_info": debug_info,
-                    "v4_request_info": request_info,
-                    "v3_request_info": v3_request_info
-                }
-                
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"대안 API 시도 실패: {str(e)}",
-                "message": "SOLAPI 고객센터에 문의해주세요.",
-                "debug_info": debug_info
-            }
+
     
     def send_analysis_summary_sms(self, 
                                  phone_number: str, 
