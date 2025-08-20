@@ -66,13 +66,15 @@ class SOLAPIHandler:
     
     def _get_auth_headers(self, method: str, path: str, body: str = "") -> Dict[str, str]:
         """인증 헤더 생성"""
-        timestamp = str(int(time.time()))
-        signature = self._generate_hmac_signature(method, path, timestamp, body)
-        
         return {
-            "Content-Type": "application/json",
-            "Authorization": f"hmac-sha256 {self.api_key}:{signature}",
-            "X-Timestamp": timestamp
+            "Content-Type": "application/json"
+        }
+    
+    def _get_auth_params(self) -> Dict[str, str]:
+        """인증 파라미터 생성"""
+        return {
+            "apiKey": self.api_key,
+            "apiSecret": self.api_secret
         }
     
     def send_sms(self, 
@@ -108,12 +110,12 @@ class SOLAPIHandler:
                 }
             }
             
-            # HMAC 인증 헤더 생성
-            body = json.dumps(data, ensure_ascii=False)
-            headers = self._get_auth_headers("POST", path, body)
+            # 인증 파라미터 생성
+            params = self._get_auth_params()
+            headers = self._get_auth_headers("POST", path)
             
             # API 호출
-            response = requests.post(url, headers=headers, json=data, timeout=30)
+            response = requests.post(url, headers=headers, json=data, params=params, timeout=30)
             
             if response.status_code == 200:
                 result = response.json()
@@ -223,8 +225,9 @@ class SOLAPIHandler:
             url = f"{self.base_url}{path}"
             
             headers = self._get_auth_headers("GET", path)
+            params = self._get_auth_params()
             
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(url, headers=headers, params=params, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
