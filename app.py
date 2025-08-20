@@ -1172,14 +1172,57 @@ with st.sidebar:
     if st.button("🔗 SOLAPI 연결 테스트", use_container_width=True):
         if solapi_api_key and solapi_api_secret:
             try:
-                test_handler = SOLAPIHandler(solapi_api_key, solapi_api_secret)
-                test_result = test_handler.test_connection()
-                if test_result["success"]:
-                    st.success("✅ SOLAPI 연결 성공!")
+                # API 키 형식 검증
+                if len(solapi_api_key) != 32 or len(solapi_api_secret) != 32:
+                    st.error("❌ API 키 형식 오류: API 키와 Secret은 각각 32자리여야 합니다.")
+                    st.info(f"현재 API 키: {len(solapi_api_key)}자, Secret: {len(solapi_api_secret)}자")
                 else:
-                    st.error(f"❌ SOLAPI 연결 실패: {test_result['message']}")
+                    # 연결 테스트 실행
+                    with st.spinner("SOLAPI 연결 테스트 중..."):
+                        test_handler = SOLAPIHandler(solapi_api_key, solapi_api_secret)
+                        test_result = test_handler.test_connection()
+                    
+                    if test_result["success"]:
+                        st.success("✅ SOLAPI 연결 성공!")
+                        st.info(f"연결 정보: {test_result['message']}")
+                    else:
+                        st.error(f"❌ SOLAPI 연결 실패: {test_result['message']}")
+                        
+                        # 오류별 해결 방법 제시
+                        if "HTTP 400" in test_result['message']:
+                            st.warning("🔧 HTTP 400 오류 해결 방법:")
+                            st.markdown("""
+                            1. **API 키 확인**: SOLAPI 대시보드에서 API 키가 올바른지 확인
+                            2. **발신자 번호**: SOLAPI에 등록된 발신자 번호인지 확인
+                            3. **권한 설정**: API 키에 계정 조회 권한이 있는지 확인
+                            4. **IP 제한**: API 키의 IP 제한 설정 확인
+                            """)
+                        elif "HTTP 401" in test_result['message']:
+                            st.warning("🔧 HTTP 401 오류 해결 방법:")
+                            st.markdown("""
+                            1. **API 키 재확인**: API 키와 Secret을 정확히 입력했는지 확인
+                            2. **새로운 키 생성**: SOLAPI 대시보드에서 새로운 API 키 생성
+                            3. **대소문자 확인**: API 키와 Secret의 대소문자 정확히 입력
+                            """)
+                        elif "HTTP 403" in test_result['message']:
+                            st.warning("🔧 HTTP 403 오류 해결 방법:")
+                            st.markdown("""
+                            1. **권한 확인**: API 키에 필요한 권한이 부여되었는지 확인
+                            2. **프로젝트 설정**: 올바른 프로젝트에서 API 키를 생성했는지 확인
+                            3. **계정 상태**: SOLAPI 계정이 정상 상태인지 확인
+                            """)
+                        
+                        # 디버깅 정보 표시
+                        with st.expander("🔍 디버깅 정보"):
+                            st.code(f"""
+API 키: {solapi_api_key[:8]}...{solapi_api_key[-8:]}
+API Secret: {solapi_secret[:8]}...{solapi_secret[-8:]}
+발신자 번호: {sender_phone}
+                            """)
+                        
             except Exception as e:
                 st.error(f"❌ 연결 테스트 중 오류: {e}")
+                st.exception(e)
         else:
             st.warning("⚠️ API 키와 Secret을 모두 입력해주세요.")
     

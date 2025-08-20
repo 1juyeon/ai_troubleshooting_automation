@@ -68,9 +68,11 @@ class SOLAPIHandler:
             # SOLAPI SMS 발송 API 엔드포인트
             url = f"{self.base_url}/messages/v4/send"
             
-            # 헤더 설정
+            # 헤더 설정 (SOLAPI는 Basic 인증 사용)
+            import base64
+            credentials = base64.b64encode(f"{self.api_key}:{self.api_secret}".encode()).decode()
             headers = {
-                "Authorization": f"Bearer {self.api_key}",
+                "Authorization": f"Basic {credentials}",
                 "Content-Type": "application/json"
             }
             
@@ -196,26 +198,50 @@ class SOLAPIHandler:
             }
         
         try:
-            # 간단한 API 호출로 연결 테스트
-            url = f"{self.base_url}/messages/v4/status"
+            # SOLAPI 계정 정보 조회 API로 연결 테스트 (더 안정적)
+            url = f"{self.base_url}/account/v1/balance"
+            import base64
+            credentials = base64.b64encode(f"{self.api_key}:{self.api_secret}".encode()).decode()
             headers = {
-                "Authorization": f"Bearer {self.api_key}",
+                "Authorization": f"Basic {credentials}",
                 "Content-Type": "application/json"
             }
             
             response = requests.get(url, headers=headers, timeout=10)
             
             if response.status_code == 200:
+                result = response.json()
+                balance = result.get('balance', 0)
                 return {
                     "success": True,
-                    "message": "SOLAPI 연결 성공"
+                    "message": f"SOLAPI 연결 성공 (잔액: {balance:,}원)"
+                }
+            elif response.status_code == 401:
+                return {
+                    "success": False,
+                    "message": "SOLAPI 인증 실패: API 키 또는 Secret이 올바르지 않습니다."
+                }
+            elif response.status_code == 403:
+                return {
+                    "success": False,
+                    "message": "SOLAPI 권한 없음: API 키에 계정 조회 권한이 없습니다."
                 }
             else:
                 return {
                     "success": False,
-                    "message": f"SOLAPI 연결 실패: HTTP {response.status_code}"
+                    "message": f"SOLAPI 연결 실패: HTTP {response.status_code} - {response.text}"
                 }
                 
+        except requests.exceptions.Timeout:
+            return {
+                "success": False,
+                "message": "SOLAPI 연결 시간 초과: 네트워크 상태를 확인해주세요."
+            }
+        except requests.exceptions.ConnectionError:
+            return {
+                "success": False,
+                "message": "SOLAPI 서버 연결 실패: 인터넷 연결을 확인해주세요."
+            }
         except Exception as e:
             return {
                 "success": False,
