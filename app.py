@@ -1087,25 +1087,26 @@ def init_components():
         scenario_db = ScenarioDB()
         vector_search = VectorSearchWrapper()
         
-        # API 키 설정 (사이드바 우선, st.secrets 차선, 환경변수 마지막)
+        # API 키 설정 (Streamlit Secrets 우선, 환경변수 차선, 사이드바 마지막)
         api_key = ""
         
-        # 1. 사이드바에서 설정한 API 키 우선 사용
-        if 'current_api_key' in st.session_state and st.session_state.current_api_key:
-            api_key = st.session_state.current_api_key
-            print("✅ Gemini API 키를 사이드바에서 로드했습니다.")
-        # 2. st.secrets에서 시도
-        elif not api_key:
-            try:
-                api_key = st.secrets["GEMINI_API_KEY"]
-                print("✅ Gemini API 키를 Streamlit Secrets에서 로드했습니다.")
-            except:
-                pass
-        # 3. 환경변수로 폴백
+        # 1. st.secrets에서 시도
+        try:
+            api_key = st.secrets["GEMINI_API_KEY"]
+            print("✅ Gemini API 키를 Streamlit Secrets에서 로드했습니다.")
+        except:
+            pass
+        
+        # 2. 환경변수로 폴백
         if not api_key:
             api_key = os.getenv("GOOGLE_API_KEY")
             if api_key:
                 print("✅ Gemini API 키를 환경변수에서 로드했습니다.")
+        
+        # 3. 사이드바에서 설정한 API 키 (마지막 우선순위)
+        if not api_key and 'current_api_key' in st.session_state and st.session_state.current_api_key:
+            api_key = st.session_state.current_api_key
+            print("✅ Gemini API 키를 사이드바에서 로드했습니다.")
         
         gpt_handler = GPTHandler(api_key=api_key)
         
@@ -1124,7 +1125,24 @@ def init_components():
         # API 키 상태 확인 (최소 하나는 필요)
         if not api_key and not openai_api_key:
             st.error("❌ AI API 키가 설정되지 않았습니다.")
-            st.info("Gemini API 키 또는 OpenAI API 키 중 하나를 설정해야 합니다. 관리자가 Streamlit Cloud Secrets 또는 환경변수를 설정하면 AI 분석이 가능합니다.")
+            st.info("""
+            **API 키 설정 방법:**
+            
+            **Streamlit Cloud Secrets (권장):**
+            1. Streamlit Cloud → Settings → Secrets
+            2. 다음 키를 추가:
+               - `GEMINI_API_KEY`: Google AI Studio에서 발급받은 API 키
+               - `OPENAI_API_KEY`: OpenAI에서 발급받은 API 키
+            
+            **환경변수:**
+            - `GEMINI_API_KEY` 또는 `GOOGLE_API_KEY`
+            - `OPENAI_API_KEY`
+            
+            **사이드바 입력:**
+            - Gemini API 키 또는 OpenAI API 키 중 하나를 입력
+            
+            최소 하나의 API 키가 필요합니다.
+            """)
             st.stop()
         
         # SOLAPI 핸들러 초기화
@@ -1204,23 +1222,45 @@ with st.sidebar:
     
     st.markdown("## 🔑 API 설정")
     
+    # API 키 상태 확인
+    gemini_key_from_secrets = ""
+    openai_key_from_secrets = ""
+    
+    try:
+        gemini_key_from_secrets = st.secrets.get("GEMINI_API_KEY", "")
+    except:
+        pass
+    
+    try:
+        openai_key_from_secrets = st.secrets.get("OPENAI_API_KEY", "")
+    except:
+        pass
+    
     # Gemini API 키 설정
-    gemini_api_key = st.text_input(
-        "Gemini API 키",
-        value=st.session_state.get('google_api_key', ''),
-        type="password",
-        placeholder="Gemini API 키를 입력하세요",
-        help="Google AI Studio에서 발급받은 API 키"
-    )
+    if gemini_key_from_secrets:
+        st.success("✅ Gemini API 키가 Streamlit Secrets에서 설정되었습니다.")
+        gemini_api_key = gemini_key_from_secrets
+    else:
+        gemini_api_key = st.text_input(
+            "Gemini API 키",
+            value=st.session_state.get('google_api_key', ''),
+            type="password",
+            placeholder="Gemini API 키를 입력하세요",
+            help="Google AI Studio에서 발급받은 API 키"
+        )
     
     # OpenAI API 키 설정
-    openai_api_key = st.text_input(
-        "OpenAI API 키",
-        value=st.session_state.get('openai_api_key', ''),
-        type="password",
-        placeholder="OpenAI API 키를 입력하세요",
-        help="OpenAI에서 발급받은 API 키"
-    )
+    if openai_key_from_secrets:
+        st.success("✅ OpenAI API 키가 Streamlit Secrets에서 설정되었습니다.")
+        openai_api_key = openai_key_from_secrets
+    else:
+        openai_api_key = st.text_input(
+            "OpenAI API 키",
+            value=st.session_state.get('openai_api_key', ''),
+            type="password",
+            placeholder="OpenAI API 키를 입력하세요",
+            help="OpenAI에서 발급받은 API 키"
+        )
     
     # SOLAPI API 키를 세션 상태에 저장 (secrets에서 자동 로드)
     try:
@@ -1234,8 +1274,12 @@ with st.sidebar:
     # API 키를 세션 상태에 저장
     if gemini_api_key:
         st.session_state['google_api_key'] = gemini_api_key
+        if gemini_key_from_secrets:
+            print("✅ Gemini API 키를 Streamlit Secrets에서 세션 상태로 저장했습니다.")
     if openai_api_key:
         st.session_state['openai_api_key'] = openai_api_key
+        if openai_key_from_secrets:
+            print("✅ OpenAI API 키를 Streamlit Secrets에서 세션 상태로 저장했습니다.")
     
     # 세션 상태에 저장
     st.session_state.contact_name = contact_name
@@ -1369,9 +1413,23 @@ with tab1:
                         
                         if 'GPT' in selected_model:
                             # GPT API 사용
-                            api_key_available = st.session_state.get('openai_api_key') or os.getenv("OPENAI_API_KEY")
+                            # Streamlit Secrets 우선, 환경변수 차선, 사이드바 마지막
+                            api_key_available = ""
+                            try:
+                                api_key_available = st.secrets["OPENAI_API_KEY"]
+                                print("✅ OpenAI API 키를 Streamlit Secrets에서 로드했습니다.")
+                            except:
+                                api_key_available = os.getenv("OPENAI_API_KEY")
+                                if api_key_available:
+                                    print("✅ OpenAI API 키를 환경변수에서 로드했습니다.")
+                                else:
+                                    api_key_available = st.session_state.get('openai_api_key', "")
+                                    if api_key_available:
+                                        print("✅ OpenAI API 키를 사이드바에서 로드했습니다.")
+                            
                             if not api_key_available:
                                 st.error("❌ OpenAI API 키가 설정되지 않아 AI 분석을 진행할 수 없습니다.")
+                                st.info("Streamlit Cloud Secrets에서 OPENAI_API_KEY를 설정하거나, 환경변수 OPENAI_API_KEY를 설정해주세요.")
                                 st.stop()
                             
                             # GPT 모델 매핑
@@ -1408,9 +1466,23 @@ with tab1:
                                 }
                         else:
                             # Gemini API 사용
-                            api_key_available = st.session_state.get('google_api_key') or os.getenv("GOOGLE_API_KEY")
+                            # Streamlit Secrets 우선, 환경변수 차선, 사이드바 마지막
+                            api_key_available = ""
+                            try:
+                                api_key_available = st.secrets["GEMINI_API_KEY"]
+                                print("✅ Gemini API 키를 Streamlit Secrets에서 로드했습니다.")
+                            except:
+                                api_key_available = os.getenv("GOOGLE_API_KEY")
+                                if api_key_available:
+                                    print("✅ Gemini API 키를 환경변수에서 로드했습니다.")
+                                else:
+                                    api_key_available = st.session_state.get('google_api_key', "")
+                                    if api_key_available:
+                                        print("✅ Gemini API 키를 사이드바에서 로드했습니다.")
+                            
                             if not api_key_available:
                                 st.error("❌ Gemini API 키가 설정되지 않아 AI 분석을 진행할 수 없습니다.")
+                                st.info("Streamlit Cloud Secrets에서 GEMINI_API_KEY를 설정하거나, 환경변수 GOOGLE_API_KEY를 설정해주세요.")
                                 st.stop()
                             
                             try:
