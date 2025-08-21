@@ -1858,13 +1858,8 @@ with tab2:
             with col10:
                 st.markdown("#### 📧 이메일 초안")
                 if parsed.get('email_draft'):
-                    # 이메일 내용을 자연스러운 형태로 표시
+                    # 이메일 내용을 원본 그대로 표시 (전체 AI 응답과 동일하게)
                     email_content = parsed['email_draft']
-                    # 연속된 공백을 하나로 통일
-                    email_content = ' '.join(email_content.split())
-                    
-                    # 제목과 본문 분리 및 자연스러운 줄바꿈 처리
-                    email_content = _format_email_content(email_content)
                     st.text_area("이메일 내용", email_content, height=300)
                     
                     # 복사 버튼
@@ -2007,13 +2002,8 @@ with tab2:
                 with col10:
                     st.markdown("#### 📧 이메일 초안")
                     if parsed.get('email_draft'):
-                        # 이메일 내용을 자연스러운 형태로 표시
+                        # 이메일 내용을 원본 그대로 표시 (전체 AI 응답과 동일하게)
                         email_content = parsed['email_draft']
-                        # 연속된 공백을 하나로 통일
-                        email_content = ' '.join(email_content.split())
-                        
-                        # 제목과 본문 분리 및 자연스러운 줄바꿈 처리
-                        email_content = _format_email_content(email_content)
                         st.text_area("이메일 내용", email_content, height=300)
                         
                         if st.button("📋 이메일 복사", use_container_width=True):
