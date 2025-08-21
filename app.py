@@ -1394,6 +1394,46 @@ with tab2:
                     st.write(f"**운영체제:** {data['os_info']}")
         
         
+        # 문제 유형 분류와 시나리오 매칭 섹션 삭제
+        
+        # Gemini 응답 결과
+        st.markdown("### 🤖 AI 응답")
+        
+        if result['gemini_result']['success']:
+            parsed = result['gemini_result']['parsed_response']
+            
+            # 대응 유형 표시
+            response_type = parsed['response_type']
+            if response_type == "해결안":
+                st.success(f"✅ {response_type}")
+            elif response_type == "질문":
+                st.warning(f"❓ {response_type}")
+            elif response_type == "출동":
+                st.error(f"🚨 {response_type}")
+            else:
+                st.info(f"ℹ️ {response_type}")
+            
+            # 응답 내용
+            col9, col10 = st.columns(2)
+            
+            with col9:
+                st.markdown("#### 📝 요약")
+                st.write(parsed['summary'])
+                
+                st.markdown("#### 🔧 조치 흐름")
+                # 조치 흐름에 줄바꿈 적용
+                action_flow_content = parsed['action_flow'].replace('\n', '\n\n')
+                st.write(action_flow_content)
+            
+            with col10:
+                st.markdown("#### 📧 이메일 초안")
+                # 이메일 내용을 줄바꿈이 포함된 형태로 표시
+                email_content = parsed['email_draft'].replace('\n', '\n\n')
+                st.text_area("이메일 내용", email_content, height=300)
+                
+                # 복사 버튼
+                if st.button("📋 이메일 복사", use_container_width=True):
+                    st.success("이메일 내용이 클립보드에 복사되었습니다!")
             
             # 전체 응답
             with st.expander("📄 전체 AI 응답", expanded=True):
