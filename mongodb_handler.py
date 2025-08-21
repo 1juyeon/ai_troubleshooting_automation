@@ -117,18 +117,6 @@ class MongoDBHandler:
     def save_analysis(self, analysis_data: Dict, inquiry_data: Dict) -> Dict:
         """분석 결과 저장"""
         try:
-            # 응답 데이터 추출 (구조에 따라 안전하게 추출)
-            parsed_response = {}
-            if 'ai_result' in analysis_data:
-                if 'parsed_response' in analysis_data['ai_result']:
-                    parsed_response = analysis_data['ai_result']['parsed_response']
-                elif 'gemini_result' in analysis_data['ai_result']:
-                    if 'parsed_response' in analysis_data['ai_result']['gemini_result']:
-                        parsed_response = analysis_data['ai_result']['gemini_result']['parsed_response']
-            
-            # 분류 정보 추출
-            classification = analysis_data.get('classification', {})
-            
             # 저장할 데이터 구성
             document = {
                 'timestamp': inquiry_data.get('timestamp', datetime.now().isoformat()),
@@ -137,12 +125,12 @@ class MongoDBHandler:
                 'customer_manager': inquiry_data.get('customer_manager', ''),
                 'inquiry_content': inquiry_data.get('inquiry_content', ''),
                 'issue_type': analysis_data.get('issue_type', ''),
-                'classification_method': classification.get('method', ''),
-                'confidence': classification.get('confidence', ''),
-                'response_type': parsed_response.get('response_type', ''),
-                'summary': parsed_response.get('summary', ''),
-                'action_flow': parsed_response.get('action_flow', ''),
-                'email_draft': parsed_response.get('email_draft', ''),
+                'classification_method': analysis_data.get('classification', {}).get('method', ''),
+                'confidence': analysis_data.get('classification', {}).get('confidence', ''),
+                'response_type': analysis_data.get('gemini_result', {}).get('parsed_response', {}).get('response_type', ''),
+                'summary': analysis_data.get('gemini_result', {}).get('parsed_response', {}).get('summary', ''),
+                'action_flow': analysis_data.get('gemini_result', {}).get('parsed_response', {}).get('action_flow', ''),
+                'email_draft': analysis_data.get('gemini_result', {}).get('parsed_response', {}).get('email_draft', ''),
                 'user_name': inquiry_data.get('user_name', ''),
                 'user_role': inquiry_data.get('user_role', ''),
                 'system_version': inquiry_data.get('system_version', ''),
@@ -156,18 +144,6 @@ class MongoDBHandler:
                 'updated_at': datetime.now()
             }
             
-            # 빈 문자열 필드 정리 (None 값 방지)
-            for key, value in document.items():
-                if value is None:
-                    document[key] = ''
-                elif isinstance(value, str) and value.strip() == '':
-                    document[key] = ''
-            
-            print(f"📝 저장할 문서 구조:")
-            for key, value in document.items():
-                if key != 'full_analysis_result':  # 전체 분석 결과는 너무 길어서 제외
-                    print(f"  {key}: {value}")
-            
             # MongoDB에 저장
             result = self.history_collection.insert_one(document)
             
@@ -180,8 +156,6 @@ class MongoDBHandler:
             
         except Exception as e:
             print(f"❌ MongoDB 저장 실패: {e}")
-            import traceback
-            traceback.print_exc()
             return {"success": False, "error": str(e)}
     
     def get_history(self, user_id: str = None, limit: int = 100, skip: int = 0) -> List[Dict]:
