@@ -1619,6 +1619,12 @@ with tab1:
                                     )
                                 }
                     
+                    # ai_result 구조를 일관되게 만들기
+                    if 'parsed_response' not in ai_result and 'gemini_result' in ai_result:
+                        # gemini_result에서 parsed_response를 상위로 이동
+                        if 'parsed_response' in ai_result['gemini_result']:
+                            ai_result['parsed_response'] = ai_result['gemini_result']['parsed_response']
+                    
                     # 결과 저장
                     analysis_result = {
                         'classification': classification_result,
