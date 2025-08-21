@@ -1418,14 +1418,18 @@ with tab2:
             
             with col9:
                 st.markdown("#### 📝 요약")
-                st.text_area("요약 내용", parsed['summary'], height=150, key="summary_text", disabled=True)
+                st.write(parsed['summary'])
                 
                 st.markdown("#### 🔧 조치 흐름")
-                st.text_area("조치 흐름", parsed['action_flow'], height=200, key="action_flow_text", disabled=True)
+                # 조치 흐름에 줄바꿈 적용
+                action_flow_content = parsed['action_flow'].replace('\n', '\n\n')
+                st.write(action_flow_content)
             
             with col10:
                 st.markdown("#### 📧 이메일 초안")
-                st.text_area("이메일 내용", parsed['email_draft'], height=300)
+                # 이메일 내용을 줄바꿈이 포함된 형태로 표시
+                email_content = parsed['email_draft'].replace('\n', '\n\n')
+                st.text_area("이메일 내용", email_content, height=300)
                 
                 # 복사 버튼
                 if st.button("📋 이메일 복사", use_container_width=True):
@@ -1463,7 +1467,7 @@ with tab2:
             with col_sms2:
                 sms_message = st.text_area(
                     "SMS 메시지",
-                    value=f"[{selected_row.get('문의유형', 'AI')}] {parsed['summary'][:100]}...",
+                    value=f"[{st.session_state.get('ai_model', 'AI')}] {parsed['summary'][:100]}...",
                     height=100,
                     key="sms_message"
                 )
@@ -1518,14 +1522,18 @@ with tab2:
                 
                 with col9:
                     st.markdown("#### 📝 요약")
-                    st.text_area("요약 내용", parsed['summary'], height=150, key="summary_text", disabled=True)
+                    st.write(parsed['summary'])
                     
                     st.markdown("#### 🔧 조치 흐름")
-                    st.text_area("조치 흐름", parsed['action_flow'], height=200, key="action_flow_text", disabled=True)
+                    # 조치 흐름에 줄바꿈 적용
+                    action_flow_content = parsed['action_flow'].replace('\n', '\n\n')
+                    st.write(action_flow_content)
                 
                 with col10:
                     st.markdown("#### 📧 이메일 초안")
-                    st.text_area("이메일 내용", parsed['email_draft'], height=300)
+                    # 이메일 내용을 줄바꿈이 포함된 형태로 표시
+                    email_content = parsed['email_draft'].replace('\n', '\n\n')
+                    st.text_area("이메일 내용", email_content, height=300)
                     
                     if st.button("📋 이메일 복사", use_container_width=True):
                         st.success("이메일 내용이 클립보드에 복사되었습니다!")

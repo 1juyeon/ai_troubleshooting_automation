@@ -220,20 +220,11 @@ class GPTHandler:
                     current_section = "email"
                     email_draft = line.replace("이메일 초안:", "").replace("이메일 초안", "").strip()
                 elif current_section == "summary":
-                    if summary:  # 이미 내용이 있으면 줄바꿈 추가
-                        summary += "\n" + line
-                    else:
-                        summary = line
+                    summary += " " + line
                 elif current_section == "action":
-                    if action_flow:  # 이미 내용이 있으면 줄바꿈 추가
-                        action_flow += "\n" + line
-                    else:
-                        action_flow = line
+                    action_flow += " " + line
                 elif current_section == "email":
-                    if email_draft:  # 이미 내용이 있으면 줄바꿈 추가
-                        email_draft += "\n" + line
-                    else:
-                        email_draft = line
+                    email_draft += " " + line
             
             return {
                 "response_type": response_type,
