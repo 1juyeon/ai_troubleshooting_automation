@@ -395,20 +395,7 @@ def show_ai_analysis(selected_row):
     # AI 분석 결과 (샘플 데이터)
     st.markdown("### 🔍 AI 분석 결과")
     
-    col3, col4 = st.columns(2)
-    
-    with col3:
-        st.markdown("#### 📊 문제 유형 분류")
-        st.write("**분류된 문제 유형:** PKP 웹 접속 안됨")
-        st.write("**분류 방법:** keyword_based")
-        st.write("**신뢰도:** medium")
-    
-    with col4:
-        st.markdown("#### 🎯 시나리오 매칭")
-        st.write("**조건 1:** 윈도우 서비스에서 톰캣 작동 여부를 확인하였는가?")
-        st.write("**조건 2:** 톰캣이 꺼져 있는가?")
-        st.write("**해결책:** 톰캣 서비스 시작")
-        st.write("**현장 출동 필요:** N")
+    # 문제 유형 분류와 시나리오 매칭 섹션 삭제
     
     # AI 응답 결과
     st.markdown("### 🤖 AI 응답")
@@ -422,13 +409,13 @@ def show_ai_analysis(selected_row):
         st.markdown("#### 🔧 조치 흐름")
         st.write("""
         1. **윈도우 서비스 확인:** 윈도우 서비스 목록에서 "Apache Tomcat" 서비스가 실행 중인지 확인합니다. (services.msc 실행)
-        
+
         2. **톰캣 상태 확인:** 톰캣이 실행 중이라면, 브라우저에서 http://localhost:8888/ (포트 번호는 환경에 따라 다를 수 있음)에 접속하여 톰캣 기본 페이지가 정상적으로 표시되는지 확인합니다.
-        
+
         3. **톰캣 재시작:** 톰캣이 실행 중이지만 접속이 안 된다면, 톰캣 서비스를 재시작합니다. 윈도우 서비스에서 "Apache Tomcat" 서비스를 "중지" 후 "시작" 합니다.
-        
+
         4. **PKP 애플리케이션 확인:** 톰캣 재시작 후에도 접속이 안 된다면, PKP 애플리케이션의 로그 파일을 확인하여 에러 메시지가 있는지 확인합니다. 로그 파일 위치는 PKP 애플리케이션 설정에 따라 다릅니다.
-        
+
         5. **방화벽 확인:** 윈도우 방화벽 또는 다른 방화벽이 톰캣 포트(기본값 8080)를 차단하고 있지 않은지 확인합니다. 필요시 방화벽 설정을 변경합니다.
         """)
     
@@ -556,6 +543,8 @@ def show_ai_analysis_modal(selected_row):
             st.markdown("---")
             st.markdown("### 🔍 AI 분석 결과")
             
+            # 문제 유형 분류와 시나리오 매칭 섹션 삭제
+            
             if actual_analysis:
                 # MongoDB에서 가져온 데이터인지 로컬 데이터베이스에서 가져온 데이터인지 확인
                 if actual_analysis.get('source') == 'mongodb':
@@ -570,38 +559,6 @@ def show_ai_analysis_modal(selected_row):
                 
                 # 데이터가 성공적으로 로드되었는지 확인
                 if analysis_data:
-                    col3, col4 = st.columns(2)
-                    
-                    with col3:
-                        st.markdown("#### 📊 문제 유형 분류")
-                        issue_type = analysis_data.get('issue_type', selected_row.get('문의유형', 'N/A'))
-                        st.write(f"**분류된 문제 유형:** {issue_type}")
-                        
-                        # 분류 방법과 신뢰도 정보 표시
-                        classification_method = analysis_data.get('classification_method', 'AI 자동 분류')
-                        confidence = analysis_data.get('confidence', '높음')
-                        st.write(f"**분류 방법:** {classification_method}")
-                        st.write(f"**신뢰도:** {confidence}")
-                        
-                        # 우선순위 정보
-                        priority = analysis_data.get('priority', 'N/A')
-                        st.write(f"**우선순위:** {priority}")
-                        
-                        # 계약 유형
-                        contract_type = analysis_data.get('contract_type', 'N/A')
-                        st.write(f"**계약 유형:** {contract_type}")
-                    
-                    with col4:
-                        st.markdown("#### 🎯 시나리오 매칭")
-                        # 시나리오 매칭 정보 표시
-                        if full_result and 'best_scenario' in full_result:
-                            scenario = full_result['best_scenario']
-                            st.write(f"**조건 1:** {scenario.get('condition1', 'N/A')}")
-                            st.write(f"**조건 2:** {scenario.get('condition2', 'N/A')}")
-                            st.write(f"**해결책:** {scenario.get('solution', 'N/A')}")
-                            st.write(f"**현장 출동 필요:** {scenario.get('on_site_required', 'N/A')}")
-                        else:
-                            st.write("시나리오 매칭 정보가 없습니다.")
                     
                     # AI 응답 결과
                     st.markdown("### 🤖 AI 응답")
@@ -635,7 +592,9 @@ def show_ai_analysis_modal(selected_row):
                         st.markdown("#### 🔧 조치 흐름")
                         action_flow = analysis_data.get('action_flow', '')
                         if action_flow:
-                            st.write(action_flow)
+                            # 조치 흐름에 줄바꿈 적용
+                            action_flow_content = action_flow.replace('\n', '\n\n')
+                            st.write(action_flow_content)
                         else:
                             st.write("해당 문의에 대한 조치 흐름이 없습니다.")
                     
@@ -687,9 +646,11 @@ def show_ai_analysis_modal(selected_row):
 - 요약: {parsed.get('summary', '')}
 
 - 조치 흐름:
+
 {parsed.get('action_flow', '')}
 
 - 이메일 초안:
+
 {parsed.get('email_draft', '')}"""
                         else:
                             full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
@@ -699,9 +660,11 @@ def show_ai_analysis_modal(selected_row):
 - 요약: {analysis_data.get('summary', '')}
 
 - 조치 흐름:
+
 {analysis_data.get('action_flow', '')}
 
 - 이메일 초안:
+
 {analysis_data.get('email_draft', '')}"""
                     else:
                         full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
@@ -811,25 +774,20 @@ def show_ai_analysis_modal(selected_row):
                 
                 # 기본 AI 응답 표시 (샘플 데이터)
                 st.markdown("### 🤖 기본 AI 응답 (샘플)")
-                st.markdown("#### 📊 문제 유형 분류")
-                st.write(f"**분류된 문제 유형:** {selected_row.get('문의유형', 'N/A')}")
-                st.write("**분류 방법:** keyword_based")
-                st.write("**신뢰도:** medium")
                 
-                st.markdown("#### 🎯 시나리오 매칭")
-                st.write("**조건 1:** 해당 문제 유형에 대한 시나리오가 정의되어 있는가?")
-                st.write("**조건 2:** 시나리오 매칭이 성공했는가?")
-                st.write("**해결책:** AI 분석 결과에 따른 해결 방안")
-                st.write("**현장 출동 필요:** 상황에 따라 결정")
+                # 문제 유형 분류와 시나리오 매칭 섹션 삭제
                 
                 st.markdown("#### 📝 요약")
                 st.write(f"고객님께서 {selected_row.get('문의유형', '문의')}에 대한 문의를 주셨습니다.")
                 
                 st.markdown("#### 🔧 조치 흐름")
-                st.write("1. 문제 상황 파악 및 분석")
-                st.write("2. 적절한 해결 방안 제시")
-                st.write("3. 필요시 추가 정보 요청")
-                st.write("4. 해결 완료 확인")
+                st.write("""1. 문제 상황 파악 및 분석
+
+2. 적절한 해결 방안 제시
+
+3. 필요시 추가 정보 요청
+
+4. 해결 완료 확인""")
                 
                 st.markdown("#### 📧 이메일 초안")
                 basic_email = f"""제목: {selected_row.get('문의유형', '문의')} 답변
@@ -864,12 +822,17 @@ def show_ai_analysis_modal(selected_row):
 - 요약: 고객님께서 {selected_row.get('문의유형', '문의')}에 대한 문의를 주셨습니다.
 
 - 조치 흐름:
+
 1. 문제 상황 파악 및 분석
+
 2. 적절한 해결 방안 제시
+
 3. 필요시 추가 정보 요청
+
 4. 해결 완료 확인
 
 - 이메일 초안:
+
 {basic_email}"""
                 
                 st.text_area("전체 AI 응답", full_basic_response, height=200, disabled=True)
@@ -1433,24 +1396,7 @@ with tab2:
         # AI 분석 결과
         st.markdown("### 🔍 AI 분석 결과")
         
-        # 문제 유형 분류 결과
-        col7, col8 = st.columns(2)
-        
-        with col7:
-            st.markdown("#### 📊 문제 유형 분류")
-            classification = result['classification']
-            st.write(f"**분류된 문제 유형:** {classification['issue_type']}")
-            st.write(f"**분류 방법:** {classification['method']}")
-            st.write(f"**신뢰도:** {classification['confidence']}")
-        
-        with col8:
-            st.markdown("#### 🎯 시나리오 매칭")
-            if result['best_scenario']:
-                scenario = result['best_scenario']
-                st.write(f"**조건 1:** {scenario.get('condition_1', 'N/A')}")
-                st.write(f"**조건 2:** {scenario.get('condition_2', 'N/A')}")
-                st.write(f"**해결책:** {scenario.get('solution', 'N/A')}")
-                st.write(f"**현장 출동 필요:** {scenario.get('onsite_needed', 'N')}")
+        # 문제 유형 분류와 시나리오 매칭 섹션 삭제
         
         # Gemini 응답 결과
         st.markdown("### 🤖 AI 응답")
@@ -1477,7 +1423,9 @@ with tab2:
                 st.write(parsed['summary'])
                 
                 st.markdown("#### 🔧 조치 흐름")
-                st.write(parsed['action_flow'])
+                # 조치 흐름에 줄바꿈 적용
+                action_flow_content = parsed['action_flow'].replace('\n', '\n\n')
+                st.write(action_flow_content)
             
             with col10:
                 st.markdown("#### 📧 이메일 초안")
@@ -1579,7 +1527,9 @@ with tab2:
                     st.write(parsed['summary'])
                     
                     st.markdown("#### 🔧 조치 흐름")
-                    st.write(parsed['action_flow'])
+                    # 조치 흐름에 줄바꿈 적용
+                    action_flow_content = parsed['action_flow'].replace('\n', '\n\n')
+                    st.write(action_flow_content)
                 
                 with col10:
                     st.markdown("#### 📧 이메일 초안")
