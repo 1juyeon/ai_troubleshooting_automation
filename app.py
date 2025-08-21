@@ -13,6 +13,7 @@ from classify_issue import IssueClassifier
 from scenario_db import ScenarioDB
 from vector_search import VectorSearchWrapper
 from gpt_handler import GPTHandler
+from openai_handler import OpenAIHandler
 from database import HistoryDB
 from multi_user_database import MultiUserHistoryDB
 from mongodb_handler import MongoDBHandler
@@ -568,10 +569,18 @@ def show_ai_analysis_modal(selected_row):
                     with col5:
                         st.markdown("#### ❓ 질문")
                         # 질문 정보 표시
-                        if full_result and 'gemini_result' in full_result:
-                            gemini_result = full_result['gemini_result']
-                            if 'parsed_response' in gemini_result:
-                                parsed = gemini_result['parsed_response']
+                        if full_result and 'ai_result' in full_result:
+                            ai_result = full_result['ai_result']
+                            if 'parsed_response' in ai_result:
+                                parsed = ai_result['parsed_response']
+                                question = parsed.get('question', '')
+                                if question:
+                                    st.write(question)
+                                else:
+                                    st.write("질문 정보가 없습니다.")
+                            elif 'response' in ai_result:
+                                # GPT API 응답인 경우 파싱
+                                parsed = self._parse_gpt_response(ai_result['response'])
                                 question = parsed.get('question', '')
                                 if question:
                                     st.write(question)
@@ -634,10 +643,27 @@ def show_ai_analysis_modal(selected_row):
                     st.markdown("### 📄 전체 AI 응답")
                     
                     # MongoDB 데이터 구조에 맞게 전체 AI 응답 구성
-                    if full_result and 'gemini_result' in full_result:
-                        gemini_result = full_result['gemini_result']
-                        if 'parsed_response' in gemini_result:
-                            parsed = gemini_result['parsed_response']
+                    if full_result and 'ai_result' in full_result:
+                        ai_result = full_result['ai_result']
+                        if 'parsed_response' in ai_result:
+                            parsed = ai_result['parsed_response']
+                            
+                            full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
+
+[응답내용]
+
+- 요약: {parsed.get('summary', '')}
+
+- 조치 흐름:
+
+{parsed.get('action_flow', '')}
+
+- 이메일 초안:
+
+{parsed.get('email_draft', '')}"""
+                        elif 'response' in ai_result:
+                            # GPT API 응답인 경우 파싱
+                            parsed = self._parse_gpt_response(ai_result['response'])
                             
                             full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
 
@@ -994,6 +1020,65 @@ def render_pagination_controls(current_page, total_pages, total_items, items_per
     
     st.markdown("---")
 
+def _parse_gpt_response(response_text: str) -> dict:
+    """GPT API 응답을 파싱하여 구조화된 데이터로 변환"""
+    try:
+        parsed = {
+            'response_type': '해결안',
+            'summary': '',
+            'action_flow': '',
+            'email_draft': '',
+            'question': ''
+        }
+        
+        # 응답 텍스트를 줄 단위로 분리
+        lines = response_text.split('\n')
+        current_section = None
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # 섹션 헤더 확인
+            if '[대응유형]' in line:
+                response_type = line.replace('[대응유형]', '').strip()
+                if response_type in ['해결안', '질문', '출동']:
+                    parsed['response_type'] = response_type
+            elif '[응답내용]' in line:
+                current_section = 'content'
+            elif '- 요약:' in line:
+                current_section = 'summary'
+            elif '- 조치 흐름:' in line:
+                current_section = 'action_flow'
+            elif '- 이메일 초안:' in line:
+                current_section = 'email_draft'
+            elif line.startswith('1.') or line.startswith('2.') or line.startswith('3.'):
+                # 조치 흐름 항목
+                if current_section == 'action_flow':
+                    parsed['action_flow'] += line + '\n'
+            elif current_section == 'summary':
+                parsed['summary'] += line + ' '
+            elif current_section == 'action_flow' and parsed['action_flow']:
+                parsed['action_flow'] += line + '\n'
+            elif current_section == 'email_draft':
+                parsed['email_draft'] += line + '\n'
+        
+        # 요약에서 "- 요약:" 제거
+        parsed['summary'] = parsed['summary'].replace('- 요약:', '').strip()
+        
+        return parsed
+        
+    except Exception as e:
+        print(f"GPT 응답 파싱 오류: {e}")
+        return {
+            'response_type': '해결안',
+            'summary': '응답 파싱 중 오류가 발생했습니다.',
+            'action_flow': '응답을 확인해주세요.',
+            'email_draft': '응답을 확인해주세요.',
+            'question': ''
+        }
+
 # 컴포넌트 초기화
 def init_components():
     """컴포넌트 초기화"""
@@ -1024,10 +1109,22 @@ def init_components():
         
         gpt_handler = GPTHandler(api_key=api_key)
         
-        # API 키 상태 확인
-        if not api_key:
-            st.error("❌ Gemini API 키가 설정되지 않았습니다.")
-            st.info("사이드바에서 API 키를 설정하거나, 관리자가 Streamlit Cloud Secrets 또는 환경변수 GOOGLE_API_KEY를 설정하면 AI 분석이 가능합니다.")
+        # OpenAI 핸들러 초기화
+        openai_api_key = ""
+        try:
+            openai_api_key = st.secrets["OPENAI_API_KEY"]
+            print("✅ OpenAI API 키를 Streamlit Secrets에서 로드했습니다.")
+        except:
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+            if openai_api_key:
+                print("✅ OpenAI API 키를 환경변수에서 로드했습니다.")
+        
+        openai_handler = OpenAIHandler(api_key=openai_api_key)
+        
+        # API 키 상태 확인 (최소 하나는 필요)
+        if not api_key and not openai_api_key:
+            st.error("❌ AI API 키가 설정되지 않았습니다.")
+            st.info("Gemini API 키 또는 OpenAI API 키 중 하나를 설정해야 합니다. 관리자가 Streamlit Cloud Secrets 또는 환경변수를 설정하면 AI 분석이 가능합니다.")
             st.stop()
         
         # SOLAPI 핸들러 초기화
@@ -1042,6 +1139,7 @@ def init_components():
             'scenario_db': scenario_db,
             'vector_search': vector_search,
             'gpt_handler': gpt_handler,
+            'openai_handler': openai_handler,
             'solapi_handler': solapi_handler,
             'history_db': history_db,
             'multi_user_db': multi_user_db
@@ -1094,12 +1192,35 @@ with st.sidebar:
             "Gemini 1.5 Pro",
             "Gemini 1.5 Flash", 
             "Gemini 2.0 Pro",
-            "Gemini 2.0 Flash"
+            "Gemini 2.0 Flash",
+            "GPT-4o",
+            "GPT-4 Turbo",
+            "GPT-3.5 Turbo"
         ],
         index=0
     )
     
     st.markdown("---")
+    
+    st.markdown("## 🔑 API 설정")
+    
+    # Gemini API 키 설정
+    gemini_api_key = st.text_input(
+        "Gemini API 키",
+        value=st.session_state.get('google_api_key', ''),
+        type="password",
+        placeholder="Gemini API 키를 입력하세요",
+        help="Google AI Studio에서 발급받은 API 키"
+    )
+    
+    # OpenAI API 키 설정
+    openai_api_key = st.text_input(
+        "OpenAI API 키",
+        value=st.session_state.get('openai_api_key', ''),
+        type="password",
+        placeholder="OpenAI API 키를 입력하세요",
+        help="OpenAI에서 발급받은 API 키"
+    )
     
     # SOLAPI API 키를 세션 상태에 저장 (secrets에서 자동 로드)
     try:
@@ -1109,6 +1230,12 @@ with st.sidebar:
             st.session_state['sender_phone'] = "01012345678"
     except:
         pass
+    
+    # API 키를 세션 상태에 저장
+    if gemini_api_key:
+        st.session_state['google_api_key'] = gemini_api_key
+    if openai_api_key:
+        st.session_state['openai_api_key'] = openai_api_key
     
     # 세션 상태에 저장
     st.session_state.contact_name = contact_name
@@ -1146,7 +1273,7 @@ components = st.session_state.components
 st.markdown("""
 <div style='background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); padding: 1rem; border-radius: 10px; color: white; text-align: center; margin-bottom:2rem;'>
     <h1>🔧 PrivKeeper P 장애 대응 자동화 시스템</h1>
-    <p>Gemini AI 기반 고객 문의 자동 분석 및 응답 도구</p>
+    <p>Gemini AI & GPT 기반 고객 문의 자동 분석 및 응답 도구</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1231,47 +1358,88 @@ with tab1:
                         manual_ref = components['scenario_db'].get_manual_reference(issue_type)
                         st.success("✅ 매뉴얼 참조 조회 완료")
                     
-                    # 5. Gemini 응답 생성 (타임아웃 설정)
+                    # 5. AI 응답 생성 (타임아웃 설정)
                     with st.spinner("5단계: AI 응답 생성 중... (최대 30초)"):
                         import time
                         start_time = time.time()
                         
-                        # API 키 확인
-                        api_key_available = st.session_state.get('google_api_key') or os.getenv("GOOGLE_API_KEY")
+                        # 선택된 AI 모델에 따라 API 키 확인 및 핸들러 선택
+                        ai_result = None
+                        selected_model = st.session_state.get('ai_model', 'Gemini 1.5 Pro')
                         
-                        if not api_key_available:
-                            st.error("❌ API 키가 설정되지 않아 AI 분석을 진행할 수 없습니다.")
-                            st.stop()
-                        
-                        # 타임아웃 설정 (30초)
-                        gemini_result = None
-                        try:
-                            gemini_result = components['gpt_handler'].generate_complete_response(
-                                customer_input=inquiry_content,
-                                issue_type=issue_type,
-                                condition_1=best_scenario.get('condition_1', '') if best_scenario else '',
-                                condition_2=best_scenario.get('condition_2', '') if best_scenario else ''
-                            )
+                        if 'GPT' in selected_model:
+                            # GPT API 사용
+                            api_key_available = st.session_state.get('openai_api_key') or os.getenv("OPENAI_API_KEY")
+                            if not api_key_available:
+                                st.error("❌ OpenAI API 키가 설정되지 않아 AI 분석을 진행할 수 없습니다.")
+                                st.stop()
                             
-                            elapsed_time = time.time() - start_time
-                            if gemini_result["success"]:
-                                st.success(f"✅ AI 응답 생성 완료 ({elapsed_time:.1f}초)")
-                            else:
-                                st.warning(f"⚠️ AI 응답 생성 실패, 기본 응답 사용 ({elapsed_time:.1f}초)")
-                                
-                        except Exception as e:
-                            elapsed_time = time.time() - start_time
-                            st.error(f"❌ AI 응답 생성 중 오류 발생 ({elapsed_time:.1f}초): {e}")
-                            # 기본 응답 생성
-                            gemini_result = {
-                                "success": False,
-                                "error": str(e),
-                                "parsed_response": components['gpt_handler']._generate_default_response(
-                                    inquiry_content, issue_type, 
-                                    best_scenario.get('condition_1', '') if best_scenario else '',
-                                    best_scenario.get('condition_2', '') if best_scenario else ''
-                                )
+                            # GPT 모델 매핑
+                            model_mapping = {
+                                "GPT-4o": "gpt-4o",
+                                "GPT-4 Turbo": "gpt-4-turbo",
+                                "GPT-3.5 Turbo": "gpt-3.5-turbo"
                             }
+                            gpt_model = model_mapping.get(selected_model, "gpt-4o")
+                            
+                            try:
+                                ai_result = components['openai_handler'].generate_response(
+                                    customer_input=inquiry_content,
+                                    issue_type=issue_type,
+                                    condition_1=best_scenario.get('condition_1', '') if best_scenario else '',
+                                    condition_2=best_scenario.get('condition_2', '') if best_scenario else '',
+                                    model=gpt_model
+                                )
+                                
+                                elapsed_time = time.time() - start_time
+                                if ai_result["success"]:
+                                    st.success(f"✅ GPT 응답 생성 완료 ({elapsed_time:.1f}초)")
+                                else:
+                                    st.warning(f"⚠️ GPT 응답 생성 실패, 기본 응답 사용 ({elapsed_time:.1f}초)")
+                                    
+                            except Exception as e:
+                                elapsed_time = time.time() - start_time
+                                st.error(f"❌ GPT 응답 생성 중 오류 발생 ({elapsed_time:.1f}초): {e}")
+                                # 기본 응답 생성
+                                ai_result = {
+                                    "success": False,
+                                    "error": str(e),
+                                    "response": f"GPT API 오류로 인해 기본 응답을 생성합니다.\n\n[요약]\n고객 문의에 대한 기본적인 대응 방안을 제시합니다.\n\n[조치 흐름]\n1. 문제 상황 파악\n2. 기본적인 해결책 제시\n3. 필요시 추가 확인 요청\n\n[이메일 초안]\n고객님께서 문의하신 내용을 확인했습니다. 현재 상황을 파악하여 적절한 해결책을 제시하겠습니다."
+                                }
+                        else:
+                            # Gemini API 사용
+                            api_key_available = st.session_state.get('google_api_key') or os.getenv("GOOGLE_API_KEY")
+                            if not api_key_available:
+                                st.error("❌ Gemini API 키가 설정되지 않아 AI 분석을 진행할 수 없습니다.")
+                                st.stop()
+                            
+                            try:
+                                ai_result = components['gpt_handler'].generate_complete_response(
+                                    customer_input=inquiry_content,
+                                    issue_type=issue_type,
+                                    condition_1=best_scenario.get('condition_1', '') if best_scenario else '',
+                                    condition_2=best_scenario.get('condition_2', '') if best_scenario else ''
+                                )
+                                
+                                elapsed_time = time.time() - start_time
+                                if ai_result["success"]:
+                                    st.success(f"✅ Gemini 응답 생성 완료 ({elapsed_time:.1f}초)")
+                                else:
+                                    st.warning(f"⚠️ Gemini 응답 생성 실패, 기본 응답 사용 ({elapsed_time:.1f}초)")
+                                    
+                            except Exception as e:
+                                elapsed_time = time.time() - start_time
+                                st.error(f"❌ Gemini 응답 생성 중 오류 발생 ({elapsed_time:.1f}초): {e}")
+                                # 기본 응답 생성
+                                ai_result = {
+                                    "success": False,
+                                    "error": str(e),
+                                    "parsed_response": components['gpt_handler']._generate_default_response(
+                                        inquiry_content, issue_type, 
+                                        best_scenario.get('condition_1', '') if best_scenario else '',
+                                        best_scenario.get('condition_2', '') if best_scenario else ''
+                                    )
+                                }
                     
                     # 결과 저장
                     analysis_result = {
@@ -1279,9 +1447,9 @@ with tab1:
                         'issue_type': issue_type,
                         'scenarios': scenarios,
                         'best_scenario': best_scenario,
-                                                   'similar_cases': similar_cases,
-                           'gemini_result': gemini_result,
-                           'timestamp': get_safe_timestamp()
+                        'similar_cases': similar_cases,
+                        'ai_result': ai_result,
+                        'timestamp': get_safe_timestamp()
                     }
                     
                     st.session_state.analysis_result = analysis_result
@@ -1352,19 +1520,27 @@ with tab2:
     st.markdown("## 🤖 AI 분석 결과")
     
     # API 키 확인
-    if not st.session_state.get('google_api_key') and not os.getenv("GOOGLE_API_KEY"):
-        st.error("❌ Google API 키가 설정되지 않았습니다.")
+    gemini_api_key = st.session_state.get('google_api_key') or os.getenv("GOOGLE_API_KEY")
+    openai_api_key = st.session_state.get('openai_api_key') or os.getenv("OPENAI_API_KEY")
+    
+    if not gemini_api_key and not openai_api_key:
+        st.error("❌ AI API 키가 설정되지 않았습니다.")
         st.info("""
         **API 키 설정 방법:**
-        1. 사이드바의 "🔑 API 설정" 섹션에서 Google API 키를 입력하세요
-        2. 또는 환경변수 `GOOGLE_API_KEY`를 설정하세요
+        1. 사이드바의 "🔑 API 설정" 섹션에서 Gemini API 키 또는 OpenAI API 키를 입력하세요
+        2. 또는 환경변수 `GOOGLE_API_KEY` 또는 `OPENAI_API_KEY`를 설정하세요
         
-        **Google API 키 발급 방법:**
-        1. [Google Cloud Console](https://console.cloud.google.com/) 접속
-        2. 프로젝트 생성 또는 선택
-        3. API 및 서비스 → 사용자 인증 정보
-        4. "사용자 인증 정보 만들기" → "API 키"
-        5. 생성된 API 키를 복사하여 앱에 입력
+        **API 키 발급 방법:**
+        
+        **Gemini API 키:**
+        1. [Google AI Studio](https://aistudio.google.com/) 접속
+        2. API 키 생성
+        3. 생성된 API 키를 복사하여 앱에 입력
+        
+        **OpenAI API 키:**
+        1. [OpenAI Platform](https://platform.openai.com/) 접속
+        2. API Keys → Create new secret key
+        3. 생성된 API 키를 복사하여 앱에 입력
         """)
         st.stop()
     
@@ -1396,11 +1572,19 @@ with tab2:
         
         # 문제 유형 분류와 시나리오 매칭 섹션 삭제
         
-        # Gemini 응답 결과
+        # AI 응답 결과
         st.markdown("### 🤖 AI 응답")
         
-        if result['gemini_result']['success']:
-            parsed = result['gemini_result']['parsed_response']
+        if 'ai_result' in result and result['ai_result']['success']:
+            ai_result = result['ai_result']
+            if 'parsed_response' in ai_result:
+                parsed = ai_result['parsed_response']
+            elif 'response' in ai_result:
+                # GPT API 응답인 경우 파싱
+                parsed = _parse_gpt_response(ai_result['response'])
+            else:
+                st.error("❌ AI 응답 데이터가 올바르지 않습니다.")
+                st.stop()
             
             # 대응 유형 표시
             response_type = parsed['response_type']
@@ -1511,11 +1695,12 @@ with tab2:
         
         else:
             st.error("❌ AI 응답 생성 실패")
-            st.write(f"오류: {result['gemini_result']['error']}")
+            if 'ai_result' in result and 'error' in result['ai_result']:
+                st.write(f"오류: {result['ai_result']['error']}")
             
             # 기본 응답 표시
-            if 'parsed_response' in result['gemini_result']:
-                parsed = result['gemini_result']['parsed_response']
+            if 'ai_result' in result and 'parsed_response' in result['ai_result']:
+                parsed = result['ai_result']['parsed_response']
                 st.warning("⚠️ 기본 응답을 제공합니다:")
                 
                 col9, col10 = st.columns(2)
@@ -1851,10 +2036,17 @@ with tab3:
                         # full_analysis_result에서 response_type 추출
                         full_result = entry.get('full_analysis_result', {})
                         if full_result:
-                            gemini_result = full_result.get('gemini_result', {})
-                            if gemini_result:
-                                parsed_response = gemini_result.get('parsed_response', {})
-                                if parsed_response:
+                            ai_result = full_result.get('ai_result', {})
+                            if ai_result:
+                                if 'parsed_response' in ai_result:
+                                    parsed_response = ai_result.get('parsed_response', {})
+                                    if parsed_response:
+                                        response_type = parsed_response.get('response_type', '')
+                                        if response_type:
+                                            response_types.add(response_type)
+                                elif 'response' in ai_result:
+                                    # GPT API 응답인 경우 파싱
+                                    parsed_response = _parse_gpt_response(ai_result['response'])
                                     response_type = parsed_response.get('response_type', '')
                                     if response_type:
                                         response_types.add(response_type)

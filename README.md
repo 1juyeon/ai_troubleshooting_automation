@@ -1,6 +1,6 @@
 # 🔧 PrivKeeper P 장애 대응 자동화 시스템
 
-Gemini AI 기반 고객 문의 자동 분석 및 응답 도구
+Gemini AI & GPT 기반 고객 문의 자동 분석 및 응답 도구
 
 ## ✨ 주요 기능
 
