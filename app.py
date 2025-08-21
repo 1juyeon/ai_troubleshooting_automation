@@ -471,22 +471,31 @@ def show_ai_analysis_modal(selected_row):
         st.markdown("## 🤖 AI 분석 결과")
         st.success("✅ AI 분석이 완료되었습니다! 아래에서 상세한 결과를 확인하세요.")
         
+        # 새로운 데이터 구조 처리
+        if isinstance(selected_row, dict) and 'row_data' in selected_row and 'original_data' in selected_row:
+            row_data = selected_row['row_data']
+            original_data = selected_row['original_data']
+        else:
+            # 기존 구조와의 호환성을 위해
+            row_data = selected_row
+            original_data = selected_row
+        
         # 선택된 데이터 정보 표시
         with st.expander("📋 입력된 문의 정보", expanded=True):
             col1, col2 = st.columns(2)
             with col1:
-                customer_name = selected_row.get('고객사명', '')
+                customer_name = row_data.get('고객사명', '')
                 st.write(f"**고객사명:** {customer_name if customer_name else ''}")
-                st.write(f"**고객 담당자:** {selected_row.get('고객담당자', '')}")
-                st.write(f"**문의 내용:** {selected_row.get('문의내용', 'N/A')}")
-                st.write(f"**우선순위:** {selected_row.get('우선순위', 'N/A')}")
-                st.write(f"**계약 유형:** {selected_row.get('계약유형', 'N/A')}")
+                st.write(f"**고객 담당자:** {original_data.get('customer_contact', '') if original_data else ''}")
+                st.write(f"**문의 내용:** {original_data.get('inquiry_content', 'N/A') if original_data else 'N/A'}")
+                st.write(f"**우선순위:** {row_data.get('우선순위', 'N/A')}")
+                st.write(f"**계약 유형:** {original_data.get('contract_type', 'N/A') if original_data else 'N/A'}")
             with col2:
-                st.write(f"**담당자:** {selected_row.get('담당자', 'N/A')} ({selected_row.get('역할', 'N/A')})")
-                st.write(f"**시스템 버전:** {selected_row.get('시스템버전', '')}")
-                st.write(f"**브라우저:** {selected_row.get('브라우저', '')}")
-                st.write(f"**운영체제:** {selected_row.get('운영체제', '')}")
-                st.write(f"**날짜:** {selected_row.get('날짜', 'N/A')}")
+                st.write(f"**담당자:** {row_data.get('담당자', 'N/A')} ({row_data.get('역할', 'N/A')})")
+                st.write(f"**시스템 버전:** {original_data.get('system_version', '') if original_data else ''}")
+                st.write(f"**브라우저:** {original_data.get('browser', '') if original_data else ''}")
+                st.write(f"**운영체제:** {original_data.get('os', '') if original_data else ''}")
+                st.write(f"**날짜:** {row_data.get('날짜', 'N/A')}")
         
         # 실제 분석 결과 조회 시도
         try:
@@ -497,10 +506,10 @@ def show_ai_analysis_modal(selected_row):
             if st.session_state.get('mongodb_connected') and st.session_state.get('mongo_handler'):
                 try:
                     # 고객사명과 날짜를 기준으로 MongoDB에서 조회
-                    customer_name = selected_row.get('고객사명', '')
-                    inquiry_date = selected_row.get('날짜', '')
-                    user_name = selected_row.get('담당자', '')
-                    issue_type = selected_row.get('문의유형', '')
+                    customer_name = row_data.get('고객사명', '')
+                    inquiry_date = row_data.get('날짜', '')
+                    user_name = row_data.get('담당자', '')
+                    issue_type = row_data.get('문의유형', '')
                     
                     # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
                     if inquiry_date and ' ' in inquiry_date:
@@ -526,8 +535,8 @@ def show_ai_analysis_modal(selected_row):
                     # components가 초기화되었는지 확인
                     if 'components' in st.session_state and 'multi_user_db' in st.session_state.components:
                         # 고객사명과 날짜를 기준으로 실제 분석 결과 조회
-                        customer_name = selected_row.get('고객사명', '')
-                        inquiry_date = selected_row.get('날짜', '')
+                        customer_name = row_data.get('고객사명', '')
+                        inquiry_date = row_data.get('날짜', '')
                         
                         # 날짜 형식 변환 (YYYY-MM-DD HH:MM:SS -> YYYY-MM-DD)
                         if inquiry_date and ' ' in inquiry_date:
@@ -539,6 +548,46 @@ def show_ai_analysis_modal(selected_row):
                         )
                         
                 except Exception as local_error:
+                    pass
+            
+            # 원본 데이터에서 직접 AI 분석 결과 추출 시도
+            if not actual_analysis and original_data:
+                try:
+                    # 원본 데이터에 AI 분석 결과가 포함되어 있는지 확인
+                    if 'ai_analysis_result' in original_data:
+                        actual_analysis = {
+                            'success': True,
+                            'data': original_data['ai_analysis_result'],
+                            'source': 'original_data'
+                        }
+                    elif 'full_analysis_result' in original_data:
+                        actual_analysis = {
+                            'success': True,
+                            'data': original_data,
+                            'source': 'original_data'
+                        }
+                    elif 'analysis_result' in original_data:
+                        actual_analysis = {
+                            'success': True,
+                            'data': original_data['analysis_result'],
+                            'source': 'original_data'
+                        }
+                    elif 'gpt_response' in original_data:
+                        actual_analysis = {
+                            'success': True,
+                            'data': {
+                                'summary': original_data.get('summary', ''),
+                                'action_flow': original_data.get('action_flow', ''),
+                                'email_draft': original_data.get('email_draft', ''),
+                                'full_analysis_result': {
+                                    'ai_result': {
+                                        'response': original_data.get('gpt_response', '')
+                                    }
+                                }
+                            },
+                            'source': 'original_data'
+                        }
+                except Exception as original_error:
                     pass
             
             # AI 분석 결과 표시 (실제 데이터가 있든 없든 기본 정보는 표시)
@@ -642,7 +691,7 @@ def show_ai_analysis_modal(selected_row):
                         st.text_area("이메일 내용", email_content, height=150, disabled=True)
                         
                         # 이메일 복사 버튼
-                        if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
+                        if st.button("📋 이메일 내용 복사", key=f"copy_email_{row_data.get('번호', 'unknown')}"):
                             st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
                     
                     # 전체 AI 응답 섹션 추가
@@ -700,7 +749,22 @@ def show_ai_analysis_modal(selected_row):
 
 {analysis_data.get('email_draft', '')}"""
                     else:
-                        full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
+                        # 원본 데이터에서 직접 추출 시도
+                        if original_data and 'ai_analysis_result' in original_data:
+                            ai_data = original_data['ai_analysis_result']
+                            full_response = f"""[대응유형] {ai_data.get('response_type', '해결안')}
+
+[응답내용]
+
+- 요약: {ai_data.get('summary', '')}
+
+- 조치 흐름:
+{ai_data.get('action_flow', '')}
+
+- 이메일 초안:
+{ai_data.get('email_draft', '')}"""
+                        else:
+                            full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
 
 [응답내용]
 
@@ -716,7 +780,7 @@ def show_ai_analysis_modal(selected_row):
                     st.text_area("전체 AI 응답", full_response, height=200, disabled=True)
                     
                     # 전체 응답 복사 버튼
-                    if st.button("📋 전체 응답 복사", key=f"copy_full_{selected_row.get('번호', 'unknown')}"):
+                    if st.button("📋 전체 응답 복사", key=f"copy_full_{row_data.get('번호', 'unknown')}"):
                         st.write("✅ 전체 AI 응답이 클립보드에 복사되었습니다.")
                     
                     # SMS 발송 섹션 추가
@@ -729,31 +793,31 @@ def show_ai_analysis_modal(selected_row):
                         recipient_name = st.text_input(
                             "수신자 이름",
                             placeholder="수신자 이름을 입력하세요",
-                            key=f"sms_recipient_name_{selected_row.get('번호', 'unknown')}"
+                            key=f"sms_recipient_name_{row_data.get('번호', 'unknown')}"
                         )
                         recipient_phone = st.text_input(
                             "수신자 전화번호",
                             placeholder="01012345678",
-                            key=f"sms_recipient_phone_{selected_row.get('번호', 'unknown')}"
+                            key=f"sms_recipient_phone_{row_data.get('번호', 'unknown')}"
                         )
                         sender_phone = st.text_input(
                             "발신자 번호",
                             value=st.session_state.get('sender_phone', '01012345678'),
                             placeholder="01012345678",
                             help="SMS 발송 시 표시될 발신자 번호입니다",
-                            key=f"sms_sender_phone_{selected_row.get('번호', 'unknown')}"
+                            key=f"sms_sender_phone_{row_data.get('번호', 'unknown')}"
                         )
                     
                     with col_sms2:
                         sms_message = st.text_area(
                             "SMS 메시지",
-                            value=f"[{selected_row.get('문의유형', 'AI')}] {summary[:100] if summary else '분석 완료'}...",
+                            value=f"[{row_data.get('문의유형', 'AI')}] {summary[:100] if summary else '분석 완료'}...",
                             height=100,
-                            key=f"sms_message_{selected_row.get('번호', 'unknown')}"
+                            key=f"sms_message_{row_data.get('번호', 'unknown')}"
                         )
                         
                         # SMS 발송 버튼
-                        if st.button("📱 SMS 발송", use_container_width=True, type="primary", key=f"sms_send_{selected_row.get('번호', 'unknown')}"):
+                        if st.button("📱 SMS 발송", use_container_width=True, type="primary", key=f"sms_send_{row_data.get('번호', 'unknown')}"):
                             if recipient_name and recipient_phone and sms_message:
                                 # SOLAPI 핸들러로 SMS 발송
                                 try:
@@ -798,6 +862,13 @@ def show_ai_analysis_modal(selected_row):
                 st.info("1. 분석이 완료되지 않았거나 저장되지 않음")
                 st.info("2. MongoDB 또는 로컬 데이터베이스에서 데이터를 찾을 수 없음")
                 st.info("3. 검색 조건이 정확하지 않음")
+                
+                # 원본 데이터 정보 표시 (디버깅용)
+                if original_data:
+                    st.markdown("---")
+                    st.markdown("### 🔍 원본 데이터 정보")
+                    with st.expander("원본 데이터 구조 확인", expanded=False):
+                        st.json(original_data)
                 
                 # 기본 정보 표시
                 st.markdown("### 📋 기본 문의 정보")
@@ -2188,7 +2259,8 @@ with tab3:
                             "문의유형": entry.get('issue_type', ''),
                             "우선순위": entry.get('priority', ''),
                             "담당자": entry.get('user_name', ''),
-                            "역할": entry.get('user_role', '')
+                            "역할": entry.get('user_role', ''),
+                            "_original_data": entry  # 원본 데이터 보존
                         })
                     
                     df = pd.DataFrame(df_data)
@@ -2205,7 +2277,9 @@ with tab3:
                     
                     # 1. 기본 st.dataframe 표시 (위쪽)
                     # st.markdown("#### 📋 기본 데이터프레임")
-                    st.dataframe(df, use_container_width=True, hide_index=True)
+                    # _original_data 컬럼을 제외하고 표시
+                    display_df = df.drop(columns=['_original_data'], errors='ignore')
+                    st.dataframe(display_df, use_container_width=True, hide_index=True)
                     
                     # 0) 모달을 위쪽에서 먼저 그리기(있다면)
                     if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
@@ -2267,7 +2341,23 @@ with tab3:
                             st.markdown(f'<div class="history-table-cell">{row.get("역할", "N/A")}</div>', unsafe_allow_html=True)
                         with row_cols[7]:
                             def open_modal_new(row_dict):
-                                st.session_state.selected_row_for_detail = row_dict
+                                # 데이터프레임 행에서 원본 데이터 추출
+                                original_data = row_dict.get('_original_data', None)
+                                
+                                # 원본 데이터가 없는 경우를 대비한 fallback
+                                if not original_data:
+                                    # 번호를 기준으로 원본 데이터 찾기
+                                    row_number = row_dict.get("번호", 0)
+                                    if isinstance(row_number, str) and row_number.isdigit():
+                                        row_number = int(row_number)
+                                    
+                                    if 1 <= row_number <= len(history_data):
+                                        original_data = history_data[row_number - 1]
+                                
+                                st.session_state.selected_row_for_detail = {
+                                    'row_data': row_dict,
+                                    'original_data': original_data
+                                }
                                 st.session_state.show_detail_modal = True
 
                             st.button(
