@@ -1438,8 +1438,45 @@ with tab2:
                     st.success("이메일 내용이 클립보드에 복사되었습니다!")
             
             # 전체 응답
-            with st.expander("📄 전체 AI 응답"):
-                st.text(parsed['full_response'])
+            with st.expander("📄 전체 AI 응답", expanded=False):
+                st.markdown("#### 📋 원본 AI 응답")
+                
+                # 응답을 더 읽기 쉽게 표시
+                full_response = parsed['full_response']
+                
+                # 응답이 JSON 형태인지 확인하고 구조화
+                if full_response.strip().startswith('{') and full_response.strip().endswith('}'):
+                    try:
+                        import json
+                        response_json = json.loads(full_response)
+                        
+                        # JSON을 보기 좋게 표시
+                        st.json(response_json)
+                        
+                        # 주요 필드들을 개별적으로 표시
+                        st.markdown("#### 🔍 주요 필드 분석")
+                        
+                        for key, value in response_json.items():
+                            if isinstance(value, str) and len(value) > 50:
+                                with st.expander(f"📝 {key}", expanded=False):
+                                    st.text_area(f"{key} 내용", value, height=150, key=f"field_{key}")
+                            else:
+                                st.info(f"**{key}**: {value}")
+                                
+                    except json.JSONDecodeError:
+                        # JSON 파싱 실패 시 일반 텍스트로 표시
+                        st.text_area("AI 응답 내용", full_response, height=400, key="full_response_text")
+                else:
+                    # 일반 텍스트 응답인 경우
+                    st.text_area("AI 응답 내용", full_response, height=400, key="full_response_text")
+                
+                # 응답 길이 정보 표시
+                response_length = len(full_response)
+                st.info(f"📊 응답 길이: {response_length:,}자")
+                
+                # 복사 버튼
+                if st.button("📋 전체 응답 복사", use_container_width=True, key="copy_full_response"):
+                    st.success("전체 AI 응답이 클립보드에 복사되었습니다!")
             
             # SMS 발송 섹션 추가
             st.markdown("---")
@@ -1539,6 +1576,48 @@ with tab2:
                     
                     if st.button("📋 이메일 복사", use_container_width=True):
                         st.success("이메일 내용이 클립보드에 복사되었습니다!")
+                
+                # 기본 응답의 전체 내용도 표시
+                if 'full_response' in parsed:
+                    st.markdown("---")
+                    with st.expander("📄 전체 AI 응답 (기본)", expanded=False):
+                        st.markdown("#### 📋 원본 AI 응답")
+                        
+                        full_response = parsed['full_response']
+                        
+                        # 응답이 JSON 형태인지 확인하고 구조화
+                        if full_response.strip().startswith('{') and full_response.strip().endswith('}'):
+                            try:
+                                import json
+                                response_json = json.loads(full_response)
+                                
+                                # JSON을 보기 좋게 표시
+                                st.json(response_json)
+                                
+                                # 주요 필드들을 개별적으로 표시
+                                st.markdown("#### 🔍 주요 필드 분석")
+                                
+                                for key, value in response_json.items():
+                                    if isinstance(value, str) and len(value) > 50:
+                                        with st.expander(f"📝 {key}", expanded=False):
+                                            st.text_area(f"{key} 내용", value, height=150, key=f"basic_field_{key}")
+                                    else:
+                                        st.info(f"**{key}**: {value}")
+                                        
+                            except json.JSONDecodeError:
+                                # JSON 파싱 실패 시 일반 텍스트로 표시
+                                st.text_area("AI 응답 내용", full_response, height=400, key="basic_full_response_text")
+                        else:
+                            # 일반 텍스트 응답인 경우
+                            st.text_area("AI 응답 내용", full_response, height=400, key="basic_full_response_text")
+                        
+                        # 응답 길이 정보 표시
+                        response_length = len(full_response)
+                        st.info(f"📊 응답 길이: {response_length:,}자")
+                        
+                        # 복사 버튼
+                        if st.button("📋 전체 응답 복사 (기본)", use_container_width=True, key="copy_basic_full_response"):
+                            st.success("전체 AI 응답이 클립보드에 복사되었습니다!")
         
         # 유사 사례
         if result['similar_cases']:
