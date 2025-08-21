@@ -783,7 +783,7 @@ def show_ai_analysis_modal(selected_row):
                                             st.error(f"❌ SMS 발송 실패: {sms_result.get('error', '알 수 없는 오류')}")
                                     else:
                                         st.error("❌ SOLAPI API 키가 설정되지 않았습니다.")
-                                        st.info("사이드바에서 SOLAPI API 키를 설정해주세요.")
+                                        st.info("Streamlit Secrets에서 SOLAPI API 키를 설정해주세요.")
                                 except Exception as e:
                                     st.error(f"❌ SMS 발송 중 오류: {e}")
                             else:
@@ -1378,49 +1378,7 @@ with st.sidebar:
     
     st.markdown("---")
     
-    st.markdown("## 🔑 API 설정")
-    
-    # API 키 상태 확인
-    gemini_key_from_secrets = ""
-    openai_key_from_secrets = ""
-    
-    try:
-        gemini_key_from_secrets = st.secrets.get("GEMINI_API_KEY", "")
-    except:
-        pass
-    
-    try:
-        openai_key_from_secrets = st.secrets.get("OPENAI_API_KEY", "")
-    except:
-        pass
-    
-    # Gemini API 키 설정
-    if gemini_key_from_secrets:
-        st.success("✅ Gemini API 키가 Streamlit Secrets에서 설정되었습니다.")
-        gemini_api_key = gemini_key_from_secrets
-    else:
-        gemini_api_key = st.text_input(
-            "Gemini API 키",
-            value=st.session_state.get('google_api_key', ''),
-            type="password",
-            placeholder="Gemini API 키를 입력하세요",
-            help="Google AI Studio에서 발급받은 API 키"
-        )
-    
-    # OpenAI API 키 설정
-    if openai_key_from_secrets:
-        st.success("✅ OpenAI API 키가 Streamlit Secrets에서 설정되었습니다.")
-        openai_api_key = openai_key_from_secrets
-    else:
-        openai_api_key = st.text_input(
-            "OpenAI API 키",
-            value=st.session_state.get('openai_api_key', ''),
-            type="password",
-            placeholder="OpenAI API 키를 입력하세요",
-            help="OpenAI에서 발급받은 API 키"
-        )
-    
-    # SOLAPI API 키를 세션 상태에 저장 (secrets에서 자동 로드)
+    # API 키는 Streamlit Secrets에서 자동으로 로드됩니다
     try:
         if hasattr(st, 'secrets') and st.secrets:
             st.session_state['solapi_api_key'] = st.secrets.get("SOLAPI_API_KEY", "")
@@ -1428,16 +1386,6 @@ with st.sidebar:
             st.session_state['sender_phone'] = "01012345678"
     except:
         pass
-    
-    # API 키를 세션 상태에 저장
-    if gemini_api_key:
-        st.session_state['google_api_key'] = gemini_api_key
-        if gemini_key_from_secrets:
-            print("✅ Gemini API 키를 Streamlit Secrets에서 세션 상태로 저장했습니다.")
-    if openai_api_key:
-        st.session_state['openai_api_key'] = openai_api_key
-        if openai_key_from_secrets:
-            print("✅ OpenAI API 키를 Streamlit Secrets에서 세션 상태로 저장했습니다.")
     
     # 세션 상태에 저장
     st.session_state.contact_name = contact_name
@@ -1712,7 +1660,8 @@ with tab1:
                             mongo_result = st.session_state.mongo_handler.save_analysis(analysis_result, inquiry_data_with_user)
                             
                             if mongo_result.get('success'):
-                                st.success(f"✅ MongoDB에 분석 결과가 저장되었습니다. (ID: {mongo_result.get('id', 'Unknown')})")
+                                # MongoDB 저장 성공 (안내 메시지 제거)
+                                pass
                             else:
                                 st.warning(f"⚠️ MongoDB 저장 실패: {mongo_result.get('error', '알 수 없는 오류')}")
                                 # 로컬 백업 저장 시도
@@ -1757,7 +1706,7 @@ with tab2:
         st.error("❌ AI API 키가 설정되지 않았습니다.")
         st.info("""
         **API 키 설정 방법:**
-        1. 사이드바의 "🔑 API 설정" 섹션에서 Gemini API 키 또는 OpenAI API 키를 입력하세요
+        1. Streamlit Secrets에서 Gemini API 키 또는 OpenAI API 키를 설정하세요
         2. 또는 환경변수 `GOOGLE_API_KEY` 또는 `OPENAI_API_KEY`를 설정하세요
         
         **API 키 발급 방법:**
@@ -1950,7 +1899,7 @@ with tab2:
                                     st.error(f"❌ SMS 발송 실패: {sms_result.get('error', '알 수 없는 오류')}")
                             else:
                                 st.error("❌ SOLAPI API 키가 설정되지 않았습니다.")
-                                st.info("사이드바에서 SOLAPI API 키를 설정해주세요.")
+                                st.info("Streamlit Secrets에서 SOLAPI API 키를 설정해주세요.")
                         except Exception as e:
                             st.error(f"❌ SMS 발송 중 오류: {e}")
                     else:
@@ -2520,7 +2469,7 @@ with tab4:
     st.markdown("- **이력 관리**: SMS 발송 내역 추적 및 관리")
     
     st.markdown("**SMS 발송 방법:**")
-    st.markdown("1. 사이드바에서 SOLAPI API 키 설정")
+    st.markdown("1. Streamlit Secrets에서 SOLAPI API 키 설정")
     st.markdown("2. AI 분석 결과 또는 이력 상세보기에서 SMS 발송")
     st.markdown("3. 수신자 정보 입력 후 발송")
     
