@@ -1448,7 +1448,7 @@ with tab2:
             with col_sms1:
                 recipient_name = st.text_input(
                     "수신자 이름",
-                    placeholder="수신자 이름을 입력하세요",
+                    placeholder="홍길동 대리",
                     key="sms_recipient_name"
                 )
                 recipient_phone = st.text_input(
@@ -1550,31 +1550,31 @@ with tab2:
                         st.write(f"**유사도:** {case['similarity_score']:.3f}")
         
         # 액션 버튼
-        col11, col12, col13, col14 = st.columns(4)
+        #col11, col12, col13, col14 = st.columns(4)
         
-        with col11:
-            if st.button("💾 결과 저장", use_container_width=True):
-                # 결과를 JSON 파일로 저장
-                filename = f"analysis_result_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        #with col11:
+        #    if st.button("💾 결과 저장", use_container_width=True):
+        #        # 결과를 JSON 파일로 저장
+        #        filename = f"analysis_result_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
                 with open(filename, 'w', encoding='utf-8') as f:
                     json.dump(st.session_state.analysis_result, f, ensure_ascii=False, indent=2)
                 st.success(f"분석 결과가 {filename}에 저장되었습니다!")
         
-        with col12:
-            if st.button("🔄 새로운 분석", use_container_width=True):
-                st.session_state.analysis_result = None
-                st.session_state.inquiry_data = None
-                st.rerun()
+        #with col12:
+        #    if st.button("🔄 새로운 분석", use_container_width=True):
+        #        st.session_state.analysis_result = None
+        #        st.session_state.inquiry_data = None
+        #        st.rerun()
         
-        with col13:
-            if st.button("📊 통계 보기", use_container_width=True):
-                # 통계 보기 버튼 클릭시 분석 완료 알림 제거
+        #with col13:
+        #    if st.button("📊 통계 보기", use_container_width=True):
+        #        # 통계 보기 버튼 클릭시 분석 완료 알림 제거
                 st.session_state.analysis_completed = False
                 st.info("📊 이력 관리 탭으로 이동하세요.")
         
-        with col14:
-            if st.button("📱 SMS 발송", use_container_width=True):
-                st.info("📱 위의 SMS 발송 섹션을 사용하여 SMS를 발송하세요.")
+        #with col14:
+        #  if st.button("📱 SMS 발송", use_container_width=True):
+        #       st.info("📱 위의 SMS 발송 섹션을 사용하여 SMS를 발송하세요.")
     
     else:
         st.info("📝 먼저 고객 문의 입력 탭에서 문의를 입력해주세요.")
