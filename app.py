@@ -581,7 +581,7 @@ def show_ai_analysis_modal(selected_row):
                                     st.write("질문 정보가 없습니다.")
                             elif 'response' in ai_result:
                                 # GPT API 응답인 경우 파싱
-                                parsed = self._parse_gpt_response(ai_result['response'])
+                                parsed = _parse_gpt_response(ai_result['response'])
                                 question = parsed.get('question', '')
                                 if question:
                                     st.write(question)
@@ -670,7 +670,7 @@ def show_ai_analysis_modal(selected_row):
 {parsed.get('email_draft', '')}"""
                         elif 'response' in ai_result:
                             # GPT API 응답인 경우 파싱
-                            parsed = self._parse_gpt_response(ai_result['response'])
+                            parsed = _parse_gpt_response(ai_result['response'])
                             
                             full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
 
@@ -1092,6 +1092,150 @@ def _parse_gpt_response(response_text: str) -> dict:
             'email_draft': '응답을 확인해주세요.',
             'question': ''
         }
+
+def _format_email_content(email_content: str) -> str:
+    """이메일 내용을 자연스러운 형태로 포맷팅"""
+    try:
+        # 제목 분리
+        if '제목:' in email_content:
+            parts = email_content.split('제목:', 1)
+            if len(parts) == 2:
+                title_and_body = parts[1].strip()
+                
+                # 제목과 본문 분리 - "고객님 안녕하세요"를 찾아서 분리
+                if '고객님 안녕하세요' in title_and_body:
+                    title_part = title_and_body.split('고객님 안녕하세요')[0].strip()
+                    body_part = '고객님 안녕하세요' + title_and_body.split('고객님 안녕하세요')[1]
+                    
+                    # 자연스러운 단락 구분을 위한 키워드 기반 줄바꿈
+                    formatted_body = _format_email_body(body_part)
+                    
+                    # 최종 이메일 형식
+                    formatted_email = f"제목: {title_part}\n\n{formatted_body}\n\n감사합니다."
+                    return formatted_email
+                else:
+                    # 첫 번째 문장이 제목 (기존 로직)
+                    sentences = title_and_body.split('. ')
+                    if len(sentences) > 0:
+                        title = sentences[0].strip()
+                        body_sentences = sentences[1:] if len(sentences) > 1 else []
+                        
+                        # 본문 재구성
+                        body = '. '.join(body_sentences).strip()
+                        
+                        # 자연스러운 단락 구분을 위한 키워드 기반 줄바꿈
+                        formatted_body = _format_email_body(body)
+                        
+                        # 최종 이메일 형식
+                        formatted_email = f"제목: {title}\n\n고객님 안녕하세요.\n\n{formatted_body}\n\n감사합니다."
+                        return formatted_email
+        
+        # 제목이 없는 경우 기본 처리
+        return _format_email_body(email_content)
+        
+    except Exception as e:
+        print(f"이메일 포맷팅 오류: {e}")
+        # 기본 문장 단위 줄바꿈으로 폴백
+        return email_content.replace('. ', '.\n')
+
+def _format_email_body(body_text: str) -> str:
+    """이메일 본문을 자연스러운 단락으로 구분"""
+    # 특정 패턴을 기준으로 단락 구분
+    paragraph_patterns = [
+        ('먼저', '먼저'),
+        ('만약', '만약'),
+        ('비밀번호가 다를 경우', '비밀번호 변경 후'),
+        ('비밀번호 변경 후', '문제가 지속될 경우'),
+        ('문제가 해결되지', '문제가 해결되지')
+    ]
+    
+    # 각 패턴에 따라 단락 구분
+    result = body_text
+    
+    # "먼저"로 시작하는 부분을 첫 번째 단락으로
+    if '먼저' in result:
+        before_first = result.split('먼저')[0].strip()
+        after_first = '먼저' + result.split('먼저')[1]
+        
+        # "비밀번호 변경 후" 또는 "만약"으로 두 번째 단락 구분
+        if '비밀번호 변경 후' in after_first:
+            first_para = after_first.split('비밀번호 변경 후')[0].strip()
+            second_para_start = '비밀번호 변경 후' + after_first.split('비밀번호 변경 후')[1]
+            
+            # "문제가 해결되지"로 세 번째 단락 구분
+            if '문제가 해결되지' in second_para_start:
+                second_para = second_para_start.split('문제가 해결되지')[0].strip()
+                third_para = '문제가 해결되지' + second_para_start.split('문제가 해결되지')[1].strip()
+                
+                # 감사합니다 제거 (별도로 추가됨)
+                third_para = third_para.replace('감사합니다.', '').strip()
+                
+                result = f"{before_first}\n\n{first_para}\n\n{second_para}\n\n{third_para}"
+            else:
+                result = f"{before_first}\n\n{first_para}\n\n{second_para_start}"
+        elif '만약' in after_first:
+            first_para = after_first.split('만약')[0].strip()
+            second_para_start = '만약' + after_first.split('만약')[1]
+            
+            # "문제가 해결되지"로 세 번째 단락 구분
+            if '문제가 해결되지' in second_para_start:
+                second_para = second_para_start.split('문제가 해결되지')[0].strip()
+                third_para = '문제가 해결되지' + second_para_start.split('문제가 해결되지')[1].strip()
+                
+                # 감사합니다 제거 (별도로 추가됨)
+                third_para = third_para.replace('감사합니다.', '').strip()
+                # 띄어쓰기 수정
+                third_para = third_para.replace('문제가 해결되지않을', '문제가 해결되지 않을')
+                
+                result = f"{before_first}\n\n{first_para}\n\n{second_para}\n\n{third_para}"
+            else:
+                result = f"{before_first}\n\n{first_para}\n\n{second_para_start}"
+    
+    # 감사합니다 제거 및 띄어쓰기 정리
+    result = result.replace('감사합니다.', '').strip()
+    result = result.replace('문제가 해결되지않을', '문제가 해결되지 않을')
+    
+    return result
+
+def _add_natural_line_breaks(text: str) -> str:
+    """텍스트에 자연스러운 줄바꿈 추가"""
+    # 키워드 기반 단락 구분 (더 구체적으로)
+    paragraph_keywords = [
+        '먼저', '만약', '만일', '비밀번호 변경 후', '위 조치 후', '문제가 해결되지'
+    ]
+    
+    # 문장별로 분리
+    sentences = text.split('. ')
+    formatted_sentences = []
+    
+    for i, sentence in enumerate(sentences):
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+            
+        # 마지막 문장이 아니면 마침표 추가
+        if i < len(sentences) - 1 and not sentence.endswith('.'):
+            sentence += '.'
+            
+        # 단락 시작 키워드 확인
+        should_add_paragraph = any(sentence.startswith(keyword) for keyword in paragraph_keywords)
+        
+        if should_add_paragraph and formatted_sentences:
+            # 이전 문장 끝에 추가 줄바꿈 (두 줄바꿈으로 단락 구분)
+            formatted_sentences.append('\n\n' + sentence)
+        else:
+            formatted_sentences.append(sentence)
+    
+    # 문장들을 연결
+    result = ' '.join(formatted_sentences)
+    
+    # 연속된 공백 정리
+    result = ' '.join(result.split())
+    
+    # 단락 구분 줄바꿈 복원
+    result = result.replace(' \n\n', '\n\n')
+    
+    return result
 
 # 컴포넌트 초기화
 def init_components():
@@ -1714,12 +1858,13 @@ with tab2:
             with col10:
                 st.markdown("#### 📧 이메일 초안")
                 if parsed.get('email_draft'):
-                    # 이메일 내용을 줄바꿈이 포함된 형태로 표시 (더 효과적인 줄바꿈 처리)
+                    # 이메일 내용을 자연스러운 형태로 표시
                     email_content = parsed['email_draft']
                     # 연속된 공백을 하나로 통일
                     email_content = ' '.join(email_content.split())
-                    # 문장 단위로 줄바꿈
-                    email_content = email_content.replace('. ', '.\n')
+                    
+                    # 제목과 본문 분리 및 자연스러운 줄바꿈 처리
+                    email_content = _format_email_content(email_content)
                     st.text_area("이메일 내용", email_content, height=300)
                     
                     # 복사 버튼
@@ -1862,12 +2007,13 @@ with tab2:
                 with col10:
                     st.markdown("#### 📧 이메일 초안")
                     if parsed.get('email_draft'):
-                        # 이메일 내용을 줄바꿈이 포함된 형태로 표시 (더 효과적인 줄바꿈 처리)
+                        # 이메일 내용을 자연스러운 형태로 표시
                         email_content = parsed['email_draft']
                         # 연속된 공백을 하나로 통일
                         email_content = ' '.join(email_content.split())
-                        # 문장 단위로 줄바꿈
-                        email_content = email_content.replace('. ', '.\n')
+                        
+                        # 제목과 본문 분리 및 자연스러운 줄바꿈 처리
+                        email_content = _format_email_content(email_content)
                         st.text_area("이메일 내용", email_content, height=300)
                         
                         if st.button("📋 이메일 복사", use_container_width=True):
@@ -1893,9 +2039,9 @@ with tab2:
         #    if st.button("💾 결과 저장", use_container_width=True):
         #        # 결과를 JSON 파일로 저장
         #        filename = f"analysis_result_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-                with open(filename, 'w', encoding='utf-8') as f:
-                    json.dump(st.session_state.analysis_result, f, ensure_ascii=False, indent=2)
-                st.success(f"분석 결과가 {filename}에 저장되었습니다!")
+        #        with open(filename, 'w', encoding='utf-8') as f:
+        #            json.dump(st.session_state.analysis_result, f, ensure_ascii=False, indent=2)
+        #        st.success(f"분석 결과가 {filename}에 저장되었습니다!")
         
         #with col12:
         #    if st.button("🔄 새로운 분석", use_container_width=True):
@@ -1906,8 +2052,8 @@ with tab2:
         #with col13:
         #    if st.button("📊 통계 보기", use_container_width=True):
         #        # 통계 보기 버튼 클릭시 분석 완료 알림 제거
-                st.session_state.analysis_completed = False
-                st.info("📊 이력 관리 탭으로 이동하세요.")
+        #        st.session_state.analysis_completed = False
+        #        st.info("📊 이력 관리 탭으로 이동하세요.")
         
         #with col14:
         #  if st.button("📱 SMS 발송", use_container_width=True):
