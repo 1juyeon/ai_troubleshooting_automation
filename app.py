@@ -1693,7 +1693,21 @@ with tab2:
             
             # 전체 응답
             with st.expander("📄 전체 AI 응답", expanded=True):
-                st.text(parsed['full_response'])
+                # full_response를 parsed 딕셔너리에서 재구성
+                full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
+
+[응답내용]
+
+- 요약: {parsed.get('summary', '')}
+
+- 조치 흐름:
+
+{parsed.get('action_flow', '')}
+
+- 이메일 초안:
+
+{parsed.get('email_draft', '')}"""
+                st.text(full_response)
             
             # SMS 발송 섹션 추가
             st.markdown("---")
