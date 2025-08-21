@@ -1649,7 +1649,11 @@ with tab2:
         
         if 'ai_result' in result and result['ai_result']['success']:
             ai_result = result['ai_result']
-            if 'parsed_response' in ai_result:
+            
+            # Gemini 응답인 경우 gemini_result에서 parsed_response 추출
+            if 'gemini_result' in ai_result:
+                parsed = ai_result['gemini_result']['parsed_response']
+            elif 'parsed_response' in ai_result:
                 parsed = ai_result['parsed_response']
             elif 'response' in ai_result:
                 # GPT API 응답인 경우 파싱
@@ -1674,22 +1678,31 @@ with tab2:
             
             with col9:
                 st.markdown("#### 📝 요약")
-                st.write(parsed['summary'])
+                if parsed.get('summary'):
+                    st.write(parsed['summary'])
+                else:
+                    st.warning("⚠️ 요약 정보가 없습니다.")
                 
                 st.markdown("#### 🔧 조치 흐름")
-                # 조치 흐름에 줄바꿈 적용
-                action_flow_content = parsed['action_flow'].replace('\n', '\n\n')
-                st.write(action_flow_content)
+                if parsed.get('action_flow'):
+                    # 조치 흐름에 줄바꿈 적용 (연속된 줄바꿈을 하나로 통일)
+                    action_flow_content = parsed['action_flow'].replace('\n\n', '\n').replace('\n', '\n\n')
+                    st.write(action_flow_content)
+                else:
+                    st.warning("⚠️ 조치 흐름 정보가 없습니다.")
             
             with col10:
                 st.markdown("#### 📧 이메일 초안")
-                # 이메일 내용을 줄바꿈이 포함된 형태로 표시
-                email_content = parsed['email_draft'].replace('\n', '\n\n')
-                st.text_area("이메일 내용", email_content, height=300)
-                
-                # 복사 버튼
-                if st.button("📋 이메일 복사", use_container_width=True):
-                    st.success("이메일 내용이 클립보드에 복사되었습니다!")
+                if parsed.get('email_draft'):
+                    # 이메일 내용을 줄바꿈이 포함된 형태로 표시 (연속된 줄바꿈을 하나로 통일)
+                    email_content = parsed['email_draft'].replace('\n\n', '\n').replace('\n', '\n\n')
+                    st.text_area("이메일 내용", email_content, height=300)
+                    
+                    # 복사 버튼
+                    if st.button("📋 이메일 복사", use_container_width=True):
+                        st.success("이메일 내용이 클립보드에 복사되었습니다!")
+                else:
+                    st.warning("⚠️ 이메일 초안 정보가 없습니다.")
             
             # 전체 응답
             with st.expander("📄 전체 AI 응답", expanded=True):
@@ -1698,15 +1711,15 @@ with tab2:
 
 [응답내용]
 
-- 요약: {parsed.get('summary', '')}
+- 요약: {parsed.get('summary', '정보 없음')}
 
 - 조치 흐름:
 
-{parsed.get('action_flow', '')}
+{parsed.get('action_flow', '정보 없음')}
 
 - 이메일 초안:
 
-{parsed.get('email_draft', '')}"""
+{parsed.get('email_draft', '정보 없음')}"""
                 st.text(full_response)
             
             # SMS 발송 섹션 추가
@@ -1737,7 +1750,7 @@ with tab2:
             with col_sms2:
                 sms_message = st.text_area(
                     "SMS 메시지",
-                    value=f"[{st.session_state.get('ai_model', 'AI')}] {parsed['summary'][:100]}...",
+                    value=f"[{st.session_state.get('ai_model', 'AI')}] {parsed.get('summary', '')[:100] if parsed.get('summary') else '분석 완료'}...",
                     height=100,
                     key="sms_message"
                 )
@@ -1785,29 +1798,48 @@ with tab2:
                 st.write(f"오류: {result['ai_result']['error']}")
             
             # 기본 응답 표시
-            if 'ai_result' in result and 'parsed_response' in result['ai_result']:
-                parsed = result['ai_result']['parsed_response']
+            if 'ai_result' in result:
+                ai_result = result['ai_result']
+                
+                # Gemini 응답인 경우 gemini_result에서 parsed_response 추출
+                if 'gemini_result' in ai_result:
+                    parsed = ai_result['gemini_result']['parsed_response']
+                elif 'parsed_response' in ai_result:
+                    parsed = ai_result['parsed_response']
+                else:
+                    st.error("❌ 기본 응답 데이터가 올바르지 않습니다.")
+                    st.stop()
+                
                 st.warning("⚠️ 기본 응답을 제공합니다:")
                 
                 col9, col10 = st.columns(2)
                 
                 with col9:
                     st.markdown("#### 📝 요약")
-                    st.write(parsed['summary'])
+                    if parsed.get('summary'):
+                        st.write(parsed['summary'])
+                    else:
+                        st.warning("⚠️ 요약 정보가 없습니다.")
                     
                     st.markdown("#### 🔧 조치 흐름")
-                    # 조치 흐름에 줄바꿈 적용
-                    action_flow_content = parsed['action_flow'].replace('\n', '\n\n')
-                    st.write(action_flow_content)
+                    if parsed.get('action_flow'):
+                        # 조치 흐름에 줄바꿈 적용 (연속된 줄바꿈을 하나로 통일)
+                        action_flow_content = parsed['action_flow'].replace('\n\n', '\n').replace('\n', '\n\n')
+                        st.write(action_flow_content)
+                    else:
+                        st.warning("⚠️ 조치 흐름 정보가 없습니다.")
                 
                 with col10:
                     st.markdown("#### 📧 이메일 초안")
-                    # 이메일 내용을 줄바꿈이 포함된 형태로 표시
-                    email_content = parsed['email_draft'].replace('\n', '\n\n')
-                    st.text_area("이메일 내용", email_content, height=300)
-                    
-                    if st.button("📋 이메일 복사", use_container_width=True):
-                        st.success("이메일 내용이 클립보드에 복사되었습니다!")
+                    if parsed.get('email_draft'):
+                        # 이메일 내용을 줄바꿈이 포함된 형태로 표시 (연속된 줄바꿈을 하나로 통일)
+                        email_content = parsed['email_draft'].replace('\n\n', '\n').replace('\n', '\n\n')
+                        st.text_area("이메일 내용", email_content, height=300)
+                        
+                        if st.button("📋 이메일 복사", use_container_width=True):
+                            st.success("이메일 내용이 클립보드에 복사되었습니다!")
+                    else:
+                        st.warning("⚠️ 이메일 초안 정보가 없습니다.")
         
         # 유사 사례
         if result['similar_cases']:

@@ -66,9 +66,10 @@ class GPTHandler:
 [대응유형] 해결안 / 질문 / 출동 중 하나를 선택하십시오.
 
 [응답내용]
-- 요약: 고객 문의의 핵심 내용을 간결하게 정리하십시오.
 
-- 조치 흐름: 아래 형식을 따라 단계별로 줄바꿈하며 번호를 붙여 설명하십시오.
+요약: 고객 문의의 핵심 내용을 간결하게 정리하십시오.
+
+조치 흐름: 아래 형식을 따라 단계별로 줄바꿈하며 번호를 붙여 설명하십시오.
 
 1. 단계 제목: 해당 단계에서 수행할 조치 설명
 
@@ -78,7 +79,7 @@ class GPTHandler:
 
 ※ 각 단계는 짧고 명확하게, 실무자가 바로 이해할 수 있도록 작성하십시오.
 
-- 이메일 초안: 고객에게 보낼 수 있는 실제 이메일 본문 형식으로 작성하십시오. 간결하고 정중한 표현을 사용하십시오.
+이메일 초안: 고객에게 보낼 수 있는 실제 이메일 본문 형식으로 작성하십시오. 간결하고 정중한 표현을 사용하십시오.
 
 [예외 처리 기준]
 - 조건 정보가 불충분하거나 고객 상태가 불명확한 경우 → "추가 확인이 필요합니다. 다음 질문을 해주세요."라고 안내하십시오.
@@ -109,9 +110,10 @@ class GPTHandler:
 [대응유형] 해결안 / 질문 / 출동 중 하나를 선택하십시오.
 
 [응답내용]
-- 요약: 고객 문의의 핵심 내용을 간결하게 정리하십시오.
 
-- 조치 흐름: 아래 형식을 따라 단계별로 줄바꿈하며 번호를 붙여 설명하십시오.
+요약: 고객 문의의 핵심 내용을 간결하게 정리하십시오.
+
+조치 흐름: 아래 형식을 따라 단계별로 줄바꿈하며 번호를 붙여 설명하십시오.
 
 1. 단계 제목: 해당 단계에서 수행할 조치 설명
 
@@ -121,7 +123,7 @@ class GPTHandler:
 
 ※ 각 단계는 짧고 명확하게, 실무자가 바로 이해할 수 있도록 작성하십시오.
 
-- 이메일 초안: 고객에게 보낼 수 있는 실제 이메일 본문 형식으로 작성하십시오. 간결하고 정중한 표현을 사용하십시오.
+이메일 초안: 고객에게 보낼 수 있는 실제 이메일 본문 형식으로 작성하십시오. 간결하고 정중한 표현을 사용하십시오.
 
 [예외 처리 기준]
 - 조건 정보가 불충분하거나 고객 상태가 불명확한 경우 → "추가 확인이 필요합니다. 다음 질문을 해주세요."라고 안내하십시오.
@@ -190,12 +192,14 @@ class GPTHandler:
     def parse_response(self, response_text: str) -> Dict[str, Any]:
         """응답 텍스트를 구조화된 형태로 파싱"""
         try:
-            # 대응 유형 추출
+            # 대응 유형 추출 (더 정확한 인식)
             response_type = "해결안"  # 기본값
-            if "질문" in response_text:
+            if "질문" in response_text and "출동" not in response_text:
                 response_type = "질문"
-            elif "출동" in response_text:
+            elif "출동" in response_text and "질문" not in response_text:
                 response_type = "출동"
+            elif "해결안" in response_text:
+                response_type = "해결안"
             
             # 요약, 조치 흐름, 이메일 초안 추출 시도
             summary = ""
@@ -210,31 +214,55 @@ class GPTHandler:
                 if not line:
                     continue
                 
+                # 섹션 시작점 감지
                 if "요약:" in line or "요약" in line:
                     current_section = "summary"
-                    summary = line.replace("요약:", "").replace("요약", "").strip()
+                    # 요약 내용이 같은 줄에 있는 경우
+                    summary_content = line.replace("요약:", "").replace("요약", "").strip()
+                    if summary_content:
+                        summary = summary_content
                 elif "조치 흐름:" in line or "조치 흐름" in line:
                     current_section = "action"
-                    action_flow = line.replace("조치 흐름:", "").replace("조치 흐름", "").strip()
+                    # 조치 흐름 내용이 같은 줄에 있는 경우
+                    action_content = line.replace("조치 흐름:", "").replace("조치 흐름", "").strip()
+                    if action_content:
+                        action_flow = action_content + "\n"
                 elif "이메일 초안:" in line or "이메일 초안" in line:
                     current_section = "email"
-                    email_draft = line.replace("이메일 초안:", "").replace("이메일 초안", "").strip()
-                elif current_section == "summary":
-                    summary += " " + line
-                elif current_section == "action":
-                    action_flow += " " + line
-                elif current_section == "email":
-                    email_draft += " " + line
+                    # 이메일 초안 내용이 같은 줄에 있는 경우
+                    email_content = line.replace("이메일 초안:", "").replace("이메일 초안", "").strip()
+                    if email_content:
+                        email_draft = email_content + "\n"
+                else:
+                    # 현재 섹션에 내용 추가
+                    if current_section == "summary":
+                        if summary:  # 이미 내용이 있으면 공백 추가
+                            summary += " " + line
+                        else:
+                            summary = line
+                    elif current_section == "action":
+                        # 불필요한 지침 텍스트 제거
+                        if not any(instruction in line for instruction in [
+                            "아래 형식을 따라", "단계별로 줄바꿈하며", "번호를 붙여 설명하십시오"
+                        ]):
+                            action_flow += line + "\n"
+                    elif current_section == "email":
+                        email_draft += line + "\n"
+            
+            # 줄바꿈 정리 (연속된 줄바꿈을 하나로 통일)
+            action_flow = action_flow.strip()
+            email_draft = email_draft.strip()
             
             return {
                 "response_type": response_type,
                 "summary": summary.strip(),
-                "action_flow": action_flow.strip(),
-                "email_draft": email_draft.strip(),
+                "action_flow": action_flow,
+                "email_draft": email_draft,
                 "full_response": response_text
             }
             
         except Exception as e:
+            print(f"응답 파싱 중 오류: {e}")
             return {
                 "response_type": "해결안",
                 "summary": "응답 파싱 중 오류가 발생했습니다.",
@@ -266,9 +294,11 @@ class GPTHandler:
             
             return {
                 "success": True,
-                "api_response": api_response,
-                "parsed_response": parsed_response,
-                "prompt_used": prompt
+                "gemini_result": {
+                    "api_response": api_response,
+                    "parsed_response": parsed_response,
+                    "prompt_used": prompt
+                }
             }
         else:
             # 기본 응답 생성
@@ -279,9 +309,11 @@ class GPTHandler:
             return {
                 "success": False,
                 "error": api_response["error"],
-                "api_response": api_response,
-                "parsed_response": default_response,
-                "prompt_used": prompt
+                "gemini_result": {
+                    "api_response": api_response,
+                    "parsed_response": default_response,
+                    "prompt_used": prompt
+                }
             }
     
     def _generate_default_response(self, customer_input: str, issue_type: str, 
