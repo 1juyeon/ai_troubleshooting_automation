@@ -69,15 +69,13 @@ class GPTHandler:
 
 요약: 고객 문의의 핵심 내용을 간결하게 정리하십시오.
 
-조치 흐름: 아래 형식을 따라 단계별로 줄바꿈하며 번호를 붙여 설명하십시오.
+조치 흐름: 단계별로 줄바꿈하며 번호를 붙여 설명하십시오.
 
 1. 단계 제목: 해당 단계에서 수행할 조치 설명
 
 2. 단계 제목: 해당 단계에서 수행할 조치 설명
 
 3. 단계 제목: 해당 단계에서 수행할 조치 설명
-
-※ 각 단계는 짧고 명확하게, 실무자가 바로 이해할 수 있도록 작성하십시오.
 
 이메일 초안: 고객에게 보낼 수 있는 실제 이메일 본문 형식으로 작성하십시오. 간결하고 정중한 표현을 사용하십시오.
 
@@ -113,15 +111,13 @@ class GPTHandler:
 
 요약: 고객 문의의 핵심 내용을 간결하게 정리하십시오.
 
-조치 흐름: 아래 형식을 따라 단계별로 줄바꿈하며 번호를 붙여 설명하십시오.
+조치 흐름: 단계별로 줄바꿈하며 번호를 붙여 설명하십시오.
 
 1. 단계 제목: 해당 단계에서 수행할 조치 설명
 
 2. 단계 제목: 해당 단계에서 수행할 조치 설명
 
 3. 단계 제목: 해당 단계에서 수행할 조치 설명
-
-※ 각 단계는 짧고 명확하게, 실무자가 바로 이해할 수 있도록 작성하십시오.
 
 이메일 초안: 고객에게 보낼 수 있는 실제 이메일 본문 형식으로 작성하십시오. 간결하고 정중한 표현을 사용하십시오.
 
@@ -192,8 +188,7 @@ class GPTHandler:
     def parse_response(self, response_text: str) -> Dict[str, Any]:
         """응답 텍스트를 구조화된 형태로 파싱"""
         try:
-            # 대응 유형 추출 (더 정확한 인식)
-            response_type = "해결안"  # 기본값
+            response_type = "해결안"
             if "질문" in response_text and "출동" not in response_text:
                 response_type = "질문"
             elif "출동" in response_text and "질문" not in response_text:
@@ -201,7 +196,6 @@ class GPTHandler:
             elif "해결안" in response_text:
                 response_type = "해결안"
             
-            # 요약, 조치 흐름, 이메일 초안 추출 시도
             summary = ""
             action_flow = ""
             email_draft = ""
@@ -243,7 +237,9 @@ class GPTHandler:
                     elif current_section == "action":
                         # 불필요한 지침 텍스트 제거
                         if not any(instruction in line for instruction in [
-                            "아래 형식을 따라", "단계별로 줄바꿈하며", "번호를 붙여 설명하십시오"
+                            "아래 형식을 따라", "단계별로 줄바꿈하며", "번호를 붙여 설명하십시오",
+                            "각 단계는 짧고 명확하게", "실무자가 바로 이해할 수 있도록",
+                            "※ 각 단계는", "짧고 명확하게", "실무자가 바로 이해할 수 있도록 작성하십시오"
                         ]):
                             action_flow += line + "\n"
                     elif current_section == "email":

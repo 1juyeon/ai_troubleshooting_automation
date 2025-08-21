@@ -7,6 +7,7 @@ import requests
 from typing import Dict, Any
 import pickle
 import pytz
+import re
 
 # 커스텀 모듈 import
 from classify_issue import IssueClassifier
@@ -601,11 +602,17 @@ def show_ai_analysis_modal(selected_row):
                         st.markdown("#### 🔧 조치 흐름")
                         action_flow = analysis_data.get('action_flow', '')
                         if action_flow:
-                            # 조치 흐름에 줄바꿈 적용
-                            action_flow_content = action_flow.replace('\n', '\n\n')
+                            # 조치 흐름에 줄바꿈 적용 (더 효과적인 줄바꿈 처리)
+                            action_flow_content = action_flow
+                            # 연속된 공백을 하나로 통일
+                            action_flow_content = ' '.join(action_flow_content.split())
+                            # 번호가 있는 항목을 줄바꿈으로 구분 (더 정교한 처리)
+                            action_flow_content = re.sub(r'(\d+\.)', r'\n\1', action_flow_content)
+                            # 첫 번째 줄바꿈 제거
+                            action_flow_content = action_flow_content.lstrip('\n')
                             st.write(action_flow_content)
                         else:
-                            st.write("해당 문의에 대한 조치 흐름이 없습니다.")
+                            st.warning("⚠️ 조치 흐름 정보가 없습니다.")
                     
                     with col6:
                         st.markdown("#### 📧 이메일 초안")
@@ -1049,6 +1056,10 @@ def _parse_gpt_response(response_text: str) -> dict:
                 current_section = 'content'
             elif '- 요약:' in line:
                 current_section = 'summary'
+                # 요약 내용이 같은 줄에 있는 경우
+                summary_content = line.replace('- 요약:', '').strip()
+                if summary_content:
+                    parsed['summary'] = summary_content
             elif '- 조치 흐름:' in line:
                 current_section = 'action_flow'
             elif '- 이메일 초안:' in line:
@@ -1058,13 +1069,16 @@ def _parse_gpt_response(response_text: str) -> dict:
                 if current_section == 'action_flow':
                     parsed['action_flow'] += line + '\n'
             elif current_section == 'summary':
-                parsed['summary'] += line + ' '
+                if parsed['summary']:  # 이미 내용이 있으면 공백 추가
+                    parsed['summary'] += ' ' + line
+                else:
+                    parsed['summary'] = line
             elif current_section == 'action_flow' and parsed['action_flow']:
                 parsed['action_flow'] += line + '\n'
             elif current_section == 'email_draft':
                 parsed['email_draft'] += line + '\n'
         
-        # 요약에서 "- 요약:" 제거
+        # 요약에서 "- 요약:" 제거 (혹시 남아있을 경우)
         parsed['summary'] = parsed['summary'].replace('- 요약:', '').strip()
         
         return parsed
@@ -1685,8 +1699,14 @@ with tab2:
                 
                 st.markdown("#### 🔧 조치 흐름")
                 if parsed.get('action_flow'):
-                    # 조치 흐름에 줄바꿈 적용 (연속된 줄바꿈을 하나로 통일)
-                    action_flow_content = parsed['action_flow'].replace('\n\n', '\n').replace('\n', '\n\n')
+                    # 조치 흐름에 줄바꿈 적용 (더 효과적인 줄바꿈 처리)
+                    action_flow_content = parsed['action_flow']
+                    # 연속된 공백을 하나로 통일
+                    action_flow_content = ' '.join(action_flow_content.split())
+                    # 번호가 있는 항목을 줄바꿈으로 구분 (더 정교한 처리)
+                    action_flow_content = re.sub(r'(\d+\.)', r'\n\1', action_flow_content)
+                    # 첫 번째 줄바꿈 제거
+                    action_flow_content = action_flow_content.lstrip('\n')
                     st.write(action_flow_content)
                 else:
                     st.warning("⚠️ 조치 흐름 정보가 없습니다.")
@@ -1694,8 +1714,12 @@ with tab2:
             with col10:
                 st.markdown("#### 📧 이메일 초안")
                 if parsed.get('email_draft'):
-                    # 이메일 내용을 줄바꿈이 포함된 형태로 표시 (연속된 줄바꿈을 하나로 통일)
-                    email_content = parsed['email_draft'].replace('\n\n', '\n').replace('\n', '\n\n')
+                    # 이메일 내용을 줄바꿈이 포함된 형태로 표시 (더 효과적인 줄바꿈 처리)
+                    email_content = parsed['email_draft']
+                    # 연속된 공백을 하나로 통일
+                    email_content = ' '.join(email_content.split())
+                    # 문장 단위로 줄바꿈
+                    email_content = email_content.replace('. ', '.\n')
                     st.text_area("이메일 내용", email_content, height=300)
                     
                     # 복사 버튼
@@ -1823,8 +1847,14 @@ with tab2:
                     
                     st.markdown("#### 🔧 조치 흐름")
                     if parsed.get('action_flow'):
-                        # 조치 흐름에 줄바꿈 적용 (연속된 줄바꿈을 하나로 통일)
-                        action_flow_content = parsed['action_flow'].replace('\n\n', '\n').replace('\n', '\n\n')
+                        # 조치 흐름에 줄바꿈 적용 (더 효과적인 줄바꿈 처리)
+                        action_flow_content = parsed['action_flow']
+                        # 연속된 공백을 하나로 통일
+                        action_flow_content = ' '.join(action_flow_content.split())
+                        # 번호가 있는 항목을 줄바꿈으로 구분 (더 정교한 처리)
+                        action_flow_content = re.sub(r'(\d+\.)', r'\n\1', action_flow_content)
+                        # 첫 번째 줄바꿈 제거
+                        action_flow_content = action_flow_content.lstrip('\n')
                         st.write(action_flow_content)
                     else:
                         st.warning("⚠️ 조치 흐름 정보가 없습니다.")
@@ -1832,8 +1862,12 @@ with tab2:
                 with col10:
                     st.markdown("#### 📧 이메일 초안")
                     if parsed.get('email_draft'):
-                        # 이메일 내용을 줄바꿈이 포함된 형태로 표시 (연속된 줄바꿈을 하나로 통일)
-                        email_content = parsed['email_draft'].replace('\n\n', '\n').replace('\n', '\n\n')
+                        # 이메일 내용을 줄바꿈이 포함된 형태로 표시 (더 효과적인 줄바꿈 처리)
+                        email_content = parsed['email_draft']
+                        # 연속된 공백을 하나로 통일
+                        email_content = ' '.join(email_content.split())
+                        # 문장 단위로 줄바꿈
+                        email_content = email_content.replace('. ', '.\n')
                         st.text_area("이메일 내용", email_content, height=300)
                         
                         if st.button("📋 이메일 복사", use_container_width=True):
