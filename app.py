@@ -447,21 +447,7 @@ PKP 웹 접속 불가 현상에 대한 문의 주셔서 감사합니다.
         
         st.text_area("이메일 내용", email_content, height=300)
         
-        # 복사 버튼
-        if st.button("📋 이메일 복사", use_container_width=True):
-            # 클립보드에 복사하는 JavaScript 코드
-            st.markdown(f"""
-            <script>
-            function copyToClipboard() {{
-                const text = `{email_content.replace('`', '\\`').replace('$', '\\$')}`;
-                navigator.clipboard.writeText(text).then(function() {{
-                    console.log('이메일 내용이 클립보드에 복사되었습니다.');
-                }});
-            }}
-            copyToClipboard();
-            </script>
-            """, unsafe_allow_html=True)
-            st.success("이메일 내용이 클립보드에 복사되었습니다!")
+
     
     # 액션 버튼
     col7, col8, col9 = st.columns(3)
@@ -655,24 +641,7 @@ def show_ai_analysis_modal(selected_row):
                         
                         st.text_area("이메일 내용", email_content, height=150, disabled=True)
                         
-                        # 이메일 복사 버튼
-                        if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
-                            # JavaScript를 사용한 클립보드 복사
-                            js_code = f"""
-                            <script>
-                            function copyToClipboard() {{
-                                const text = `{email_draft.replace('`', '\\`').replace("'", "\\'")}`;
-                                navigator.clipboard.writeText(text).then(function() {{
-                                    console.log('클립보드에 복사됨');
-                                }}).catch(function(err) {{
-                                    console.error('클립보드 복사 실패:', err);
-                                }});
-                            }}
-                            copyToClipboard();
-                            </script>
-                            """
-                            st.components.v1.html(js_code, height=0)
-                            st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
+
                     
                     # 전체 AI 응답 섹션 추가
                     st.markdown("---")
@@ -766,24 +735,7 @@ def show_ai_analysis_modal(selected_row):
                     # 전체 AI 응답 표시
                     st.text_area("전체 AI 응답", full_response, height=200, disabled=True)
                     
-                    # 전체 응답 복사 버튼
-                    if st.button("📋 전체 응답 복사", key=f"copy_full_{selected_row.get('번호', 'unknown')}"):
-                        # JavaScript를 사용한 클립보드 복사
-                        js_code = f"""
-                        <script>
-                        function copyToClipboard() {{
-                            const text = `{full_response.replace('`', '\\`').replace("'", "\\'")}`;
-                            navigator.clipboard.writeText(text).then(function() {{
-                                console.log('클립보드에 복사됨');
-                            }}).catch(function(err) {{
-                                console.error('클립보드 복사 실패:', err);
-                            }});
-                        }}
-                        copyToClipboard();
-                        </script>
-                        """
-                        st.components.v1.html(js_code, height=0)
-                        st.write("✅ 전체 AI 응답이 클립보드에 복사되었습니다.")
+
                     
                     # SMS 발송 섹션 추가
                     st.markdown("---")
@@ -1898,7 +1850,11 @@ with tab2:
             
             # Gemini 응답인 경우 gemini_result에서 parsed_response 추출
             if 'gemini_result' in ai_result:
-                parsed = ai_result['gemini_result']['parsed_response']
+                # Gemini 응답도 GPT와 동일한 형식으로 파싱
+                if 'raw_response' in ai_result['gemini_result']:
+                    parsed = _parse_gpt_response(ai_result['gemini_result']['raw_response'])
+                else:
+                    parsed = ai_result['gemini_result']['parsed_response']
             elif 'parsed_response' in ai_result:
                 parsed = ai_result['parsed_response']
             elif 'response' in ai_result:
@@ -1950,24 +1906,7 @@ with tab2:
                     email_content = parsed['email_draft']
                     st.text_area("이메일 내용", email_content, height=300)
                     
-                    # 이메일 복사 버튼
-                    if st.button("📋 이메일 복사", use_container_width=True):
-                        # JavaScript를 사용한 클립보드 복사
-                        js_code = f"""
-                        <script>
-                        function copyToClipboard() {{
-                            const text = `{email_content.replace('`', '\\`').replace("'", "\\'")}`;
-                            navigator.clipboard.writeText(text).then(function() {{
-                                console.log('클립보드에 복사됨');
-                            }}).catch(function(err) {{
-                                console.error('클립보드 복사 실패:', err);
-                            }});
-                        }}
-                        copyToClipboard();
-                        </script>
-                        """
-                        st.components.v1.html(js_code, height=0)
-                        st.success("이메일 내용이 클립보드에 복사되었습니다!")
+
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
             
@@ -2109,24 +2048,7 @@ with tab2:
                         email_content = parsed['email_draft']
                         st.text_area("이메일 내용", email_content, height=300)
                         
-                        # 이메일 복사 버튼
-                        if st.button("📋 이메일 복사", use_container_width=True):
-                            # JavaScript를 사용한 클립보드 복사
-                            js_code = f"""
-                            <script>
-                            function copyToClipboard() {{
-                                const text = `{email_content.replace('`', '\\`').replace("'", "\\'")}`;
-                                navigator.clipboard.writeText(text).then(function() {{
-                                    console.log('클립보드에 복사됨');
-                                }}).catch(function(err) {{
-                                    console.error('클립보드 복사 실패:', err);
-                                }});
-                            }}
-                            copyToClipboard();
-                            </script>
-                            """
-                            st.components.v1.html(js_code, height=0)
-                            st.success("이메일 내용이 클립보드에 복사되었습니다!")
+
                     else:
                         st.warning("⚠️ 이메일 초안 정보가 없습니다.")
         
