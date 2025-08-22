@@ -1644,6 +1644,18 @@ with tab1:
                                     condition_2=best_scenario.get('condition_2', '') if best_scenario else ''
                                 )
                                 
+                                # AI 결과 구조 디버깅
+                                print(f"🔍 AI 결과 구조: {list(ai_result.keys())}")
+                                if 'gemini_result' in ai_result:
+                                    print(f"🔍 Gemini 결과 구조: {list(ai_result['gemini_result'].keys())}")
+                                    if 'parsed_response' in ai_result['gemini_result']:
+                                        parsed = ai_result['gemini_result']['parsed_response']
+                                        print(f"🔍 파싱된 응답 구조: {list(parsed.keys())}")
+                                        print(f"🔍 응답 유형: {parsed.get('response_type', 'N/A')}")
+                                        print(f"🔍 요약: {parsed.get('summary', 'N/A')[:100]}...")
+                                        print(f"🔍 조치 흐름: {parsed.get('action_flow', 'N/A')[:100]}...")
+                                        print(f"🔍 이메일 초안: {parsed.get('email_draft', 'N/A')[:100]}...")
+                                
                                 elapsed_time = time.time() - start_time
                                 if ai_result["success"]:
                                     st.success(f"✅ Gemini 응답 생성 완료 ({elapsed_time:.1f}초)")
@@ -1706,17 +1718,27 @@ with tab1:
                             parsed_data = None
                             if 'ai_result' in analysis_result:
                                 ai_result = analysis_result['ai_result']
+                                print(f"🔍 AI 결과 구조 확인: {list(ai_result.keys())}")
+                                
                                 if 'gemini_result' in ai_result and 'parsed_response' in ai_result['gemini_result']:
                                     parsed_data = ai_result['gemini_result']['parsed_response']
+                                    print(f"✅ Gemini 결과에서 파싱된 데이터 추출: {parsed_data}")
                                 elif 'parsed_response' in ai_result:
                                     parsed_data = ai_result['parsed_response']
+                                    print(f"✅ 직접 파싱된 데이터 추출: {parsed_data}")
                                 elif 'response' in ai_result:
                                     # GPT API 응답인 경우 파싱
                                     parsed_data = _parse_gpt_response(ai_result['response'])
+                                    print(f"✅ GPT 응답에서 파싱된 데이터 추출: {parsed_data}")
+                                else:
+                                    print(f"⚠️ AI 결과에서 파싱된 데이터를 찾을 수 없습니다: {ai_result}")
                             
                             # 파싱된 데이터를 analysis_result에 명시적으로 포함
                             if parsed_data:
                                 analysis_result['parsed_response'] = parsed_data
+                                print(f"✅ analysis_result에 파싱된 데이터 추가: {parsed_data}")
+                            else:
+                                print("❌ 파싱된 데이터가 없습니다!")
                             
                             # MongoDB에 저장
                             mongo_result = st.session_state.mongo_handler.save_analysis(analysis_result, inquiry_data_with_user)

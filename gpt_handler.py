@@ -189,7 +189,16 @@ class GPTHandler:
     def parse_response(self, response_text: str) -> Dict[str, Any]:
         """응답 텍스트를 구조화된 형태로 파싱"""
         try:
+            print(f"🔍 파싱 시작 - 원본 응답 길이: {len(response_text)}")
+            print(f"🔍 원본 응답 일부: {response_text[:300]}...")
+            
+            # 기본값 설정
             response_type = "해결안"
+            summary = ""
+            action_flow = ""
+            email_draft = ""
+            
+            # 응답 유형 결정
             if "질문" in response_text and "출동" not in response_text:
                 response_type = "질문"
             elif "출동" in response_text and "질문" not in response_text:
@@ -197,86 +206,131 @@ class GPTHandler:
             elif "해결안" in response_text:
                 response_type = "해결안"
             
-            summary = ""
-            action_flow = ""
-            email_draft = ""
+            # 정규식을 사용한 더 정확한 파싱
+            import re
             
-            lines = response_text.split('\n')
-            current_section = ""
+            # 요약 추출 - "요약:" 다음에 오는 텍스트
+            summary_match = re.search(r'요약[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:조치 흐름|이메일 초안|$))', response_text, re.DOTALL)
+            if summary_match:
+                summary = summary_match.group(1).strip()
+                # 불필요한 텍스트 제거
+                summary = re.sub(r'아래 형식을 참고하여|실무자가 이해하기 쉽도록|자연스럽고 정확하게 응답을 생성하십시오', '', summary).strip()
+                print(f"✅ 정규식으로 요약 추출: {summary[:100]}...")
             
-            for i, line in enumerate(lines):
-                line = line.strip()
-                if not line:
-                    continue
+            # 조치 흐름 추출 - "조치 흐름:" 다음에 오는 텍스트
+            action_match = re.search(r'조치 흐름[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:이메일 초안|$))', response_text, re.DOTALL)
+            if action_match:
+                action_text = action_match.group(1).strip()
+                # 줄별로 처리하여 번호가 있는 항목만 추출
+                action_lines = []
+                for line in action_text.split('\n'):
+                    line = line.strip()
+                    if line and not any(unwanted in line for unwanted in [
+                        "아래 형식을 따라", "단계별로 줄바꿈하며", "번호를 붙여 설명하십시오",
+                        "각 단계는 짧고 명확하게", "실무자가 바로 이해할 수 있도록",
+                        "※ 각 단계는", "짧고 명확하게", "실무자가 바로 이해할 수 있도록 작성하십시오",
+                        "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:"
+                    ]):
+                        if re.match(r'^\d+\.', line) or (line and not line.startswith('-')):
+                            action_lines.append(line)
+                action_flow = '\n'.join(action_lines)
+                print(f"✅ 정규식으로 조치 흐름 추출: {action_flow[:100]}...")
+            
+            # 이메일 초안 추출 - "이메일 초안:" 다음에 오는 텍스트
+            email_match = re.search(r'이메일 초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:$))', response_text, re.DOTALL)
+            if email_match:
+                email_text = email_match.group(1).strip()
+                # 불필요한 텍스트 제거
+                email_lines = []
+                for line in email_text.split('\n'):
+                    line = line.strip()
+                    if line and not any(unwanted in line for unwanted in [
+                        "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
+                        "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오"
+                    ]):
+                        email_lines.append(line)
+                email_draft = '\n'.join(email_lines)
+                print(f"✅ 정규식으로 이메일 초안 추출: {email_draft[:100]}...")
+            
+            # 기존 방식으로도 시도 (정규식이 실패한 경우)
+            if not summary or not action_flow or not email_draft:
+                print("⚠️ 정규식 파싱이 불완전하여 기존 방식으로 보완합니다.")
                 
-                # 섹션 시작점 감지
-                if "요약:" in line or "요약" in line:
-                    current_section = "summary"
-                    # 요약 내용이 같은 줄에 있는 경우
-                    summary_content = line.replace("요약:", "").replace("요약", "").strip()
-                    if summary_content:
-                        summary = summary_content
-                    # 다음 줄에 요약 내용이 있는지 확인
-                    if i + 1 < len(lines):
-                        next_line = lines[i + 1].strip()
-                        if next_line and not any(keyword in next_line for keyword in ["조치 흐름:", "조치 흐름", "이메일 초안:", "이메일 초안", "[응답내용]", "[대응유형]"]):
-                            if summary:
-                                summary += " " + next_line
-                            else:
+                lines = response_text.split('\n')
+                current_section = ""
+                
+                for i, line in enumerate(lines):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    
+                    # 섹션 시작점 감지
+                    if "요약:" in line or "요약" in line:
+                        current_section = "summary"
+                        # 요약 내용이 같은 줄에 있는 경우
+                        summary_content = line.replace("요약:", "").replace("요약", "").strip()
+                        if summary_content and not summary:
+                            summary = summary_content
+                        # 다음 줄에 요약 내용이 있는지 확인
+                        if i + 1 < len(lines) and not summary:
+                            next_line = lines[i + 1].strip()
+                            if next_line and not any(keyword in next_line for keyword in ["조치 흐름:", "조치 흐름", "이메일 초안:", "이메일 초안", "[응답내용]", "[대응유형]"]):
                                 summary = next_line
-                elif "조치 흐름:" in line or "조치 흐름" in line:
-                    current_section = "action"
-                    # 조치 흐름 내용이 같은 줄에 있는 경우
-                    action_content = line.replace("조치 흐름:", "").replace("조치 흐름", "").strip()
-                    if action_content:
-                        action_flow = action_content + "\n"
-                elif "이메일 초안:" in line or "이메일 초안" in line:
-                    current_section = "email"
-                    # 이메일 초안 내용이 같은 줄에 있는 경우
-                    email_content = line.replace("이메일 초안:", "").replace("이메일 초안", "").strip()
-                    if email_content:
-                        email_draft = email_content + "\n"
-                else:
-                    # 현재 섹션에 내용 추가
-                    if current_section == "summary":
-                        if summary:  # 이미 내용이 있으면 공백 추가
-                            summary += " " + line
-                        else:
+                    elif "조치 흐름:" in line or "조치 흐름" in line:
+                        current_section = "action"
+                        # 조치 흐름 내용이 같은 줄에 있는 경우
+                        action_content = line.replace("조치 흐름:", "").replace("조치 흐름", "").strip()
+                        if action_content and not action_flow:
+                            action_flow = action_content + "\n"
+                    elif "이메일 초안:" in line or "이메일 초안" in line:
+                        current_section = "email"
+                        # 이메일 초안 내용이 같은 줄에 있는 경우
+                        email_content = line.replace("이메일 초안:", "").replace("이메일 초안", "").strip()
+                        if email_content and not email_draft:
+                            email_draft = email_content + "\n"
+                    else:
+                        # 현재 섹션에 내용 추가
+                        if current_section == "summary" and not summary:
                             summary = line
-                    elif current_section == "action":
-                        # 불필요한 지침 텍스트 제거
-                        if not any(instruction in line for instruction in [
-                            "아래 형식을 따라", "단계별로 줄바꿈하며", "번호를 붙여 설명하십시오",
-                            "각 단계는 짧고 명확하게", "실무자가 바로 이해할 수 있도록",
-                            "※ 각 단계는", "짧고 명확하게", "실무자가 바로 이해할 수 있도록 작성하십시오",
-                            "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:"
-                        ]):
-                            # 번호가 있는 항목인지 확인
-                            if re.match(r'^\d+\.', line):
-                                action_flow += line + "\n"
-                            elif line and not line.startswith('-'):
-                                action_flow += line + "\n"
-                    elif current_section == "email":
-                        # 이메일 초안에서 불필요한 텍스트 제거
-                        if not any(unwanted in line for unwanted in [
-                            "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
-                            "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오"
-                        ]):
-                            email_draft += line + "\n"
+                        elif current_section == "action" and not action_flow:
+                            if not any(instruction in line for instruction in [
+                                "아래 형식을 따라", "단계별로 줄바꿈하며", "번호를 붙여 설명하십시오",
+                                "각 단계는 짧고 명확하게", "실무자가 바로 이해할 수 있도록",
+                                "※ 각 단계는", "짧고 명확하게", "실무자가 바로 이해할 수 있도록 작성하십시오",
+                                "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:"
+                            ]):
+                                if re.match(r'^\d+\.', line) or (line and not line.startswith('-')):
+                                    action_flow = line + "\n"
+                        elif current_section == "email" and not email_draft:
+                            if not any(unwanted in line for unwanted in [
+                                "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
+                                "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오"
+                            ]):
+                                email_draft = line + "\n"
             
-            # 줄바꿈 정리 (연속된 줄바꿈을 하나로 통일)
+            # 줄바꿈 정리
             action_flow = action_flow.strip()
             email_draft = email_draft.strip()
             
-            # 요약에서 불필요한 텍스트 제거
-            summary = summary.replace("아래 형식을 참고하여", "").replace("실무자가 이해하기 쉽도록", "").replace("자연스럽고 정확하게 응답을 생성하십시오", "").strip()
-            
             # 디버깅을 위한 로그 추가
-            print(f"파싱 결과 - 요약: {summary[:50]}...")
-            print(f"파싱 결과 - 조치 흐름: {action_flow[:50]}...")
-            print(f"파싱 결과 - 이메일 초안: {email_draft[:50]}...")
+            print(f"✅ 최종 파싱 결과:")
+            print(f"  - 응답 유형: {response_type}")
+            print(f"  - 요약: {summary[:100]}...")
+            print(f"  - 조치 흐름: {action_flow[:100]}...")
+            print(f"  - 이메일 초안: {email_draft[:100]}...")
             
-            return {
+            # 빈 값 체크 및 기본값 설정
+            if not summary.strip():
+                print("⚠️ 경고: 요약이 비어있어 기본값을 사용합니다!")
+                summary = "AI 분석 결과를 파싱할 수 없습니다."
+            if not action_flow.strip():
+                print("⚠️ 경고: 조치 흐름이 비어있어 기본값을 사용합니다!")
+                action_flow = "AI 분석 결과를 파싱할 수 없습니다."
+            if not email_draft.strip():
+                print("⚠️ 경고: 이메일 초안이 비어있어 기본값을 사용합니다!")
+                email_draft = "AI 분석 결과를 파싱할 수 없습니다."
+            
+            result = {
                 "response_type": response_type,
                 "summary": summary.strip(),
                 "action_flow": action_flow,
@@ -284,13 +338,19 @@ class GPTHandler:
                 "full_response": response_text
             }
             
+            print(f"✅ 최종 파싱 결과: {result}")
+            return result
+            
         except Exception as e:
-            print(f"응답 파싱 중 오류: {e}")
+            print(f"❌ 파싱 중 오류 발생: {e}")
+            import traceback
+            traceback.print_exc()
+            # 기본값 반환
             return {
                 "response_type": "해결안",
-                "summary": "응답 파싱 중 오류가 발생했습니다.",
-                "action_flow": "",
-                "email_draft": "",
+                "summary": "파싱 오류로 인해 요약을 생성할 수 없습니다.",
+                "action_flow": "파싱 오류로 인해 조치 흐름을 생성할 수 없습니다.",
+                "email_draft": "파싱 오류로 인해 이메일 초안을 생성할 수 없습니다.",
                 "full_response": response_text
             }
     
