@@ -1287,10 +1287,6 @@ def _add_natural_line_breaks(text: str) -> str:
 def init_components():
     """컴포넌트 초기화"""
     try:
-        classifier = IssueClassifier(api_key=api_key)
-        scenario_db = ScenarioDB()
-        vector_search = VectorSearchWrapper()
-        
         # API 키 설정 (Streamlit Secrets 우선, 환경변수 차선, 사이드바 마지막)
         api_key = ""
         
@@ -1311,6 +1307,11 @@ def init_components():
         if not api_key and 'current_api_key' in st.session_state and st.session_state.current_api_key:
             api_key = st.session_state.current_api_key
             print("✅ Gemini API 키를 사이드바에서 로드했습니다.")
+        
+        # 컴포넌트 초기화 (API 키 로드 후)
+        classifier = IssueClassifier(api_key=api_key)
+        scenario_db = ScenarioDB()
+        vector_search = VectorSearchWrapper()
         
         # Gemini 핸들러들 초기화
         gemini_1_5_pro = GeminiHandler(api_key=api_key, model_name="gemini-1.5-pro")
