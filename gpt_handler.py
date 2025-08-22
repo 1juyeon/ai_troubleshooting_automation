@@ -388,69 +388,6 @@ class GPTHandler:
                 "full_response": response_text
             }
     
-    def _validate_and_fix_parsed_response(self, parsed_response: Dict[str, Any], raw_response: str) -> Dict[str, Any]:
-        """파싱된 응답을 검증하고 필요한 경우 보완"""
-        try:
-            # 필수 필드 확인 및 기본값 설정
-            required_fields = {
-                'response_type': '해결안',
-                'summary': '',
-                'action_flow': '',
-                'email_draft': '',
-                'full_response': raw_response
-            }
-            
-            # 기존 데이터 유지하면서 누락된 필드 보완
-            for field, default_value in required_fields.items():
-                if field not in parsed_response or not parsed_response[field]:
-                    parsed_response[field] = default_value
-                elif field == 'full_response' and not parsed_response[field]:
-                    parsed_response[field] = raw_response
-            
-            # 응답 유형 검증
-            if parsed_response['response_type'] not in ['해결안', '질문', '출동']:
-                parsed_response['response_type'] = '해결안'
-            
-            # 요약 검증 및 보완
-            if not parsed_response['summary'] or len(parsed_response['summary'].strip()) < 10:
-                # 원본 응답에서 요약 추출 시도
-                summary_match = re.search(r'요약[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:조치|이메일|$))', raw_response, re.DOTALL | re.IGNORECASE)
-                if summary_match:
-                    parsed_response['summary'] = summary_match.group(1).strip()
-                else:
-                    parsed_response['summary'] = "AI 분석 결과를 파싱할 수 없습니다. 고객 문의 내용을 확인해주세요."
-            
-            # 조치 흐름 검증 및 보완
-            if not parsed_response['action_flow'] or len(parsed_response['action_flow'].strip()) < 20:
-                # 원본 응답에서 조치 흐름 추출 시도
-                action_match = re.search(r'조치\s*흐름[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:이메일|$))', raw_response, re.DOTALL | re.IGNORECASE)
-                if action_match:
-                    parsed_response['action_flow'] = action_match.group(1).strip()
-                else:
-                    parsed_response['action_flow'] = "AI 분석 결과를 파싱할 수 없습니다. 단계별 조치 사항을 확인해주세요."
-            
-            # 이메일 초안 검증 및 보완
-            if not parsed_response['email_draft'] or len(parsed_response['email_draft'].strip()) < 30:
-                # 원본 응답에서 이메일 초안 추출 시도
-                email_match = re.search(r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\s*$)', raw_response, re.DOTALL | re.IGNORECASE)
-                if email_match:
-                    parsed_response['email_draft'] = email_match.group(1).strip()
-                else:
-                    parsed_response['email_draft'] = "AI 분석 결과를 파싱할 수 없습니다. 이메일 초안을 확인해주세요."
-            
-            return parsed_response
-            
-        except Exception as e:
-            print(f"파싱된 응답 검증 중 오류: {e}")
-            # 오류 발생 시 기본값 반환
-            return {
-                'response_type': '해결안',
-                'summary': "AI 분석 결과를 파싱할 수 없습니다. 고객 문의 내용을 확인해주세요.",
-                'action_flow': "AI 분석 결과를 파싱할 수 없습니다. 단계별 조치 사항을 확인해주세요.",
-                'email_draft': "AI 분석 결과를 파싱할 수 없습니다. 이메일 초안을 확인해주세요.",
-                'full_response': raw_response
-            }
-    
     def generate_complete_response(self,
                                  customer_input: str,
                                  issue_type: str,
@@ -471,18 +408,15 @@ class GPTHandler:
             api_response = self.generate_response(prompt, model)
             
             if api_response["success"]:
-                # 응답 파싱 - parse_response 함수 호출
+                # 응답 파싱
                 parsed_response = self.parse_response(api_response["response"])
                 
-                # 파싱 결과 검증 및 보완
+                # 파싱 결과 검증
                 if not parsed_response or not isinstance(parsed_response, dict):
                     # 파싱 실패 시 기본 응답 사용
                     parsed_response = self._generate_default_response(
                         customer_input, issue_type, condition_1, condition_2
                     )
-                else:
-                    # 파싱된 데이터 검증 및 보완
-                    parsed_response = self._validate_and_fix_parsed_response(parsed_response, api_response["response"])
                 
                 return {
                     "success": True,

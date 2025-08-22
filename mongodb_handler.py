@@ -333,14 +333,6 @@ class MongoDBHandler:
             # 요약에서 "- 요약:" 제거 (혹시 남아있을 경우)
             parsed['summary'] = parsed['summary'].replace('- 요약:', '').strip()
             
-            # 파싱 실패 시 기본값 설정
-            if not parsed['summary'] or len(parsed['summary'].strip()) < 5:
-                parsed['summary'] = "AI 분석 결과를 파싱할 수 없습니다. 고객 문의 내용을 확인해주세요."
-            if not parsed['action_flow'] or len(parsed['action_flow'].strip()) < 10:
-                parsed['action_flow'] = "AI 분석 결과를 파싱할 수 없습니다. 단계별 조치 사항을 확인해주세요."
-            if not parsed['email_draft'] or len(parsed['email_draft'].strip()) < 20:
-                parsed['email_draft'] = "AI 분석 결과를 파싱할 수 없습니다. 이메일 초안을 확인해주세요."
-            
             # 디버깅을 위한 로그 추가
             print(f"MongoDB GPT 파싱 결과 - 요약: {parsed['summary'][:50]}...")
             print(f"MongoDB GPT 파싱 결과 - 조치 흐름: {parsed['action_flow'][:50]}...")
@@ -355,8 +347,7 @@ class MongoDBHandler:
                 'summary': '응답 파싱 중 오류가 발생했습니다.',
                 'action_flow': '응답을 확인해주세요.',
                 'email_draft': '응답을 확인해주세요.',
-                'question': '',
-                'full_response': response_text
+                'question': ''
             }
     
     def get_history(self, user_id: str = None, limit: int = 100, skip: int = 0, date_from: str = None, date_to: str = None, issue_type: str = None) -> List[Dict]:

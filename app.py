@@ -1053,95 +1053,69 @@ def _parse_gpt_response(response_text: str) -> dict:
             'summary': '',
             'action_flow': '',
             'email_draft': '',
-            'question': '',
-            'full_response': response_text
+            'question': ''
         }
         
-        # 정규식을 사용한 더 정확한 파싱
-        import re
+        # 응답 텍스트를 줄 단위로 분리
+        lines = response_text.split('\n')
+        current_section = None
         
-        # 응답 유형 추출
-        response_type_match = re.search(r'\[대응유형\]\s*([^\n]+)', response_text, re.IGNORECASE)
-        if response_type_match:
-            response_type = response_type_match.group(1).strip()
-            if response_type in ['해결안', '질문', '출동']:
-                parsed['response_type'] = response_type
+        for i, line in enumerate(lines):
+            line = line.strip()
+            if not line:
+                continue
+                
+            # 섹션 헤더 확인
+            if '[대응유형]' in line:
+                response_type = line.replace('[대응유형]', '').strip()
+                if response_type in ['해결안', '질문', '출동']:
+                    parsed['response_type'] = response_type
+            elif '[응답내용]' in line:
+                current_section = 'content'
+            elif '- 요약:' in line:
+                current_section = 'summary'
+                # 요약 내용이 같은 줄에 있는 경우
+                summary_content = line.replace('- 요약:', '').strip()
+                if summary_content:
+                    parsed['summary'] = summary_content
+                # 다음 줄에 요약 내용이 있는지 확인
+                if i + 1 < len(lines):
+                    next_line = lines[i + 1].strip()
+                    if next_line and not any(keyword in next_line for keyword in ['- 조치 흐름:', '- 이메일 초안:', '[응답내용]', '[대응유형]']):
+                        if parsed['summary']:
+                            parsed['summary'] += ' ' + next_line
+                        else:
+                            parsed['summary'] = next_line
+            elif '- 조치 흐름:' in line:
+                current_section = 'action_flow'
+            elif '- 이메일 초안:' in line:
+                current_section = 'email_draft'
+            elif line.startswith('1.') or line.startswith('2.') or line.startswith('3.') or line.startswith('4.') or line.startswith('5.'):
+                # 조치 흐름 항목
+                if current_section == 'action_flow':
+                    parsed['action_flow'] += line + '\n'
+            elif current_section == 'summary':
+                if parsed['summary']:  # 이미 내용이 있으면 공백 추가
+                    parsed['summary'] += ' ' + line
+                else:
+                    parsed['summary'] = line
+            elif current_section == 'action_flow':
+                # 조치 흐름에서 불필요한 텍스트 제거
+                if not any(unwanted in line for unwanted in [
+                    '[응답내용]', '[대응유형]', '- 요약:', '- 조치 흐름:', '- 이메일 초안:',
+                    '아래 형식을 참고하여', '실무자가 이해하기 쉽도록', '자연스럽고 정확하게 응답을 생성하십시오'
+                ]):
+                    parsed['action_flow'] += line + '\n'
+            elif current_section == 'email_draft':
+                # 이메일 초안에서 불필요한 텍스트 제거
+                if not any(unwanted in line for unwanted in [
+                    '[응답내용]', '[대응유형]', '- 요약:', '- 조치 흐름:', '- 이메일 초안:',
+                    '아래 형식을 참고하여', '실무자가 이해하기 쉽도록', '자연스럽고 정확하게 응답을 생성하십시오'
+                ]):
+                    parsed['email_draft'] += line + '\n'
         
-        # 요약 추출 - 여러 패턴 시도
-        summary_patterns = [
-            r'요약[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:조치\s*흐름|이메일\s*초안|$))',
-            r'요약[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:조치|이메일|$))',
-            r'요약[:\s]*([^\n]+)'
-        ]
-        
-        for pattern in summary_patterns:
-            summary_match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
-            if summary_match:
-                summary = summary_match.group(1).strip()
-                # 불필요한 텍스트 제거
-                summary = re.sub(r'아래\s*형식을\s*참고하여|실무자가\s*이해하기\s*쉽도록|자연스럽고\s*정확하게\s*응답을\s*생성하십시오', '', summary, flags=re.IGNORECASE).strip()
-                if summary and len(summary) > 5:
-                    parsed['summary'] = summary
-                    break
-        
-        # 조치 흐름 추출
-        action_patterns = [
-            r'조치\s*흐름[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:이메일\s*초안|$))',
-            r'조치\s*흐름[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\s*$)',
-            r'조치\s*흐름[:\s]*([^\n]+)'
-        ]
-        
-        for pattern in action_patterns:
-            action_match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
-            if action_match:
-                action_text = action_match.group(1).strip()
-                # 줄별로 처리하여 번호가 있는 항목만 추출
-                action_lines = []
-                for line in action_text.split('\n'):
-                    line = line.strip()
-                    if line and not any(unwanted in line.lower() for unwanted in [
-                        "아래 형식을 따라", "단계별로 줄바꿈하며", "번호를 붙여 설명하십시오",
-                        "각 단계는 짧고 명확하게", "실무자가 바로 이해할 수 있도록",
-                        "※ 각 단계는", "짧고 명확하게", "실무자가 바로 이해할 수 있도록 작성하십시오",
-                        "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:"
-                    ]):
-                        if re.match(r'^\d+\.', line) or (line and not line.startswith('-')):
-                            action_lines.append(line)
-                parsed['action_flow'] = '\n'.join(action_lines)
-                if parsed['action_flow'] and len(parsed['action_flow']) > 10:
-                    break
-        
-        # 이메일 초안 추출
-        email_patterns = [
-            r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\s*$)',
-            r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:$))',
-            r'이메일\s*초안[:\s]*([^\n]+)'
-        ]
-        
-        for pattern in email_patterns:
-            email_match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
-            if email_match:
-                email_text = email_match.group(1).strip()
-                # 불필요한 텍스트 제거
-                email_lines = []
-                for line in email_text.split('\n'):
-                    line = line.strip()
-                    if line and not any(unwanted in line.lower() for unwanted in [
-                        "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
-                        "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오"
-                    ]):
-                        email_lines.append(line)
-                parsed['email_draft'] = '\n'.join(email_lines)
-                if parsed['email_draft'] and len(parsed['email_draft']) > 20:
-                    break
-        
-        # 파싱 실패 시 기본값 설정
-        if not parsed['summary'] or len(parsed['summary'].strip()) < 5:
-            parsed['summary'] = "AI 분석 결과를 파싱할 수 없습니다. 고객 문의 내용을 확인해주세요."
-        if not parsed['action_flow'] or len(parsed['action_flow'].strip()) < 10:
-            parsed['action_flow'] = "AI 분석 결과를 파싱할 수 없습니다. 단계별 조치 사항을 확인해주세요."
-        if not parsed['email_draft'] or len(parsed['email_draft'].strip()) < 20:
-            parsed['email_draft'] = "AI 분석 결과를 파싱할 수 없습니다. 이메일 초안을 확인해주세요."
+        # 요약에서 "- 요약:" 제거 (혹시 남아있을 경우)
+        parsed['summary'] = parsed['summary'].replace('- 요약:', '').strip()
         
         # 디버깅을 위한 로그 추가
         print(f"GPT 파싱 결과 - 요약: {parsed['summary'][:50]}...")
@@ -1157,8 +1131,7 @@ def _parse_gpt_response(response_text: str) -> dict:
             'summary': '응답 파싱 중 오류가 발생했습니다.',
             'action_flow': '응답을 확인해주세요.',
             'email_draft': '응답을 확인해주세요.',
-            'question': '',
-            'full_response': response_text
+            'question': ''
         }
 
 def _format_email_content(email_content: str) -> str:
@@ -1722,34 +1695,6 @@ with tab1:
                         'timestamp': get_safe_timestamp()
                     }
                     
-                    # AI 응답 결과 검증 및 보완
-                    if 'ai_result' in analysis_result:
-                        ai_result = analysis_result['ai_result']
-                        
-                        # Gemini 응답인 경우
-                        if 'gemini_result' in ai_result and 'parsed_response' in ai_result['gemini_result']:
-                            parsed_response = ai_result['gemini_result']['parsed_response']
-                            if not parsed_response or not isinstance(parsed_response, dict):
-                                # 파싱된 데이터가 없거나 잘못된 경우 기본값 설정
-                                ai_result['gemini_result']['parsed_response'] = {
-                                    'response_type': '해결안',
-                                    'summary': 'AI 분석 결과를 파싱할 수 없습니다.',
-                                    'action_flow': 'AI 분석 결과를 파싱할 수 없습니다.',
-                                    'email_draft': 'AI 분석 결과를 파싱할 수 없습니다.'
-                                }
-                        
-                        # GPT 응답인 경우
-                        elif 'gpt_result' in ai_result and 'parsed_response' in ai_result['gpt_result']:
-                            parsed_response = ai_result['gpt_result']['parsed_response']
-                            if not parsed_response or not isinstance(parsed_response, dict):
-                                # 파싱된 데이터가 없거나 잘못된 경우 기본값 설정
-                                ai_result['gpt_result']['parsed_response'] = {
-                                    'response_type': '해결안',
-                                    'summary': 'AI 분석 결과를 파싱할 수 없습니다.',
-                                    'action_flow': 'AI 분석 결과를 파싱할 수 없습니다.',
-                                    'email_draft': 'AI 분석 결과를 파싱할 수 없습니다.'
-                                }
-                    
                     st.session_state.analysis_result = analysis_result
                     
                     st.session_state.inquiry_data = {
@@ -1784,8 +1729,6 @@ with tab1:
                                 
                                 if 'gemini_result' in ai_result and 'parsed_response' in ai_result['gemini_result']:
                                     parsed_data = ai_result['gemini_result']['parsed_response']
-                                elif 'gpt_result' in ai_result and 'parsed_response' in ai_result['gpt_result']:
-                                    parsed_data = ai_result['gpt_result']['parsed_response']
                                 elif 'parsed_response' in ai_result:
                                     parsed_data = ai_result['parsed_response']
                                 elif 'response' in ai_result:
@@ -1793,20 +1736,7 @@ with tab1:
                                     parsed_data = _parse_gpt_response(ai_result['response'])
                             
                             # 파싱된 데이터를 analysis_result에 명시적으로 포함
-                            if parsed_data and isinstance(parsed_data, dict):
-                                # 필수 필드 확인 및 보완
-                                required_fields = ['response_type', 'summary', 'action_flow', 'email_draft']
-                                for field in required_fields:
-                                    if field not in parsed_data or not parsed_data[field]:
-                                        if field == 'response_type':
-                                            parsed_data[field] = '해결안'
-                                        elif field == 'summary':
-                                            parsed_data[field] = 'AI 분석 결과를 파싱할 수 없습니다.'
-                                        elif field == 'action_flow':
-                                            parsed_data[field] = 'AI 분석 결과를 파싱할 수 없습니다.'
-                                        elif field == 'email_draft':
-                                            parsed_data[field] = 'AI 분석 결과를 파싱할 수 없습니다.'
-                                
+                            if parsed_data:
                                 analysis_result['parsed_response'] = parsed_data
                             else:
                                 # 파싱된 데이터가 없는 경우 기본값 설정
