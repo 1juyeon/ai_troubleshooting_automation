@@ -8,13 +8,14 @@ from typing import Dict, Any
 import pickle
 import pytz
 import re
+import time
 
 # 커스텀 모듈 import
 from classify_issue import IssueClassifier
 from scenario_db import ScenarioDB
 from vector_search import VectorSearchWrapper
-from gpt_handler import GPTHandler
 from openai_handler import OpenAIHandler
+from gemini_handler import GeminiHandler
 from database import HistoryDB
 from multi_user_database import MultiUserHistoryDB
 from mongodb_handler import MongoDBHandler
@@ -1286,7 +1287,7 @@ def _add_natural_line_breaks(text: str) -> str:
 def init_components():
     """컴포넌트 초기화"""
     try:
-        classifier = IssueClassifier()
+        classifier = IssueClassifier(api_key=api_key)
         scenario_db = ScenarioDB()
         vector_search = VectorSearchWrapper()
         
@@ -1311,7 +1312,11 @@ def init_components():
             api_key = st.session_state.current_api_key
             print("✅ Gemini API 키를 사이드바에서 로드했습니다.")
         
-        gpt_handler = GPTHandler(api_key=api_key)
+        # Gemini 핸들러들 초기화
+        gemini_1_5_pro = GeminiHandler(api_key=api_key, model_name="gemini-1.5-pro")
+        gemini_1_5_flash = GeminiHandler(api_key=api_key, model_name="gemini-1.5-flash")
+        gemini_2_0_pro = GeminiHandler(api_key=api_key, model_name="gemini-2.0-flash-exp")
+        gemini_2_0_flash = GeminiHandler(api_key=api_key, model_name="gemini-2.0-flash-exp")
         
         # OpenAI 핸들러 초기화
         openai_api_key = ""
@@ -1359,7 +1364,10 @@ def init_components():
             'classifier': classifier,
             'scenario_db': scenario_db,
             'vector_search': vector_search,
-            'gpt_handler': gpt_handler,
+            'gemini_1_5_pro': gemini_1_5_pro,
+            'gemini_1_5_flash': gemini_1_5_flash,
+            'gemini_2_0_pro': gemini_2_0_pro,
+            'gemini_2_0_flash': gemini_2_0_flash,
             'openai_handler': openai_handler,
             'solapi_handler': solapi_handler,
             'history_db': history_db,
@@ -1418,7 +1426,8 @@ with st.sidebar:
             "GPT-4 Turbo",
             "GPT-3.5 Turbo"
         ],
-        index=0
+        index=0,
+        help="각 모델의 특징:\n• Gemini 1.5 Pro: 가장 정확하고 상세한 분석\n• Gemini 1.5 Flash: 빠른 응답, 기본 분석\n• Gemini 2.0 Pro: 최신 기술, 고품질 분석\n• Gemini 2.0 Flash: 빠른 응답, 고품질\n• GPT 모델들: OpenAI 기반 분석"
     )
     
     st.markdown("---")
@@ -1555,7 +1564,6 @@ with tab1:
                     
                     # 5. AI 응답 생성 (타임아웃 설정)
                     with st.spinner("5단계: AI 응답 생성 중... (최대 30초)"):
-                        import time
                         start_time = time.time()
                         
                         # 선택된 AI 모델에 따라 API 키 확인 및 핸들러 선택
@@ -1636,8 +1644,24 @@ with tab1:
                                 st.info("Streamlit Cloud Secrets에서 GEMINI_API_KEY를 설정하거나, 환경변수 GOOGLE_API_KEY를 설정해주세요.")
                                 st.stop()
                             
+                            # 선택된 Gemini 모델에 따라 적절한 핸들러 선택
+                            gemini_handler = None
+                            if selected_model == "Gemini 1.5 Pro":
+                                gemini_handler = components.get('gemini_1_5_pro')
+                            elif selected_model == "Gemini 1.5 Flash":
+                                gemini_handler = components.get('gemini_1_5_flash')
+                            elif selected_model == "Gemini 2.0 Pro":
+                                gemini_handler = components.get('gemini_2_0_pro')
+                            elif selected_model == "Gemini 2.0 Flash":
+                                gemini_handler = components.get('gemini_2_0_flash')
+                            
+                            if not gemini_handler:
+                                st.error(f"❌ {selected_model} 핸들러를 찾을 수 없습니다.")
+                                st.info(f"💡 {selected_model} 모델을 사용하려면 Gemini API 키가 필요합니다.")
+                                st.stop()
+                            
                             try:
-                                ai_result = components['gpt_handler'].generate_complete_response(
+                                ai_result = gemini_handler.generate_complete_response(
                                     customer_input=inquiry_content,
                                     issue_type=issue_type,
                                     condition_1=best_scenario.get('condition_1', '') if best_scenario else '',
@@ -1646,18 +1670,18 @@ with tab1:
                                 
                                 elapsed_time = time.time() - start_time
                                 if ai_result["success"]:
-                                    st.success(f"✅ Gemini 응답 생성 완료 ({elapsed_time:.1f}초)")
+                                    st.success(f"✅ {selected_model} 응답 생성 완료 ({elapsed_time:.1f}초)")
                                 else:
-                                    st.warning(f"⚠️ Gemini 응답 생성 실패, 기본 응답 사용 ({elapsed_time:.1f}초)")
+                                    st.warning(f"⚠️ {selected_model} 응답 생성 실패, 기본 응답 사용 ({elapsed_time:.1f}초)")
                                     
                             except Exception as e:
                                 elapsed_time = time.time() - start_time
-                                st.error(f"❌ Gemini 응답 생성 중 오류 발생 ({elapsed_time:.1f}초): {e}")
+                                st.error(f"❌ {selected_model} 응답 생성 중 오류 발생 ({elapsed_time:.1f}초): {e}")
                                 # 기본 응답 생성
                                 ai_result = {
                                     "success": False,
                                     "error": str(e),
-                                    "parsed_response": components['gpt_handler']._generate_default_response(
+                                    "parsed_response": gemini_handler._generate_default_response(
                                         inquiry_content, issue_type, 
                                         best_scenario.get('condition_1', '') if best_scenario else '',
                                         best_scenario.get('condition_2', '') if best_scenario else ''

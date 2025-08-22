@@ -10,6 +10,8 @@ Gemini AI & GPT 기반 고객 문의 자동 분석 및 응답 도구
 - **고객 응답 이메일 초안 자동 생성**
 - **다중 사용자 이력 관리**
 - **벡터 검색 기반 지식 베이스**
+- **다중 AI 모델 지원** (Gemini 1.5/2.0, GPT 3.5/4)
+- **모델별 최적화된 응답 품질**
 
 ## 🚀 빠른 시작
 
@@ -28,12 +30,19 @@ pip install -r requirements.txt
 `.streamlit/secrets.toml` 파일을 생성하고 API 키를 설정하세요:
 
 ```toml
-# Gemini API 키 (필수)
+# Gemini API 키 (필수 - 모든 Gemini 모델 사용 가능)
 GEMINI_API_KEY = "your-actual-gemini-api-key"
+
+# OpenAI API 키 (선택사항 - GPT 모델 사용)
+OPENAI_API_KEY = "your-openai-api-key"
 
 # 기존 호환성 유지 (선택사항)
 GOOGLE_API_KEY = "your-google-api-key"
 ```
+
+**지원하는 AI 모델:**
+- **Gemini 모델**: 1.5 Pro, 1.5 Flash, 2.0 Pro, 2.0 Flash
+- **GPT 모델**: GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo
 
 ### 4. 앱 실행
 ```bash
@@ -48,7 +57,13 @@ streamlit run app.py
 
 ### 2. AI 분석
 - "AI 분석 요청" 버튼 클릭
-- Gemini AI가 자동으로 분석 수행
+- **AI 모델 선택**: 사이드바에서 원하는 AI 모델 선택
+  - Gemini 1.5 Pro: 가장 정확하고 상세한 분석
+  - Gemini 1.5 Flash: 빠른 응답, 기본 분석
+  - Gemini 2.0 Pro: 최신 기술, 고품질 분석
+  - Gemini 2.0 Flash: 빠른 응답, 고품질
+  - GPT 모델들: OpenAI 기반 분석
+- 선택된 AI 모델이 자동으로 분석 수행
 
 ### 3. 결과 확인
 - AI 분석 결과 탭에서 상세 결과 확인
@@ -57,8 +72,10 @@ streamlit run app.py
 ## 🔍 문제 해결
 
 ### API 키 관련 문제
-- **API 키 설정**: Streamlit Secrets 또는 환경변수 설정
-- **권한 확인**: Gemini API 사용 권한 확인
+- **Gemini API 키**: Streamlit Secrets 또는 환경변수 설정
+- **OpenAI API 키**: GPT 모델 사용 시 필요
+- **권한 확인**: 각 API 서비스의 사용 권한 확인
+- **모델별 지원**: 일부 모델은 API 키 설정 후에만 사용 가능
 
 ### 디버깅 도구
 시스템 상태 탭에서 각 모듈의 상태를 확인할 수 있습니다.
@@ -71,7 +88,8 @@ streamlit_pratice/
 ├── classify_issue.py         # 문제 유형 분류 모듈
 ├── scenario_db.py            # 시나리오 데이터베이스
 ├── vector_search.py          # 벡터 검색 래퍼
-├── gpt_handler.py            # Gemini AI 핸들러
+├── gemini_handler.py         # Gemini AI 핸들러 (다중 모델 지원)
+├── gpt_handler.py            # 기존 Gemini AI 핸들러 (호환성)
 ├── database.py               # 기본 데이터베이스
 ├── multi_user_database.py    # 다중 사용자 데이터베이스
 ├── vector_db.py              # 벡터 데이터베이스
@@ -86,7 +104,9 @@ streamlit_pratice/
 
 ## 🔧 기술 스택
 
-- **AI 모델**: Google Gemini 1.5 Pro
+- **AI 모델**: 
+  - **Gemini 모델**: 1.5 Pro, 1.5 Flash, 2.0 Pro, 2.0 Flash
+  - **GPT 모델**: GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo
 - **웹 프레임워크**: Streamlit
 - **벡터 데이터베이스**: ChromaDB
 - **데이터 처리**: Pandas, NumPy

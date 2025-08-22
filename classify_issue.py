@@ -70,9 +70,13 @@ class IssueClassifier:
         
         # Gemini API 초기화 (실패해도 키워드 분류는 작동)
         try:
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel('gemini-1.5-pro')
-            print("✅ Gemini API 초기화 성공 (gemini-1.5-pro)")
+            if api_key:
+                genai.configure(api_key=api_key)
+                self.model = genai.GenerativeModel('gemini-1.5-pro')
+                print("✅ Gemini API 초기화 성공 (gemini-1.5-pro)")
+            else:
+                self.model = None
+                print("⚠️ Gemini API 키가 없어 모델을 초기화할 수 없습니다.")
         except Exception as e:
             print(f"❌ Gemini API 초기화 실패: {e}")
             self.model = None
