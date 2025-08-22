@@ -126,7 +126,10 @@ class MongoDBHandler:
             email_draft = ""
             
             # Gemini 응답 구조 확인
-            if 'gemini_result' in analysis_data and 'parsed_response' in analysis_data['gemini_result']:
+            if 'parsed_response' in analysis_data:
+                # analysis_result에 직접 포함된 경우
+                parsed_data = analysis_data['parsed_response']
+            elif 'gemini_result' in analysis_data and 'parsed_response' in analysis_data['gemini_result']:
                 parsed_data = analysis_data['gemini_result']['parsed_response']
             elif 'ai_result' in analysis_data:
                 ai_result = analysis_data['ai_result']

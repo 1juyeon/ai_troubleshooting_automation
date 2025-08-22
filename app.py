@@ -1714,6 +1714,10 @@ with tab1:
                                     # GPT API 응답인 경우 파싱
                                     parsed_data = _parse_gpt_response(ai_result['response'])
                             
+                            # 파싱된 데이터를 analysis_result에 명시적으로 포함
+                            if parsed_data:
+                                analysis_result['parsed_response'] = parsed_data
+                            
                             # MongoDB에 저장
                             mongo_result = st.session_state.mongo_handler.save_analysis(analysis_result, inquiry_data_with_user)
                             
