@@ -126,65 +126,44 @@ class MongoDBHandler:
             email_draft = ""
             
             # Gemini 응답 구조 확인
-            print(f"🔍 MongoDB 저장 - 분석 데이터 구조: {list(analysis_data.keys())}")
-            
             if 'parsed_response' in analysis_data:
                 # analysis_result에 직접 포함된 경우
                 parsed_data = analysis_data['parsed_response']
-                print(f"✅ 직접 포함된 파싱된 데이터 사용: {parsed_data}")
             elif 'gemini_result' in analysis_data and 'parsed_response' in analysis_data['gemini_result']:
                 parsed_data = analysis_data['gemini_result']['parsed_response']
-                print(f"✅ Gemini 결과에서 파싱된 데이터 사용: {parsed_data}")
             elif 'ai_result' in analysis_data:
                 ai_result = analysis_data['ai_result']
-                print(f"🔍 AI 결과 구조: {list(ai_result.keys())}")
                 
                 if 'gemini_result' in ai_result and 'parsed_response' in ai_result['gemini_result']:
                     parsed_data = ai_result['gemini_result']['parsed_response']
-                    print(f"✅ AI 결과의 Gemini 결과에서 파싱된 데이터 사용: {parsed_data}")
-                    
-                    # 파싱된 데이터가 비어있는지 확인
-                    if parsed_data and isinstance(parsed_data, dict):
-                        if not parsed_data.get('summary', '').strip():
-                            print("⚠️ 경고: 파싱된 데이터의 요약이 비어있습니다!")
-                        if not parsed_data.get('action_flow', '').strip():
-                            print("⚠️ 경고: 파싱된 데이터의 조치 흐름이 비어있습니다!")
-                        if not parsed_data.get('email_draft', '').strip():
-                            print("⚠️ 경고: 파싱된 데이터의 이메일 초안이 비어있습니다!")
-                    else:
-                        print("⚠️ 경고: 파싱된 데이터가 비어있거나 딕셔너리가 아닙니다!")
-                        
                 elif 'parsed_response' in ai_result:
                     parsed_data = ai_result['parsed_response']
-                    print(f"✅ AI 결과에서 직접 파싱된 데이터 사용: {parsed_data}")
                 elif 'response' in ai_result:
                     # GPT API 응답인 경우 파싱
                     parsed_data = self._parse_gpt_response(ai_result['response'])
-                    print(f"✅ AI 결과의 응답에서 파싱된 데이터 사용: {parsed_data}")
-                else:
-                    print(f"⚠️ AI 결과에서 파싱된 데이터를 찾을 수 없습니다: {ai_result}")
-            else:
-                print(f"⚠️ 분석 데이터에서 AI 결과를 찾을 수 없습니다: {analysis_data}")
             
             # 파싱된 데이터에서 정보 추출
-            if parsed_data:
-                print(f"🔍 파싱된 데이터에서 정보 추출: {parsed_data}")
+            if parsed_data and isinstance(parsed_data, dict):
                 response_type = parsed_data.get('response_type', '')
                 summary = parsed_data.get('summary', '')
                 action_flow = parsed_data.get('action_flow', '')
                 email_draft = parsed_data.get('email_draft', '')
                 
-                print(f"✅ 추출된 정보:")
-                print(f"  - 응답 유형: {response_type}")
-                print(f"  - 요약: {summary[:100]}...")
-                print(f"  - 조치 흐름: {action_flow[:100]}...")
-                print(f"  - 이메일 초안: {email_draft[:100]}...")
+                # 빈 값 검증 및 기본값 설정
+                if not response_type or len(response_type.strip()) < 2:
+                    response_type = "해결안"
+                if not summary or len(summary.strip()) < 5:
+                    summary = "AI 분석 결과를 파싱할 수 없습니다. 고객 문의 내용을 확인해주세요."
+                if not action_flow or len(action_flow.strip()) < 10:
+                    action_flow = "AI 분석 결과를 파싱할 수 없습니다. 단계별 조치 사항을 확인해주세요."
+                if not email_draft or len(email_draft.strip()) < 20:
+                    email_draft = "AI 분석 결과를 파싱할 수 없습니다. 이메일 초안을 확인해주세요."
             else:
-                print("❌ 파싱된 데이터가 없어 기본값을 사용합니다.")
+                # 파싱된 데이터가 없는 경우 기본값 사용
                 response_type = "해결안"
-                summary = "AI 분석 결과를 파싱할 수 없습니다."
-                action_flow = "AI 분석 결과를 파싱할 수 없습니다."
-                email_draft = "AI 분석 결과를 파싱할 수 없습니다."
+                summary = "AI 분석 결과를 파싱할 수 없습니다. 고객 문의 내용을 확인해주세요."
+                action_flow = "AI 분석 결과를 파싱할 수 없습니다. 단계별 조치 사항을 확인해주세요."
+                email_draft = "AI 분석 결과를 파싱할 수 없습니다. 이메일 초안을 확인해주세요."
             
             document = {
                 'timestamp': inquiry_data.get('timestamp', datetime.now().isoformat()),

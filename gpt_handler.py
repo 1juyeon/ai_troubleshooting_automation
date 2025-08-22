@@ -49,7 +49,6 @@ class GPTHandler:
             with open("프롬프트.txt", "r", encoding="utf-8") as f:
                 return f.read()
         except Exception as e:
-            print(f"프롬프트 템플릿 로딩 실패: {e}")
             # 기본 프롬프트 템플릿 (프롬프트.txt와 동일)
             return """[고객 문의 내용]
 {customer_input}
@@ -62,28 +61,35 @@ class GPTHandler:
 - 조건 2: {condition_2}
 
 [대응안 작성 지침]
-아래 형식을 참고하여, 실무자가 이해하기 쉽도록 자연스럽고 정확하게 응답을 생성하십시오.
+아래 형식을 정확히 따라 응답을 생성하십시오.
 
-[대응유형] 해결안 / 질문 / 출동 중 하나를 선택하십시오.
+[대응유형]
+해결안 / 질문 / 출동 중 하나를 선택하십시오.
 
 [응답내용]
 
-요약: 고객 문의의 핵심 내용을 간결하게 정리하십시오.
+요약: {customer_input}에 대한 핵심 내용을 간결하게 정리하십시오.
 
-조치 흐름: 단계별로 줄바꿈하며 번호를 붙여 설명하십시오.
+조치 흐름: 
+1. 첫 번째 조치 단계
+2. 두 번째 조치 단계  
+3. 세 번째 조치 단계
 
-1. 단계 제목: 해당 단계에서 수행할 조치 설명
+이메일 초안: 
+안녕하세요,
 
-2. 단계 제목: 해당 단계에서 수행할 조치 설명
+{customer_input}에 대한 답변드립니다.
 
-3. 단계 제목: 해당 단계에서 수행할 조치 설명
+[구체적인 내용]
 
-이메일 초안: 고객에게 보낼 수 있는 실제 이메일 본문 형식으로 작성하십시오. 간결하고 정중한 표현을 사용하십시오.
+감사합니다.
 
 [예외 처리 기준]
 - 조건 정보가 불충분하거나 고객 상태가 불명확한 경우 → "추가 확인이 필요합니다. 다음 질문을 해주세요."라고 안내하십시오.
 - 문제가 시나리오 DB에 존재하지 않거나, 적절한 해결책이 없는 경우 → "현장 출동이 필요할 수 있습니다."로 안내하십시오.
-- 확실한 답변이 불가능한 경우에도 → "현장 확인 후 조치가 필요합니다" 또는 "엔지니어 출동을 권장합니다" 등으로 마무리하십시오."""
+- 확실한 답변이 불가능한 경우에도 → "현장 확인 후 조치가 필요합니다" 또는 "엔지니어 출동을 권장합니다" 등으로 마무리하십시오.
+
+**중요: 위 형식을 정확히 따라 응답하십시오. 각 섹션은 반드시 포함되어야 합니다.**"""
     
     def build_prompt(self, 
                     customer_input: str,
@@ -104,23 +110,28 @@ class GPTHandler:
 - 조건 2: {condition_2}
 
 [대응안 작성 지침]
-아래 형식을 참고하여, 실무자가 이해하기 쉽도록 자연스럽고 정확하게 응답을 생성하십시오.
+아래 형식을 정확히 따라 응답을 생성하십시오.
 
-[대응유형] 해결안 / 질문 / 출동 중 하나를 선택하십시오.
+[대응유형]
+해결안 / 질문 / 출동 중 하나를 선택하십시오.
 
 [응답내용]
 
-요약: 고객 문의의 핵심 내용을 간결하게 정리하십시오.
+요약: {customer_input}에 대한 핵심 내용을 간결하게 정리하십시오.
 
-조치 흐름: 단계별로 줄바꿈하며 번호를 붙여 설명하십시오.
+조치 흐름: 
+1. 첫 번째 조치 단계
+2. 두 번째 조치 단계  
+3. 세 번째 조치 단계
 
-1. 단계 제목: 해당 단계에서 수행할 조치 설명
+이메일 초안: 
+안녕하세요,
 
-2. 단계 제목: 해당 단계에서 수행할 조치 설명
+{customer_input}에 대한 답변드립니다.
 
-3. 단계 제목: 해당 단계에서 수행할 조치 설명
+[구체적인 내용]
 
-이메일 초안: 고객에게 보낼 수 있는 실제 이메일 본문 형식으로 작성하십시오. 간결하고 정중한 표현을 사용하십시오.
+감사합니다.
 
 [예외 처리 기준]
 - 조건 정보가 불충분하거나 고객 상태가 불명확한 경우 → "추가 확인이 필요합니다. 다음 질문을 해주세요."라고 안내하십시오.
@@ -156,9 +167,29 @@ class GPTHandler:
             
             elapsed_time = time.time() - start_time
             
+            # 응답 검증
+            if not response or not response.text:
+                return {
+                    "success": False,
+                    "error": "API 응답이 비어있습니다",
+                    "response": "죄송합니다. AI 응답이 비어있어 기본 응답을 제공합니다.",
+                    "model": "gemini-1.5-pro",
+                    "response_time": elapsed_time
+                }
+            
+            # 응답 길이 검증
+            response_text = response.text.strip()
+            if len(response_text) < 50:  # 너무 짧은 응답은 의심스러움
+                return {
+                    "success": False,
+                    "error": "API 응답이 너무 짧습니다",
+                    "response": "죄송합니다. AI 응답이 너무 짧아 기본 응답을 제공합니다.",
+                    "model": "gemini-1.5-pro",
+                    "response_time": elapsed_time
+                }
+            
             # 타임아웃 체크
             if elapsed_time > 15:
-                print(f"Gemini API 타임아웃 ({elapsed_time:.2f}초), 기본 응답 사용")
                 return {
                     "success": False,
                     "error": "API 응답 시간 초과",
@@ -167,18 +198,15 @@ class GPTHandler:
                     "response_time": elapsed_time
                 }
             
-            print(f"Gemini API 응답 시간: {elapsed_time:.2f}초")
-            
             return {
                 "success": True,
-                "response": response.text,
+                "response": response_text,
                 "model": "gemini-1.5-pro",
-                "tokens_used": len(response.text.split()),  # 대략적인 토큰 수
+                "tokens_used": len(response_text.split()),  # 대략적인 토큰 수
                 "response_time": elapsed_time
             }
             
         except Exception as e:
-            print(f"Gemini API 호출 실패: {e}")
             return {
                 "success": False,
                 "error": str(e),
@@ -189,111 +217,131 @@ class GPTHandler:
     def parse_response(self, response_text: str) -> Dict[str, Any]:
         """응답 텍스트를 구조화된 형태로 파싱"""
         try:
-            print(f"🔍 파싱 시작 - 원본 응답 길이: {len(response_text)}")
-            print(f"🔍 원본 응답 일부: {response_text[:300]}...")
-            
             # 기본값 설정
             response_type = "해결안"
             summary = ""
             action_flow = ""
             email_draft = ""
             
-            # 응답 유형 결정
-            if "질문" in response_text and "출동" not in response_text:
+            # 응답 유형 결정 (더 정확하게)
+            response_text_lower = response_text.lower()
+            if "질문" in response_text_lower and "출동" not in response_text_lower:
                 response_type = "질문"
-            elif "출동" in response_text and "질문" not in response_text:
+            elif "출동" in response_text_lower and "질문" not in response_text_lower:
                 response_type = "출동"
-            elif "해결안" in response_text:
+            elif "해결안" in response_text_lower:
                 response_type = "해결안"
             
             # 정규식을 사용한 더 정확한 파싱
             import re
             
-            # 요약 추출 - "요약:" 다음에 오는 텍스트
-            summary_match = re.search(r'요약[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:조치 흐름|이메일 초안|$))', response_text, re.DOTALL)
-            if summary_match:
-                summary = summary_match.group(1).strip()
-                # 불필요한 텍스트 제거
-                summary = re.sub(r'아래 형식을 참고하여|실무자가 이해하기 쉽도록|자연스럽고 정확하게 응답을 생성하십시오', '', summary).strip()
-                print(f"✅ 정규식으로 요약 추출: {summary[:100]}...")
+            # 요약 추출 - "요약:" 다음에 오는 텍스트 (더 유연하게)
+            summary_patterns = [
+                r'요약[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:조치\s*흐름|이메일\s*초안|$))',
+                r'요약[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:조치|이메일|$))',
+                r'요약[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\s*$)',
+                r'요약[:\s]*([^\n]+)'
+            ]
+            
+            for pattern in summary_patterns:
+                summary_match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
+                if summary_match:
+                    summary = summary_match.group(1).strip()
+                    # 불필요한 텍스트 제거
+                    summary = re.sub(r'아래\s*형식을\s*참고하여|실무자가\s*이해하기\s*쉽도록|자연스럽고\s*정확하게\s*응답을\s*생성하십시오', '', summary, flags=re.IGNORECASE).strip()
+                    if summary and len(summary) > 5:  # 의미있는 길이인지 확인
+                        break
             
             # 조치 흐름 추출 - "조치 흐름:" 다음에 오는 텍스트
-            action_match = re.search(r'조치 흐름[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:이메일 초안|$))', response_text, re.DOTALL)
-            if action_match:
-                action_text = action_match.group(1).strip()
-                # 줄별로 처리하여 번호가 있는 항목만 추출
-                action_lines = []
-                for line in action_text.split('\n'):
-                    line = line.strip()
-                    if line and not any(unwanted in line for unwanted in [
-                        "아래 형식을 따라", "단계별로 줄바꿈하며", "번호를 붙여 설명하십시오",
-                        "각 단계는 짧고 명확하게", "실무자가 바로 이해할 수 있도록",
-                        "※ 각 단계는", "짧고 명확하게", "실무자가 바로 이해할 수 있도록 작성하십시오",
-                        "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:"
-                    ]):
-                        if re.match(r'^\d+\.', line) or (line and not line.startswith('-')):
-                            action_lines.append(line)
-                action_flow = '\n'.join(action_lines)
-                print(f"✅ 정규식으로 조치 흐름 추출: {action_flow[:100]}...")
+            action_patterns = [
+                r'조치\s*흐름[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:이메일\s*초안|$))',
+                r'조치\s*흐름[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\s*$)',
+                r'조치\s*흐름[:\s]*([^\n]+)'
+            ]
+            
+            for pattern in action_patterns:
+                action_match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
+                if action_match:
+                    action_text = action_match.group(1).strip()
+                    # 줄별로 처리하여 번호가 있는 항목만 추출
+                    action_lines = []
+                    for line in action_text.split('\n'):
+                        line = line.strip()
+                        if line and not any(unwanted in line.lower() for unwanted in [
+                            "아래 형식을 따라", "단계별로 줄바꿈하며", "번호를 붙여 설명하십시오",
+                            "각 단계는 짧고 명확하게", "실무자가 바로 이해할 수 있도록",
+                            "※ 각 단계는", "짧고 명확하게", "실무자가 바로 이해할 수 있도록 작성하십시오",
+                            "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:"
+                        ]):
+                            if re.match(r'^\d+\.', line) or (line and not line.startswith('-')):
+                                action_lines.append(line)
+                    action_flow = '\n'.join(action_lines)
+                    if action_flow and len(action_flow) > 10:  # 의미있는 길이인지 확인
+                        break
             
             # 이메일 초안 추출 - "이메일 초안:" 다음에 오는 텍스트
-            email_match = re.search(r'이메일 초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:$))', response_text, re.DOTALL)
-            if email_match:
-                email_text = email_match.group(1).strip()
-                # 불필요한 텍스트 제거
-                email_lines = []
-                for line in email_text.split('\n'):
-                    line = line.strip()
-                    if line and not any(unwanted in line for unwanted in [
-                        "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
-                        "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오"
-                    ]):
-                        email_lines.append(line)
-                email_draft = '\n'.join(email_lines)
-                print(f"✅ 정규식으로 이메일 초안 추출: {email_draft[:100]}...")
+            email_patterns = [
+                r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\s*$)',
+                r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:$))',
+                r'이메일\s*초안[:\s]*([^\n]+)'
+            ]
             
-            # 기존 방식으로도 시도 (정규식이 실패한 경우)
+            for pattern in email_patterns:
+                email_match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
+                if email_match:
+                    email_text = email_match.group(1).strip()
+                    # 불필요한 텍스트 제거
+                    email_lines = []
+                    for line in email_text.split('\n'):
+                        line = line.strip()
+                        if line and not any(unwanted in line.lower() for unwanted in [
+                            "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
+                            "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오"
+                        ]):
+                            email_lines.append(line)
+                    email_draft = '\n'.join(email_lines)
+                    if email_draft and len(email_draft) > 20:  # 의미있는 길이인지 확인
+                        break
+            
+            # 정규식 파싱이 실패한 경우 더 강력한 폴백 로직
             if not summary or not action_flow or not email_draft:
-                print("⚠️ 정규식 파싱이 불완전하여 기존 방식으로 보완합니다.")
-                
+                # 줄별 파싱으로 보완
                 lines = response_text.split('\n')
                 current_section = ""
+                section_content = {"summary": [], "action": [], "email": []}
                 
                 for i, line in enumerate(lines):
                     line = line.strip()
                     if not line:
                         continue
                     
-                    # 섹션 시작점 감지
-                    if "요약:" in line or "요약" in line:
+                    # 섹션 시작점 감지 (더 유연하게)
+                    line_lower = line.lower()
+                    if "요약" in line_lower and ":" in line:
                         current_section = "summary"
                         # 요약 내용이 같은 줄에 있는 경우
-                        summary_content = line.replace("요약:", "").replace("요약", "").strip()
-                        if summary_content and not summary:
+                        summary_content = line.split(":", 1)[1].strip() if ":" in line else ""
+                        if summary_content and len(summary_content) > 5:
                             summary = summary_content
-                        # 다음 줄에 요약 내용이 있는지 확인
-                        if i + 1 < len(lines) and not summary:
-                            next_line = lines[i + 1].strip()
-                            if next_line and not any(keyword in next_line for keyword in ["조치 흐름:", "조치 흐름", "이메일 초안:", "이메일 초안", "[응답내용]", "[대응유형]"]):
-                                summary = next_line
-                    elif "조치 흐름:" in line or "조치 흐름" in line:
+                    elif "조치" in line_lower and "흐름" in line_lower and ":" in line:
                         current_section = "action"
                         # 조치 흐름 내용이 같은 줄에 있는 경우
-                        action_content = line.replace("조치 흐름:", "").replace("조치 흐름", "").strip()
-                        if action_content and not action_flow:
+                        action_content = line.split(":", 1)[1].strip() if ":" in line else ""
+                        if action_content and len(action_content) > 5:
                             action_flow = action_content + "\n"
-                    elif "이메일 초안:" in line or "이메일 초안" in line:
+                    elif "이메일" in line_lower and "초안" in line_lower and ":" in line:
                         current_section = "email"
                         # 이메일 초안 내용이 같은 줄에 있는 경우
-                        email_content = line.replace("이메일 초안:", "").replace("이메일 초안", "").strip()
-                        if email_content and not email_draft:
+                        email_content = line.split(":", 1)[1].strip() if ":" in line else ""
+                        if email_content and len(email_content) > 10:
                             email_draft = email_content + "\n"
                     else:
                         # 현재 섹션에 내용 추가
                         if current_section == "summary" and not summary:
-                            summary = line
+                            if len(line) > 5 and not any(keyword in line.lower() for keyword in ["조치", "이메일", "[응답내용]", "[대응유형]"]):
+                                summary = line
                         elif current_section == "action" and not action_flow:
-                            if not any(instruction in line for instruction in [
+                            if len(line) > 5 and not any(instruction in line.lower() for instruction in [
                                 "아래 형식을 따라", "단계별로 줄바꿈하며", "번호를 붙여 설명하십시오",
                                 "각 단계는 짧고 명확하게", "실무자가 바로 이해할 수 있도록",
                                 "※ 각 단계는", "짧고 명확하게", "실무자가 바로 이해할 수 있도록 작성하십시오",
@@ -302,7 +350,7 @@ class GPTHandler:
                                 if re.match(r'^\d+\.', line) or (line and not line.startswith('-')):
                                     action_flow = line + "\n"
                         elif current_section == "email" and not email_draft:
-                            if not any(unwanted in line for unwanted in [
+                            if len(line) > 5 and not any(unwanted in line.lower() for unwanted in [
                                 "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
                                 "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오"
                             ]):
@@ -312,23 +360,13 @@ class GPTHandler:
             action_flow = action_flow.strip()
             email_draft = email_draft.strip()
             
-            # 디버깅을 위한 로그 추가
-            print(f"✅ 최종 파싱 결과:")
-            print(f"  - 응답 유형: {response_type}")
-            print(f"  - 요약: {summary[:100]}...")
-            print(f"  - 조치 흐름: {action_flow[:100]}...")
-            print(f"  - 이메일 초안: {email_draft[:100]}...")
-            
-            # 빈 값 체크 및 기본값 설정
-            if not summary.strip():
-                print("⚠️ 경고: 요약이 비어있어 기본값을 사용합니다!")
-                summary = "AI 분석 결과를 파싱할 수 없습니다."
-            if not action_flow.strip():
-                print("⚠️ 경고: 조치 흐름이 비어있어 기본값을 사용합니다!")
-                action_flow = "AI 분석 결과를 파싱할 수 없습니다."
-            if not email_draft.strip():
-                print("⚠️ 경고: 이메일 초안이 비어있어 기본값을 사용합니다!")
-                email_draft = "AI 분석 결과를 파싱할 수 없습니다."
+            # 빈 값 체크 및 기본값 설정 (더 엄격하게)
+            if not summary or len(summary.strip()) < 5:
+                summary = "AI 분석 결과를 파싱할 수 없습니다. 고객 문의 내용을 확인해주세요."
+            if not action_flow or len(action_flow.strip()) < 10:
+                action_flow = "AI 분석 결과를 파싱할 수 없습니다. 단계별 조치 사항을 확인해주세요."
+            if not email_draft or len(email_draft.strip()) < 20:
+                email_draft = "AI 분석 결과를 파싱할 수 없습니다. 이메일 초안을 확인해주세요."
             
             result = {
                 "response_type": response_type,
@@ -338,19 +376,15 @@ class GPTHandler:
                 "full_response": response_text
             }
             
-            print(f"✅ 최종 파싱 결과: {result}")
             return result
             
         except Exception as e:
-            print(f"❌ 파싱 중 오류 발생: {e}")
-            import traceback
-            traceback.print_exc()
-            # 기본값 반환
+            # 오류 발생 시 기본값 반환
             return {
                 "response_type": "해결안",
-                "summary": "파싱 오류로 인해 요약을 생성할 수 없습니다.",
-                "action_flow": "파싱 오류로 인해 조치 흐름을 생성할 수 없습니다.",
-                "email_draft": "파싱 오류로 인해 이메일 초안을 생성할 수 없습니다.",
+                "summary": "파싱 오류로 인해 요약을 생성할 수 없습니다. 고객 문의 내용을 확인해주세요.",
+                "action_flow": "파싱 오류로 인해 조치 흐름을 생성할 수 없습니다. 단계별 조치 사항을 확인해주세요.",
+                "email_draft": "파싱 오류로 인해 이메일 초안을 생성할 수 없습니다. 이메일 초안을 확인해주세요.",
                 "full_response": response_text
             }
     
@@ -360,42 +394,66 @@ class GPTHandler:
                                  condition_1: str = "",
                                  condition_2: str = "") -> Dict[str, Any]:
         """완전한 응답 생성 프로세스"""
-        # 프롬프트 조립
-        prompt = self.build_prompt(
-            customer_input=customer_input,
-            issue_type=issue_type,
-            condition_1=condition_1,
-            condition_2=condition_2
-        )
-        
-        # Gemini API 호출
-        api_response = self.generate_response(prompt)
-        
-        if api_response["success"]:
-            # 응답 파싱
-            parsed_response = self.parse_response(api_response["response"])
+        try:
+            # 프롬프트 조립
+            prompt = self.build_prompt(
+                customer_input=customer_input,
+                issue_type=issue_type,
+                condition_1=condition_1,
+                condition_2=condition_2
+            )
             
-            return {
-                "success": True,
-                "gemini_result": {
-                    "api_response": api_response,
-                    "parsed_response": parsed_response,
-                    "prompt_used": prompt
+            # Gemini API 호출
+            api_response = self.generate_response(prompt)
+            
+            if api_response["success"]:
+                # 응답 파싱
+                parsed_response = self.parse_response(api_response["response"])
+                
+                # 파싱 결과 검증
+                if not parsed_response or not isinstance(parsed_response, dict):
+                    # 파싱 실패 시 기본 응답 사용
+                    parsed_response = self._generate_default_response(
+                        customer_input, issue_type, condition_1, condition_2
+                    )
+                
+                return {
+                    "success": True,
+                    "gemini_result": {
+                        "api_response": api_response,
+                        "parsed_response": parsed_response,
+                        "prompt_used": prompt
+                    }
                 }
-            }
-        else:
-            # 기본 응답 생성
+            else:
+                # API 실패 시 기본 응답 생성
+                default_response = self._generate_default_response(
+                    customer_input, issue_type, condition_1, condition_2
+                )
+                
+                return {
+                    "success": False,
+                    "error": api_response["error"],
+                    "gemini_result": {
+                        "api_response": api_response,
+                        "parsed_response": default_response,
+                        "prompt_used": prompt
+                    }
+                }
+                
+        except Exception as e:
+            # 전체 프로세스 실패 시 기본 응답 생성
             default_response = self._generate_default_response(
                 customer_input, issue_type, condition_1, condition_2
             )
             
             return {
                 "success": False,
-                "error": api_response["error"],
+                "error": f"전체 프로세스 오류: {str(e)}",
                 "gemini_result": {
-                    "api_response": api_response,
+                    "api_response": {"success": False, "error": str(e)},
                     "parsed_response": default_response,
-                    "prompt_used": prompt
+                    "prompt_used": ""
                 }
             }
     
