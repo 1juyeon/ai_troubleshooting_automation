@@ -9,7 +9,7 @@ import pickle
 import pytz
 import re
 import time
-import pyperclip
+# import pyperclip  # Windows 환경에서 문제가 있어 JavaScript 기반 클립보드 사용
 
 # 커스텀 모듈 import
 from classify_issue import IssueClassifier
@@ -657,11 +657,22 @@ def show_ai_analysis_modal(selected_row):
                         
                         # 이메일 복사 버튼
                         if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
-                            try:
-                                pyperclip.copy(email_draft)
-                                st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
-                            except Exception as e:
-                                st.error(f"클립보드 복사 실패: {e}")
+                            # JavaScript를 사용한 클립보드 복사
+                            js_code = f"""
+                            <script>
+                            function copyToClipboard() {{
+                                const text = `{email_draft.replace('`', '\\`').replace("'", "\\'")}`;
+                                navigator.clipboard.writeText(text).then(function() {{
+                                    console.log('클립보드에 복사됨');
+                                }}).catch(function(err) {{
+                                    console.error('클립보드 복사 실패:', err);
+                                }});
+                            }}
+                            copyToClipboard();
+                            </script>
+                            """
+                            st.components.v1.html(js_code, height=0)
+                            st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
                     
                     # 전체 AI 응답 섹션 추가
                     st.markdown("---")
@@ -757,11 +768,22 @@ def show_ai_analysis_modal(selected_row):
                     
                     # 전체 응답 복사 버튼
                     if st.button("📋 전체 응답 복사", key=f"copy_full_{selected_row.get('번호', 'unknown')}"):
-                        try:
-                            pyperclip.copy(full_response)
-                            st.write("✅ 전체 AI 응답이 클립보드에 복사되었습니다.")
-                        except Exception as e:
-                            st.error(f"클립보드 복사 실패: {e}")
+                        # JavaScript를 사용한 클립보드 복사
+                        js_code = f"""
+                        <script>
+                        function copyToClipboard() {{
+                            const text = `{full_response.replace('`', '\\`').replace("'", "\\'")}`;
+                            navigator.clipboard.writeText(text).then(function() {{
+                                console.log('클립보드에 복사됨');
+                            }}).catch(function(err) {{
+                                console.error('클립보드 복사 실패:', err);
+                            }});
+                        }}
+                        copyToClipboard();
+                        </script>
+                        """
+                        st.components.v1.html(js_code, height=0)
+                        st.write("✅ 전체 AI 응답이 클립보드에 복사되었습니다.")
                     
                     # SMS 발송 섹션 추가
                     st.markdown("---")
@@ -1930,11 +1952,22 @@ with tab2:
                     
                     # 이메일 복사 버튼
                     if st.button("📋 이메일 복사", use_container_width=True):
-                        try:
-                            pyperclip.copy(email_content)
-                            st.success("이메일 내용이 클립보드에 복사되었습니다!")
-                        except Exception as e:
-                            st.error(f"클립보드 복사 실패: {e}")
+                        # JavaScript를 사용한 클립보드 복사
+                        js_code = f"""
+                        <script>
+                        function copyToClipboard() {{
+                            const text = `{email_content.replace('`', '\\`').replace("'", "\\'")}`;
+                            navigator.clipboard.writeText(text).then(function() {{
+                                console.log('클립보드에 복사됨');
+                            }}).catch(function(err) {{
+                                console.error('클립보드 복사 실패:', err);
+                            }});
+                        }}
+                        copyToClipboard();
+                        </script>
+                        """
+                        st.components.v1.html(js_code, height=0)
+                        st.success("이메일 내용이 클립보드에 복사되었습니다!")
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
             
@@ -2078,11 +2111,22 @@ with tab2:
                         
                         # 이메일 복사 버튼
                         if st.button("📋 이메일 복사", use_container_width=True):
-                            try:
-                                pyperclip.copy(email_content)
-                                st.success("이메일 내용이 클립보드에 복사되었습니다!")
-                            except Exception as e:
-                                st.error(f"클립보드 복사 실패: {e}")
+                            # JavaScript를 사용한 클립보드 복사
+                            js_code = f"""
+                            <script>
+                            function copyToClipboard() {{
+                                const text = `{email_content.replace('`', '\\`').replace("'", "\\'")}`;
+                                navigator.clipboard.writeText(text).then(function() {{
+                                    console.log('클립보드에 복사됨');
+                                }}).catch(function(err) {{
+                                    console.error('클립보드 복사 실패:', err);
+                                }});
+                            }}
+                            copyToClipboard();
+                            </script>
+                            """
+                            st.components.v1.html(js_code, height=0)
+                            st.success("이메일 내용이 클립보드에 복사되었습니다!")
                     else:
                         st.warning("⚠️ 이메일 초안 정보가 없습니다.")
         
