@@ -3,6 +3,7 @@ import os
 import streamlit as st
 from typing import Dict, Any, Optional
 import json
+import re # Added for regex in parse_response
 
 class GPTHandler:
     def __init__(self, api_key: str = None):
@@ -203,7 +204,7 @@ class GPTHandler:
             lines = response_text.split('\n')
             current_section = ""
             
-            for line in lines:
+            for i, line in enumerate(lines):
                 line = line.strip()
                 if not line:
                     continue
@@ -215,6 +216,14 @@ class GPTHandler:
                     summary_content = line.replace("요약:", "").replace("요약", "").strip()
                     if summary_content:
                         summary = summary_content
+                    # 다음 줄에 요약 내용이 있는지 확인
+                    if i + 1 < len(lines):
+                        next_line = lines[i + 1].strip()
+                        if next_line and not any(keyword in next_line for keyword in ["조치 흐름:", "조치 흐름", "이메일 초안:", "이메일 초안", "[응답내용]", "[대응유형]"]):
+                            if summary:
+                                summary += " " + next_line
+                            else:
+                                summary = next_line
                 elif "조치 흐름:" in line or "조치 흐름" in line:
                     current_section = "action"
                     # 조치 흐름 내용이 같은 줄에 있는 경우
@@ -239,15 +248,33 @@ class GPTHandler:
                         if not any(instruction in line for instruction in [
                             "아래 형식을 따라", "단계별로 줄바꿈하며", "번호를 붙여 설명하십시오",
                             "각 단계는 짧고 명확하게", "실무자가 바로 이해할 수 있도록",
-                            "※ 각 단계는", "짧고 명확하게", "실무자가 바로 이해할 수 있도록 작성하십시오"
+                            "※ 각 단계는", "짧고 명확하게", "실무자가 바로 이해할 수 있도록 작성하십시오",
+                            "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:"
                         ]):
-                            action_flow += line + "\n"
+                            # 번호가 있는 항목인지 확인
+                            if re.match(r'^\d+\.', line):
+                                action_flow += line + "\n"
+                            elif line and not line.startswith('-'):
+                                action_flow += line + "\n"
                     elif current_section == "email":
-                        email_draft += line + "\n"
+                        # 이메일 초안에서 불필요한 텍스트 제거
+                        if not any(unwanted in line for unwanted in [
+                            "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
+                            "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오"
+                        ]):
+                            email_draft += line + "\n"
             
             # 줄바꿈 정리 (연속된 줄바꿈을 하나로 통일)
             action_flow = action_flow.strip()
             email_draft = email_draft.strip()
+            
+            # 요약에서 불필요한 텍스트 제거
+            summary = summary.replace("아래 형식을 참고하여", "").replace("실무자가 이해하기 쉽도록", "").replace("자연스럽고 정확하게 응답을 생성하십시오", "").strip()
+            
+            # 디버깅을 위한 로그 추가
+            print(f"파싱 결과 - 요약: {summary[:50]}...")
+            print(f"파싱 결과 - 조치 흐름: {action_flow[:50]}...")
+            print(f"파싱 결과 - 이메일 초안: {email_draft[:50]}...")
             
             return {
                 "response_type": response_type,

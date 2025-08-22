@@ -655,62 +655,84 @@ def show_ai_analysis_modal(selected_row):
                         if 'parsed_response' in ai_result:
                             parsed = ai_result['parsed_response']
                             
-                            full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
-
-[응답내용]
-
-- 요약: {parsed.get('summary', '')}
-
-- 조치 흐름:
-
-{parsed.get('action_flow', '')}
-
-- 이메일 초안:
-
-{parsed.get('email_draft', '')}"""
-                        elif 'response' in ai_result:
-                            # GPT API 응답인 경우 파싱
-                            parsed = _parse_gpt_response(ai_result['response'])
+                            # 파싱된 데이터가 비어있는지 확인하고 기본값 설정
+                            summary = parsed.get('summary', '') or '요약 정보가 없습니다.'
+                            action_flow = parsed.get('action_flow', '') or '조치 흐름 정보가 없습니다.'
+                            email_draft = parsed.get('email_draft', '') or '이메일 초안 정보가 없습니다.'
                             
                             full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
 
 [응답내용]
 
-- 요약: {parsed.get('summary', '')}
+- 요약: {summary}
 
 - 조치 흐름:
 
-{parsed.get('action_flow', '')}
+{action_flow}
 
 - 이메일 초안:
 
-{parsed.get('email_draft', '')}"""
+{email_draft}"""
+                        elif 'response' in ai_result:
+                            # GPT API 응답인 경우 파싱
+                            parsed = _parse_gpt_response(ai_result['response'])
+                            
+                            # 파싱된 데이터가 비어있는지 확인하고 기본값 설정
+                            summary = parsed.get('summary', '') or '요약 정보가 없습니다.'
+                            action_flow = parsed.get('action_flow', '') or '조치 흐름 정보가 없습니다.'
+                            email_draft = parsed.get('email_draft', '') or '이메일 초안 정보가 없습니다.'
+                            
+                            full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
+
+[응답내용]
+
+- 요약: {summary}
+
+- 조치 흐름:
+
+{action_flow}
+
+- 이메일 초안:
+
+{email_draft}"""
                         else:
+                            # 기본 데이터에서 추출
+                            summary = analysis_data.get('summary', '') or '요약 정보가 없습니다.'
+                            action_flow = analysis_data.get('action_flow', '') or '조치 흐름 정보가 없습니다.'
+                            email_draft = analysis_data.get('email_draft', '') or '이메일 초안 정보가 없습니다.'
+                            
                             full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
 
 [응답내용]
 
-- 요약: {analysis_data.get('summary', '')}
+- 요약: {summary}
 
 - 조치 흐름:
 
-{analysis_data.get('action_flow', '')}
+{action_flow}
 
 - 이메일 초안:
 
-{analysis_data.get('email_draft', '')}"""
+{email_draft}"""
                     else:
+                        # 기본 데이터에서 추출
+                        summary = analysis_data.get('summary', '') or '요약 정보가 없습니다.'
+                        action_flow = analysis_data.get('action_flow', '') or '조치 흐름 정보가 없습니다.'
+                        email_draft = analysis_data.get('email_draft', '') or '이메일 초안 정보가 없습니다.'
+                        
                         full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
 
 [응답내용]
 
-- 요약: {analysis_data.get('summary', '')}
+- 요약: {summary}
 
 - 조치 흐름:
-{analysis_data.get('action_flow', '')}
+
+{action_flow}
 
 - 이메일 초안:
-{analysis_data.get('email_draft', '')}"""
+
+{email_draft}"""
                     
                     # 전체 AI 응답 표시
                     st.text_area("전체 AI 응답", full_response, height=200, disabled=True)
@@ -1042,7 +1064,7 @@ def _parse_gpt_response(response_text: str) -> dict:
         lines = response_text.split('\n')
         current_section = None
         
-        for line in lines:
+        for i, line in enumerate(lines):
             line = line.strip()
             if not line:
                 continue
@@ -1060,11 +1082,19 @@ def _parse_gpt_response(response_text: str) -> dict:
                 summary_content = line.replace('- 요약:', '').strip()
                 if summary_content:
                     parsed['summary'] = summary_content
+                # 다음 줄에 요약 내용이 있는지 확인
+                if i + 1 < len(lines):
+                    next_line = lines[i + 1].strip()
+                    if next_line and not any(keyword in next_line for keyword in ['- 조치 흐름:', '- 이메일 초안:', '[응답내용]', '[대응유형]']):
+                        if parsed['summary']:
+                            parsed['summary'] += ' ' + next_line
+                        else:
+                            parsed['summary'] = next_line
             elif '- 조치 흐름:' in line:
                 current_section = 'action_flow'
             elif '- 이메일 초안:' in line:
                 current_section = 'email_draft'
-            elif line.startswith('1.') or line.startswith('2.') or line.startswith('3.'):
+            elif line.startswith('1.') or line.startswith('2.') or line.startswith('3.') or line.startswith('4.') or line.startswith('5.'):
                 # 조치 흐름 항목
                 if current_section == 'action_flow':
                     parsed['action_flow'] += line + '\n'
@@ -1073,13 +1103,28 @@ def _parse_gpt_response(response_text: str) -> dict:
                     parsed['summary'] += ' ' + line
                 else:
                     parsed['summary'] = line
-            elif current_section == 'action_flow' and parsed['action_flow']:
-                parsed['action_flow'] += line + '\n'
+            elif current_section == 'action_flow':
+                # 조치 흐름에서 불필요한 텍스트 제거
+                if not any(unwanted in line for unwanted in [
+                    '[응답내용]', '[대응유형]', '- 요약:', '- 조치 흐름:', '- 이메일 초안:',
+                    '아래 형식을 참고하여', '실무자가 이해하기 쉽도록', '자연스럽고 정확하게 응답을 생성하십시오'
+                ]):
+                    parsed['action_flow'] += line + '\n'
             elif current_section == 'email_draft':
-                parsed['email_draft'] += line + '\n'
+                # 이메일 초안에서 불필요한 텍스트 제거
+                if not any(unwanted in line for unwanted in [
+                    '[응답내용]', '[대응유형]', '- 요약:', '- 조치 흐름:', '- 이메일 초안:',
+                    '아래 형식을 참고하여', '실무자가 이해하기 쉽도록', '자연스럽고 정확하게 응답을 생성하십시오'
+                ]):
+                    parsed['email_draft'] += line + '\n'
         
         # 요약에서 "- 요약:" 제거 (혹시 남아있을 경우)
         parsed['summary'] = parsed['summary'].replace('- 요약:', '').strip()
+        
+        # 디버깅을 위한 로그 추가
+        print(f"GPT 파싱 결과 - 요약: {parsed['summary'][:50]}...")
+        print(f"GPT 파싱 결과 - 조치 흐름: {parsed['action_flow'][:50]}...")
+        print(f"GPT 파싱 결과 - 이메일 초안: {parsed['email_draft'][:50]}...")
         
         return parsed
         
@@ -1656,6 +1701,19 @@ with tab1:
                         
                         # MongoDB 연결 상태 확인
                         if st.session_state.get('mongodb_connected') and st.session_state.get('mongo_handler'):
+                            # MongoDB에 저장하기 전에 데이터 구조 확인 및 정리
+                            # analysis_result에서 파싱된 데이터 추출
+                            parsed_data = None
+                            if 'ai_result' in analysis_result:
+                                ai_result = analysis_result['ai_result']
+                                if 'gemini_result' in ai_result and 'parsed_response' in ai_result['gemini_result']:
+                                    parsed_data = ai_result['gemini_result']['parsed_response']
+                                elif 'parsed_response' in ai_result:
+                                    parsed_data = ai_result['parsed_response']
+                                elif 'response' in ai_result:
+                                    # GPT API 응답인 경우 파싱
+                                    parsed_data = _parse_gpt_response(ai_result['response'])
+                            
                             # MongoDB에 저장
                             mongo_result = st.session_state.mongo_handler.save_analysis(analysis_result, inquiry_data_with_user)
                             

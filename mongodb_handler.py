@@ -118,6 +118,33 @@ class MongoDBHandler:
         """분석 결과 저장"""
         try:
             # 저장할 데이터 구성
+            # 파싱된 데이터 추출 (여러 구조 지원)
+            parsed_data = None
+            response_type = ""
+            summary = ""
+            action_flow = ""
+            email_draft = ""
+            
+            # Gemini 응답 구조 확인
+            if 'gemini_result' in analysis_data and 'parsed_response' in analysis_data['gemini_result']:
+                parsed_data = analysis_data['gemini_result']['parsed_response']
+            elif 'ai_result' in analysis_data:
+                ai_result = analysis_data['ai_result']
+                if 'gemini_result' in ai_result and 'parsed_response' in ai_result['gemini_result']:
+                    parsed_data = ai_result['gemini_result']['parsed_response']
+                elif 'parsed_response' in ai_result:
+                    parsed_data = ai_result['parsed_response']
+                elif 'response' in ai_result:
+                    # GPT API 응답인 경우 파싱
+                    parsed_data = self._parse_gpt_response(ai_result['response'])
+            
+            # 파싱된 데이터에서 정보 추출
+            if parsed_data:
+                response_type = parsed_data.get('response_type', '')
+                summary = parsed_data.get('summary', '')
+                action_flow = parsed_data.get('action_flow', '')
+                email_draft = parsed_data.get('email_draft', '')
+            
             document = {
                 'timestamp': inquiry_data.get('timestamp', datetime.now().isoformat()),
                 'customer_name': inquiry_data.get('customer_name', ''),
@@ -127,10 +154,10 @@ class MongoDBHandler:
                 'issue_type': analysis_data.get('issue_type', ''),
                 'classification_method': analysis_data.get('classification', {}).get('method', ''),
                 'confidence': analysis_data.get('classification', {}).get('confidence', ''),
-                'response_type': analysis_data.get('gemini_result', {}).get('parsed_response', {}).get('response_type', ''),
-                'summary': analysis_data.get('gemini_result', {}).get('parsed_response', {}).get('summary', ''),
-                'action_flow': analysis_data.get('gemini_result', {}).get('parsed_response', {}).get('action_flow', ''),
-                'email_draft': analysis_data.get('gemini_result', {}).get('parsed_response', {}).get('email_draft', ''),
+                'response_type': response_type,
+                'summary': summary,
+                'action_flow': action_flow,
+                'email_draft': email_draft,
                 'user_name': inquiry_data.get('user_name', ''),
                 'user_role': inquiry_data.get('user_role', ''),
                 'system_version': inquiry_data.get('system_version', ''),
@@ -157,6 +184,95 @@ class MongoDBHandler:
         except Exception as e:
             print(f"❌ MongoDB 저장 실패: {e}")
             return {"success": False, "error": str(e)}
+    
+    def _parse_gpt_response(self, response_text: str) -> dict:
+        """GPT API 응답을 파싱하여 구조화된 데이터로 변환"""
+        try:
+            parsed = {
+                'response_type': '해결안',
+                'summary': '',
+                'action_flow': '',
+                'email_draft': '',
+                'question': ''
+            }
+            
+            # 응답 텍스트를 줄 단위로 분리
+            lines = response_text.split('\n')
+            current_section = None
+            
+            for i, line in enumerate(lines):
+                line = line.strip()
+                if not line:
+                    continue
+                    
+                # 섹션 헤더 확인
+                if '[대응유형]' in line:
+                    response_type = line.replace('[대응유형]', '').strip()
+                    if response_type in ['해결안', '질문', '출동']:
+                        parsed['response_type'] = response_type
+                elif '[응답내용]' in line:
+                    current_section = 'content'
+                elif '- 요약:' in line:
+                    current_section = 'summary'
+                    # 요약 내용이 같은 줄에 있는 경우
+                    summary_content = line.replace('- 요약:', '').strip()
+                    if summary_content:
+                        parsed['summary'] = summary_content
+                    # 다음 줄에 요약 내용이 있는지 확인
+                    if i + 1 < len(lines):
+                        next_line = lines[i + 1].strip()
+                        if next_line and not any(keyword in next_line for keyword in ['- 조치 흐름:', '- 이메일 초안:', '[응답내용]', '[대응유형]']):
+                            if parsed['summary']:
+                                parsed['summary'] += ' ' + next_line
+                            else:
+                                parsed['summary'] = next_line
+                elif '- 조치 흐름:' in line:
+                    current_section = 'action_flow'
+                elif '- 이메일 초안:' in line:
+                    current_section = 'email_draft'
+                elif line.startswith('1.') or line.startswith('2.') or line.startswith('3.') or line.startswith('4.') or line.startswith('5.'):
+                    # 조치 흐름 항목
+                    if current_section == 'action_flow':
+                        parsed['action_flow'] += line + '\n'
+                elif current_section == 'summary':
+                    if parsed['summary']:  # 이미 내용이 있으면 공백 추가
+                        parsed['summary'] += ' ' + line
+                    else:
+                        parsed['summary'] = line
+                elif current_section == 'action_flow':
+                    # 조치 흐름에서 불필요한 텍스트 제거
+                    if not any(unwanted in line for unwanted in [
+                        '[응답내용]', '[대응유형]', '- 요약:', '- 조치 흐름:', '- 이메일 초안:',
+                        '아래 형식을 참고하여', '실무자가 이해하기 쉽도록', '자연스럽고 정확하게 응답을 생성하십시오'
+                    ]):
+                        parsed['action_flow'] += line + '\n'
+                elif current_section == 'email_draft':
+                    # 이메일 초안에서 불필요한 텍스트 제거
+                    if not any(unwanted in line for unwanted in [
+                        '[응답내용]', '[대응유형]', '- 요약:', '- 조치 흐름:', '- 이메일 초안:',
+                        '아래 형식을 참고하여', '실무자가 이해하기 쉽도록', '자연스럽고 정확하게 응답을 생성하십시오'
+                    ]):
+                        parsed['email_draft'] += line + '\n'
+            
+            # 요약에서 "- 요약:" 제거 (혹시 남아있을 경우)
+            parsed['summary'] = parsed['summary'].replace('- 요약:', '').strip()
+            
+            # 디버깅을 위한 로그 추가
+            print(f"MongoDB GPT 파싱 결과 - 요약: {parsed['summary'][:50]}...")
+            print(f"MongoDB GPT 파싱 결과 - 조치 흐름: {parsed['action_flow'][:50]}...")
+            print(f"MongoDB GPT 파싱 결과 - 이메일 초안: {parsed['email_draft'][:50]}...")
+            
+            return parsed
+            
+        except Exception as e:
+            print(f"GPT 응답 파싱 오류: {e}")
+            return {
+                'response_type': '해결안',
+                'summary': '응답 파싱 중 오류가 발생했습니다.',
+                'action_flow': '응답을 확인해주세요.',
+                'email_draft': '응답을 확인해주세요.',
+                'question': ''
+            }
     
     def get_history(self, user_id: str = None, limit: int = 100, skip: int = 0) -> List[Dict]:
         """이력 조회"""
