@@ -1928,15 +1928,15 @@ with tab2:
                     email_content = parsed['email_draft']
                     st.text_area("이메일 내용", email_content, height=300)
                     
-                            # 복사 버튼
-        if st.button("📋 이메일 복사", use_container_width=True):
-            try:
-                pyperclip.copy(email_draft)
-                st.success("이메일 내용이 클립보드에 복사되었습니다!")
-            except Exception as e:
-                st.error(f"클립보드 복사 실패: {e}")
-        else:
-            st.warning("⚠️ 이메일 초안 정보가 없습니다.")
+                    # 이메일 복사 버튼
+                    if st.button("📋 이메일 복사", use_container_width=True):
+                        try:
+                            pyperclip.copy(email_content)
+                            st.success("이메일 내용이 클립보드에 복사되었습니다!")
+                        except Exception as e:
+                            st.error(f"클립보드 복사 실패: {e}")
+                else:
+                    st.warning("⚠️ 이메일 초안 정보가 없습니다.")
             
             # 전체 응답
             with st.expander("📄 전체 AI 응답"):
