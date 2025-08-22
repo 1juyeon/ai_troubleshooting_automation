@@ -294,13 +294,40 @@ class MongoDBHandler:
                 'question': ''
             }
     
-    def get_history(self, user_id: str = None, limit: int = 100, skip: int = 0) -> List[Dict]:
-        """이력 조회"""
+    def get_history(self, user_id: str = None, limit: int = 100, skip: int = 0, date_from: str = None, date_to: str = None, issue_type: str = None) -> List[Dict]:
+        """이력 조회 (날짜 범위, 문제 유형, 담당자 필터링 지원)"""
         try:
             # 쿼리 조건 구성
             query = {}
+            
+            # 담당자 필터링
             if user_id:
                 query['user_name'] = user_id
+            
+            # 날짜 범위 필터링
+            if date_from or date_to:
+                date_query = {}
+                if date_from:
+                    try:
+                        start_dt = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
+                        date_query['$gte'] = start_dt.isoformat()
+                    except:
+                        # 날짜 파싱 실패 시 원본 문자열로 검색
+                        date_query['$gte'] = date_from
+                
+                if date_to:
+                    try:
+                        end_dt = datetime.fromisoformat(date_to.replace('Z', '+00:00'))
+                        date_query['$lte'] = end_dt.isoformat()
+                    except:
+                        # 날짜 파싱 실패 시 원본 문자열로 검색
+                        date_query['$lte'] = date_to
+                
+                query['timestamp'] = date_query
+            
+            # 문제 유형 필터링
+            if issue_type and issue_type != "전체":
+                query['issue_type'] = issue_type
             
             # MongoDB에서 데이터 조회
             cursor = self.history_collection.find(query).sort("timestamp", -1).skip(skip).limit(limit)
@@ -316,7 +343,7 @@ class MongoDBHandler:
                     doc['updated_at'] = doc['updated_at'].isoformat()
                 results.append(doc)
             
-            print(f"✅ MongoDB에서 {len(results)}개 이력 조회 완료")
+            print(f"✅ MongoDB에서 {len(results)}개 이력 조회 완료 (필터: {query})")
             return results
             
         except Exception as e:

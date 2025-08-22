@@ -9,6 +9,7 @@ import pickle
 import pytz
 import re
 import time
+import pyperclip
 
 # 커스텀 모듈 import
 from classify_issue import IssueClassifier
@@ -448,6 +449,18 @@ PKP 웹 접속 불가 현상에 대한 문의 주셔서 감사합니다.
         
         # 복사 버튼
         if st.button("📋 이메일 복사", use_container_width=True):
+            # 클립보드에 복사하는 JavaScript 코드
+            st.markdown(f"""
+            <script>
+            function copyToClipboard() {{
+                const text = `{email_content.replace('`', '\\`').replace('$', '\\$')}`;
+                navigator.clipboard.writeText(text).then(function() {{
+                    console.log('이메일 내용이 클립보드에 복사되었습니다.');
+                }});
+            }}
+            copyToClipboard();
+            </script>
+            """, unsafe_allow_html=True)
             st.success("이메일 내용이 클립보드에 복사되었습니다!")
     
     # 액션 버튼
@@ -644,7 +657,11 @@ def show_ai_analysis_modal(selected_row):
                         
                         # 이메일 복사 버튼
                         if st.button("📋 이메일 내용 복사", key=f"copy_email_{selected_row.get('번호', 'unknown')}"):
-                            st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
+                            try:
+                                pyperclip.copy(email_draft)
+                                st.write("✅ 이메일 내용이 클립보드에 복사되었습니다.")
+                            except Exception as e:
+                                st.error(f"클립보드 복사 실패: {e}")
                     
                     # 전체 AI 응답 섹션 추가
                     st.markdown("---")
@@ -740,7 +757,11 @@ def show_ai_analysis_modal(selected_row):
                     
                     # 전체 응답 복사 버튼
                     if st.button("📋 전체 응답 복사", key=f"copy_full_{selected_row.get('번호', 'unknown')}"):
-                        st.write("✅ 전체 AI 응답이 클립보드에 복사되었습니다.")
+                        try:
+                            pyperclip.copy(full_response)
+                            st.write("✅ 전체 AI 응답이 클립보드에 복사되었습니다.")
+                        except Exception as e:
+                            st.error(f"클립보드 복사 실패: {e}")
                     
                     # SMS 발송 섹션 추가
                     st.markdown("---")
@@ -1907,11 +1928,15 @@ with tab2:
                     email_content = parsed['email_draft']
                     st.text_area("이메일 내용", email_content, height=300)
                     
-                    # 복사 버튼
-                    if st.button("📋 이메일 복사", use_container_width=True):
-                        st.success("이메일 내용이 클립보드에 복사되었습니다!")
-                else:
-                    st.warning("⚠️ 이메일 초안 정보가 없습니다.")
+                            # 복사 버튼
+        if st.button("📋 이메일 복사", use_container_width=True):
+            try:
+                pyperclip.copy(email_draft)
+                st.success("이메일 내용이 클립보드에 복사되었습니다!")
+            except Exception as e:
+                st.error(f"클립보드 복사 실패: {e}")
+        else:
+            st.warning("⚠️ 이메일 초안 정보가 없습니다.")
             
             # 전체 응답
             with st.expander("📄 전체 AI 응답"):
@@ -2051,8 +2076,13 @@ with tab2:
                         email_content = parsed['email_draft']
                         st.text_area("이메일 내용", email_content, height=300)
                         
+                        # 이메일 복사 버튼
                         if st.button("📋 이메일 복사", use_container_width=True):
-                            st.success("이메일 내용이 클립보드에 복사되었습니다!")
+                            try:
+                                pyperclip.copy(email_content)
+                                st.success("이메일 내용이 클립보드에 복사되었습니다!")
+                            except Exception as e:
+                                st.error(f"클립보드 복사 실패: {e}")
                     else:
                         st.warning("⚠️ 이메일 초안 정보가 없습니다.")
         
@@ -2148,25 +2178,20 @@ with tab3:
                 
                 if st.session_state.get('mongodb_connected') and st.session_state.get('mongo_handler'):
                     try:
-                        # MongoDB에서 이력 조회
-                        if filter_type != "전체":
-                            # 문제 유형별 필터링은 MongoDB에서 직접 지원하지 않으므로 전체 조회 후 필터링
-                            history_data = st.session_state.mongo_handler.get_history(limit=100)
-                            # 클라이언트 사이드에서 필터링
-                            filtered_data = []
-                            for entry in history_data:
-                                if entry.get('issue_type') == filter_type:
-                                    filtered_data.append(entry)
-                            history_data = filtered_data[:50]  # 최대 50개
-                        else:
-                            history_data = st.session_state.mongo_handler.get_history(limit=50)
+                        # MongoDB에서 이력 조회 (날짜 필터링 지원)
+                        history_data = st.session_state.mongo_handler.get_history(
+                            limit=50,
+                            date_from=filter_date_from.isoformat() if filter_date_from else None,
+                            date_to=date_to_with_time,
+                            issue_type=filter_type if filter_type != "전체" else None,
+                            user_id=filter_user if filter_user else None
+                        )
                         
                         history_result = {
                             'success': True,
                             'data': history_data,
                             'source': 'mongodb'
                         }
-                                                 # MongoDB 조회 성공 (메시지 제거)
                         
                     except Exception as e:
                         st.warning(f"⚠️ MongoDB 조회 실패: {e}")
