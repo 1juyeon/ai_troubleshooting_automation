@@ -275,3 +275,41 @@ class GeminiHandler:
             'action_flow': "1. 문제 상황 파악\n2. 기본적인 해결책 제시\n3. 필요시 추가 확인 요청",
             'email_draft': f"고객님께서 문의하신 {customer_input} 내용을 확인했습니다. 현재 상황을 파악하여 적절한 해결책을 제시하겠습니다."
         }
+    
+    def generate_response(self, prompt: str) -> Dict[str, Any]:
+        """Gemini API를 호출하여 응답 생성"""
+        try:
+            if not self.model:
+                return {
+                    "success": False,
+                    "error": "Gemini 모델이 초기화되지 않았습니다.",
+                    "response": ""
+                }
+            
+            # API 호출
+            response = self.model.generate_content(prompt)
+            
+            if response and response.text:
+                return {
+                    "success": True,
+                    "response": response.text,
+                    "model": self.model_name
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Gemini API에서 빈 응답을 받았습니다.",
+                    "response": ""
+                }
+                
+        except Exception as e:
+            print(f"Gemini API 호출 오류: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "response": ""
+            }
+    
+    def parse_response(self, response_text: str) -> Dict[str, Any]:
+        """응답 파싱 (외부에서 호출 가능한 메서드)"""
+        return self._parse_response(response_text)
