@@ -274,6 +274,15 @@ class GeminiHandler:
                     # 예외 처리 기준 섹션 시작 - 이메일 섹션 종료
                     if current_section == "email":
                         current_section = ""
+                elif current_section == "email" and not line_clean:
+                    # 이메일 섹션에서 빈 줄 처리
+                    # "감사합니다." 다음의 빈 줄인지 확인
+                    if section_content["email"] and "감사합니다" in section_content["email"][-1]:
+                        # 감사합니다 다음의 빈 줄이면 이메일 섹션 종료
+                        current_section = ""
+                    else:
+                        # 그 외의 빈 줄은 보존
+                        section_content["email"].append("")
                 elif current_section and line_clean:
                     # 현재 섹션에 내용 추가 (불필요한 지시사항 제외)
                     if not any(unwanted in line_clean.lower() for unwanted in [
@@ -286,9 +295,6 @@ class GeminiHandler:
                         else:
                             # 요약과 조치는 정리된 형태로
                             section_content[current_section].append(line_clean)
-                elif current_section == "email" and not line_clean:
-                    # 이메일 섹션에서 빈 줄도 보존
-                    section_content["email"].append("")
             
             # 결과 조립
             parsed['summary'] = "\n".join(section_content["summary"]).strip()
@@ -302,19 +308,34 @@ class GeminiHandler:
             # 이메일 초안이 너무 짧거나 구체적인 단계가 없는 경우 정규식으로 재파싱
             if len(parsed['email_draft']) < 100 or "1." not in parsed['email_draft']:
                 print("Gemini: 이메일 초안이 짧거나 단계가 없어 정규식으로 재파싱 시도")
-                # ```로 둘러싸인 이메일 초안 추출
-                email_pattern = r'이메일\s*초안[:\s]*\n```\n(.*?)\n```'
-                email_match = re.search(email_pattern, response_text, re.DOTALL)
-                if email_match:
-                    parsed['email_draft'] = email_match.group(1).strip()
-                    print(f"Gemini: 정규식으로 재파싱 성공 - 길이: {len(parsed['email_draft'])}")
+                
+                # 패턴 1: ```로 둘러싸인 이메일 초안 추출
+                email_pattern1 = r'이메일\s*초안[:\s]*\n```\n(.*?)\n```'
+                email_match1 = re.search(email_pattern1, response_text, re.DOTALL)
+                if email_match1:
+                    parsed['email_draft'] = email_match1.group(1).strip()
+                    print(f"Gemini: 정규식으로 재파싱 성공 (패턴1) - 길이: {len(parsed['email_draft'])}")
                 else:
-                    # ``` 없이 이메일 초안 추출
-                    email_pattern2 = r'이메일\s*초안[:\s]*\n(.*?)(?=\n\[예외\s*처리\s*기준\]|$)'
+                    # 패턴 2: "감사합니다."로 끝나는 이메일 초안 추출 (빈 줄 포함)
+                    email_pattern2 = r'이메일\s*초안[:\s]*\n(.*?감사합니다\.\s*\n?\s*)(?=\n\s*$)'
                     email_match2 = re.search(email_pattern2, response_text, re.DOTALL)
                     if email_match2:
                         parsed['email_draft'] = email_match2.group(1).strip()
                         print(f"Gemini: 정규식으로 재파싱 성공 (패턴2) - 길이: {len(parsed['email_draft'])}")
+                    else:
+                        # 패턴 3: [예외 처리 기준] 전까지의 이메일 초안 추출
+                        email_pattern3 = r'이메일\s*초안[:\s]*\n(.*?)(?=\n\s*\[예외\s*처리\s*기준\])'
+                        email_match3 = re.search(email_pattern3, response_text, re.DOTALL)
+                        if email_match3:
+                            parsed['email_draft'] = email_match3.group(1).strip()
+                            print(f"Gemini: 정규식으로 재파싱 성공 (패턴3) - 길이: {len(parsed['email_draft'])}")
+                        else:
+                            # 패턴 4: 응답 끝까지의 이메일 초안 추출
+                            email_pattern4 = r'이메일\s*초안[:\s]*\n(.*?)(?=\n\s*$)'
+                            email_match4 = re.search(email_pattern4, response_text, re.DOTALL)
+                            if email_match4:
+                                parsed['email_draft'] = email_match4.group(1).strip()
+                                print(f"Gemini: 정규식으로 재파싱 성공 (패턴4) - 길이: {len(parsed['email_draft'])}")
             
             # 빈 값 체크 및 기본값 설정
             if not parsed['summary'] or len(parsed['summary']) < 5:
