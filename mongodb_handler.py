@@ -211,12 +211,14 @@ class MongoDBHandler:
                 ai_result = analysis_data['ai_result']
                 if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
                     original_ai_response = ai_result['gemini_result']['raw_response']
+                elif 'response' in ai_result:  # openai_handler는 'response' 키 사용
+                    original_ai_response = ai_result['response']
                 elif 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
                     original_ai_response = ai_result['gpt_result']['raw_response']
-                elif 'response' in ai_result:
-                    original_ai_response = ai_result['response']
             elif 'gemini_result' in analysis_data and 'raw_response' in analysis_data['gemini_result']:
                 original_ai_response = analysis_data['gemini_result']['raw_response']
+            elif 'response' in analysis_data:  # openai_handler는 'response' 키 사용
+                original_ai_response = analysis_data['response']
             elif 'gpt_result' in analysis_data and 'raw_response' in analysis_data['gpt_result']:
                 original_ai_response = analysis_data['gpt_result']['raw_response']
             

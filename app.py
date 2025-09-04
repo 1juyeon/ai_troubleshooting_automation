@@ -1158,18 +1158,23 @@ def extract_email_from_analysis_result(analysis_result: dict) -> str:
             if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
                 return extract_email_from_original_response(ai_result['gemini_result']['raw_response'])
             
-            # GPT 결과에서 추출
-            if 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
-                return extract_email_from_original_response(ai_result['gpt_result']['raw_response'])
-            
-            # 직접 response가 있는 경우
+            # GPT 결과에서 추출 (openai_handler는 'response' 키 사용)
             if 'response' in ai_result:
                 return extract_email_from_original_response(ai_result['response'])
+            
+            # 기존 gpt_result 형태도 지원
+            if 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
+                return extract_email_from_original_response(ai_result['gpt_result']['raw_response'])
         
         # 직접 gemini_result나 gpt_result가 있는 경우
         if 'gemini_result' in analysis_result and 'raw_response' in analysis_result['gemini_result']:
             return extract_email_from_original_response(analysis_result['gemini_result']['raw_response'])
         
+        # GPT 응답이 직접 있는 경우 (openai_handler는 'response' 키 사용)
+        if 'response' in analysis_result:
+            return extract_email_from_original_response(analysis_result['response'])
+        
+        # 기존 gpt_result 형태도 지원
         if 'gpt_result' in analysis_result and 'raw_response' in analysis_result['gpt_result']:
             return extract_email_from_original_response(analysis_result['gpt_result']['raw_response'])
         
