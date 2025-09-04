@@ -164,7 +164,7 @@ class GPTHandler:
             response = self.client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": "당신은 고객 서비스 전문가입니다. 주어진 형식에 따라 정확하고 실용적인 응답을 생성해주세요."},
+                    {"role": "system", "content": "당신은 PrivKeeper P 장애 대응 전문가입니다. 고객의 문의에 대해 정확하고 실용적인 해결책을 제시해주세요. 반드시 제공된 형식을 정확히 따라 응답하고, 이메일 초안에는 조치 흐름의 내용이 포함되어야 합니다."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=2000,
