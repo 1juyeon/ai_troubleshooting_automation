@@ -656,7 +656,7 @@ def show_ai_analysis_modal(selected_row):
                         
                         # 이메일 내용에 줄바꿈 처리 적용
                         formatted_email = format_email_content(email_content)
-                        st.text_area("이메일 내용", formatted_email, height=150, disabled=True)
+                        create_enhanced_text_area("이메일 내용", formatted_email, height=150, disabled=True)
                         
 
                     
@@ -751,7 +751,7 @@ def show_ai_analysis_modal(selected_row):
                     
                     # 전체 AI 응답에 줄바꿈 처리 적용
                     formatted_full_response = format_ai_response(full_response)
-                    st.text_area("전체 AI 응답", formatted_full_response, height=200, disabled=True)
+                    create_enhanced_text_area("전체 AI 응답", formatted_full_response, height=200, disabled=True)
                     
 
                     
@@ -880,7 +880,7 @@ def show_ai_analysis_modal(selected_row):
                 
                 # 이메일 내용에 줄바꿈 처리 적용
                 formatted_basic_email = format_email_content(basic_email)
-                st.text_area("이메일 내용", formatted_basic_email, height=150, disabled=True)
+                create_enhanced_text_area("이메일 내용", formatted_basic_email, height=150, disabled=True)
                 
                 # 전체 AI 응답 표시
                 st.markdown("---")
@@ -908,7 +908,7 @@ def show_ai_analysis_modal(selected_row):
                 
                 # 전체 AI 응답에 줄바꿈 처리 적용
                 formatted_full_basic_response = format_ai_response(full_basic_response)
-                st.text_area("전체 AI 응답", formatted_full_basic_response, height=200, disabled=True)
+                create_enhanced_text_area("전체 AI 응답", formatted_full_basic_response, height=200, disabled=True)
                 
                 st.info("페이지를 새로고침하거나 다시 시도해주세요.")
                 
@@ -1123,6 +1123,36 @@ def format_ai_response(ai_response: str) -> str:
     formatted = formatted.lstrip('\n')
     
     return formatted
+
+def create_enhanced_text_area(label: str, value: str, height: int = 200, disabled: bool = True):
+    """향상된 텍스트 영역을 생성합니다. 텍스트를 진하게 표시하고 크기를 유동적으로 조정합니다."""
+    if not value:
+        return st.text_area(label, value, height=height, disabled=disabled)
+    
+    # 텍스트 길이에 따라 높이 조정
+    lines = value.count('\n') + 1
+    min_height = max(height, 100)
+    max_height = 500
+    dynamic_height = min(max(min_height, lines * 20 + 50), max_height)
+    
+    # CSS 스타일 적용
+    st.markdown(f"""
+    <style>
+    .enhanced-text-area {{
+        font-weight: bold !important;
+        font-size: 14px !important;
+        line-height: 1.5 !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+    
+    return st.text_area(
+        label, 
+        value, 
+        height=dynamic_height, 
+        disabled=disabled,
+        key=f"enhanced_{label}_{hash(value)}"
+    )
 
 def extract_email_from_original_response(original_response: str) -> str:
     """원본 AI 응답에서 이메일 초안을 추출"""
@@ -2095,6 +2125,10 @@ with tab2:
                 if not email_content and parsed.get('email_draft') and len(parsed['email_draft'].strip()) > 20:
                     email_content = parsed['email_draft']
                 
+                # 4. original_ai_response가 있지만 추출이 안된 경우 원본 그대로 사용
+                if not email_content and result.get('original_ai_response'):
+                    email_content = result['original_ai_response']
+                
                 if email_content:
                     # 이메일 내용에 줄바꿈 처리 적용
                     formatted_email = format_email_content(email_content)
@@ -2261,6 +2295,10 @@ with tab2:
                     if not email_content and parsed.get('email_draft') and len(parsed['email_draft'].strip()) > 20:
                         email_content = parsed['email_draft']
                     
+                    # 4. original_ai_response가 있지만 추출이 안된 경우 원본 그대로 사용
+                    if not email_content and result.get('original_ai_response'):
+                        email_content = result['original_ai_response']
+                    
                     if email_content:
                         # 이메일 내용에 줄바꿈 처리 적용
                         formatted_email = format_email_content(email_content)
@@ -2338,7 +2376,7 @@ with tab3:
     with col17:
         filter_type = st.selectbox("문제 유형 필터", 
             ["전체"] + ["현재 비밀번호가 맞지 않습니다", "VMS와의 통신에 실패했습니다", "Ping 테스트에 실패했습니다", 
-                       "Onvif 응답이 없습니다", "로그인 차단 상태입니다(CCTV)", "비밀번호 변경에 실패했습니다",
+                       "Onvif 응답이 없습니다", "로그인 차단 상태입니다", "비밀번호 변경에 실패했습니다",
                        "PK P 계정 로그인 안됨", "PK P 웹 접속 안됨", "기타"])
     
     with col18:
