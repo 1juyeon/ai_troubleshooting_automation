@@ -276,6 +276,11 @@ class GeminiHandler:
                             email_lines.append("")
                     
                     parsed['email_draft'] = '\n'.join(email_lines)
+                    
+                    # [예외 처리 기준] 이후의 모든 내용 제거
+                    if '[예외 처리 기준]' in parsed['email_draft']:
+                        parsed['email_draft'] = parsed['email_draft'].split('[예외 처리 기준]')[0].strip()
+                    
                     if parsed['email_draft'] and len(parsed['email_draft']) > 20:  # 의미있는 길이인지 확인
                         break
             
@@ -349,6 +354,10 @@ class GeminiHandler:
             # 이메일 초안은 앞뒤 공백만 제거하고 줄바꿈은 보존
             parsed['email_draft'] = parsed['email_draft'].strip('\n\r\t ')
             
+            # [예외 처리 기준] 이후의 모든 내용 제거 (폴백 로직에서도)
+            if '[예외 처리 기준]' in parsed['email_draft']:
+                parsed['email_draft'] = parsed['email_draft'].split('[예외 처리 기준]')[0].strip()
+            
             # 빈 값 체크 및 기본값 설정 (더 엄격하게)
             if not parsed['summary'] or len(parsed['summary'].strip()) < 5:
                 parsed['summary'] = "AI 분석 결과를 파싱할 수 없습니다. 고객 문의 내용을 확인해주세요."
@@ -366,6 +375,18 @@ class GeminiHandler:
             if email_start != -1:
                 email_part = response_text[email_start:email_start+500]
                 print(email_part)
+            
+            # 정규식 패턴별 매칭 결과 확인
+            print("=== 정규식 패턴 매칭 결과 ===")
+            for i, pattern in enumerate(email_patterns):
+                match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
+                if match:
+                    print(f"패턴 {i+1} 매칭됨: {pattern}")
+                    print(f"매칭된 텍스트 길이: {len(match.group(1))}")
+                    print(f"매칭된 텍스트 (처음 100자): {match.group(1)[:100]}")
+                    break
+            else:
+                print("어떤 패턴도 매칭되지 않음")
             
             return parsed
             

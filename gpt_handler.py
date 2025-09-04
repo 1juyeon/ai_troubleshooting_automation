@@ -314,6 +314,11 @@ class GPTHandler:
                             email_lines.append("")
                     
                     email_draft = '\n'.join(email_lines)
+                    
+                    # [예외 처리 기준] 이후의 모든 내용 제거
+                    if '[예외 처리 기준]' in email_draft:
+                        email_draft = email_draft.split('[예외 처리 기준]')[0].strip()
+                    
                     if email_draft and len(email_draft) > 20:  # 의미있는 길이인지 확인
                         break
             
@@ -386,6 +391,10 @@ class GPTHandler:
             action_flow = action_flow.strip()
             # 이메일 초안은 앞뒤 공백만 제거하고 줄바꿈은 보존
             email_draft = email_draft.strip('\n\r\t ')
+            
+            # [예외 처리 기준] 이후의 모든 내용 제거 (폴백 로직에서도)
+            if '[예외 처리 기준]' in email_draft:
+                email_draft = email_draft.split('[예외 처리 기준]')[0].strip()
             
             # 빈 값 체크 및 기본값 설정 (더 엄격하게)
             if not summary or len(summary.strip()) < 5:
