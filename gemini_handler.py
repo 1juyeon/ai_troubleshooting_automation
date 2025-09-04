@@ -247,6 +247,10 @@ class GeminiHandler:
                 r'이메일\s*초안[:\s]*\n---\n(.*?)\n---',
                 # [예외 처리 기준] 전까지
                 r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\s*\[예외\s*처리\s*기준\])',
+                # 감사합니다.로 끝나는 경우 (빈 줄 포함)
+                r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?감사합니다\.\s*\n?\s*)',
+                # 빈 줄 두 개로 끝나는 경우
+                r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\s*\n)',
                 # 기존 패턴들
                 r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\s*$)',
                 r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:$))',
@@ -283,6 +287,28 @@ class GeminiHandler:
                     
                     if parsed['email_draft'] and len(parsed['email_draft']) > 20:  # 의미있는 길이인지 확인
                         break
+            
+            # 특별한 이메일 초안 파싱 로직 (제공된 데이터 구조에 맞춤)
+            if not parsed['email_draft'] or len(parsed['email_draft'].strip()) < 50:
+                # "제목:" 으로 시작하는 이메일 초안 패턴 찾기
+                title_pattern = r'이메일\s*초안[:\s]*\n(제목[:\s]*.*?감사합니다\.\s*\n?\s*)'
+                title_match = re.search(title_pattern, response_text, re.DOTALL | re.IGNORECASE)
+                if title_match:
+                    email_content = title_match.group(1).strip()
+                    # 불필요한 텍스트 제거
+                    email_lines = []
+                    for line in email_content.split('\n'):
+                        line_stripped = line.strip()
+                        if line_stripped and not any(unwanted in line_stripped.lower() for unwanted in [
+                            "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
+                            "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오",
+                            "---", "[예외 처리 기준]"
+                        ]):
+                            email_lines.append(line.rstrip())
+                        elif not line_stripped:
+                            email_lines.append("")
+                    parsed['email_draft'] = '\n'.join(email_lines)
+                    print(f"특별한 이메일 파싱 성공: {len(parsed['email_draft'])}자")
             
             # 정규식 파싱이 실패한 경우 더 강력한 폴백 로직
             if not parsed['summary'] or not parsed['action_flow'] or not parsed['email_draft']:
@@ -335,11 +361,18 @@ class GeminiHandler:
                                     parsed['action_flow'] = line + "\n"
                         elif current_section == "email":
                             # 이메일 섹션 종료 조건 확인
-                            if line.strip() == "---" or "[예외 처리 기준]" in line:
+                            if (line.strip() == "---" or "[예외 처리 기준]" in line or 
+                                (line.strip() == "" and i < len(lines) - 1 and lines[i+1].strip() == "")):
                                 current_section = ""
                                 continue
                             
-                            if len(line) > 5 and not any(unwanted in line.lower() for unwanted in [
+                            # 빈 줄도 이메일 형식 유지를 위해 포함
+                            if line.strip() == "":
+                                if parsed['email_draft']:
+                                    parsed['email_draft'] += "\n"
+                                else:
+                                    parsed['email_draft'] = "\n"
+                            elif len(line) > 5 and not any(unwanted in line.lower() for unwanted in [
                                 "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
                                 "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오",
                                 "---", "[예외 처리 기준]"
