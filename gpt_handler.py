@@ -1,13 +1,14 @@
-import google.generativeai as genai
+import openai
 import os
 import streamlit as st
 from typing import Dict, Any, Optional
 import json
-import re # Added for regex in parse_response
+import re
+import time
 
 class GPTHandler:
     def __init__(self, api_key: str = None):
-        """Gemini 핸들러 초기화"""
+        """GPT 핸들러 초기화"""
         # 프롬프트 템플릿 로딩 (API 키와 관계없이 항상 로드)
         self.prompt_template = self._load_prompt_template()
         
@@ -18,30 +19,28 @@ class GPTHandler:
             else:
                 # st.secrets에서 먼저 시도
                 try:
-                    self.api_key = st.secrets["GEMINI_API_KEY"]
-                    print("✅ Gemini API 키를 Streamlit Secrets에서 로드했습니다.")
+                    self.api_key = st.secrets["OPENAI_API_KEY"]
+                    print("✅ OpenAI API 키를 Streamlit Secrets에서 로드했습니다.")
                 except:
                     # 환경변수로 폴백
-                    self.api_key = os.getenv("GOOGLE_API_KEY")
+                    self.api_key = os.getenv("OPENAI_API_KEY")
                     if self.api_key:
-                        print("✅ Gemini API 키를 환경변수에서 로드했습니다.")
+                        print("✅ OpenAI API 키를 환경변수에서 로드했습니다.")
             
             if not self.api_key:
-                print("⚠️ Gemini API 키가 설정되지 않았습니다.")
-                print("Streamlit Cloud Secrets 또는 환경변수 GOOGLE_API_KEY를 설정해주세요.")
-                self.model = None
+                print("⚠️ OpenAI API 키가 설정되지 않았습니다.")
+                print("Streamlit Cloud Secrets 또는 환경변수 OPENAI_API_KEY를 설정해주세요.")
+                self.client = None
                 return
             
-            # API 키 방식으로 설정
-            genai.configure(api_key=self.api_key)
-            # gemini-1.5-pro 모델 사용
-            self.model = genai.GenerativeModel('gemini-1.5-pro')
+            # OpenAI 클라이언트 초기화
+            self.client = openai.OpenAI(api_key=self.api_key)
             
-            print("✅ Gemini API 초기화 성공 (gemini-1.5-pro)")
+            print("✅ OpenAI API 초기화 성공")
             
         except Exception as e:
-            print(f"❌ Gemini API 초기화 실패: {e}")
-            self.model = None
+            print(f"❌ OpenAI API 초기화 실패: {e}")
+            self.client = None
         
     def _load_prompt_template(self) -> str:
         """프롬프트 템플릿 로딩"""
@@ -148,43 +147,50 @@ class GPTHandler:
         )
         return prompt
     
-    def generate_response(self, prompt: str, max_tokens: int = 1000) -> Dict[str, Any]:
-        """Gemini API를 사용한 응답 생성"""
-        if not self.model:
+    def generate_response(self, prompt: str, model: str = "gpt-4o") -> Dict[str, Any]:
+        """OpenAI GPT API를 사용한 응답 생성"""
+        if not self.client:
             return {
                 "success": False,
-                "error": "Gemini API가 초기화되지 않았습니다.",
+                "error": "OpenAI API가 초기화되지 않았습니다.",
                 "response": "죄송합니다. AI 서비스에 연결할 수 없습니다. 수동으로 대응해주세요.",
-                "model": "gemini-1.5-pro"
+                "model": model
             }
         
         try:
-            import time
             start_time = time.time()
             
-            # 더 간단한 API 호출 방식 사용
-            response = self.model.generate_content(prompt)
+            # OpenAI API 호출
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "당신은 고객 서비스 전문가입니다. 주어진 형식에 따라 정확하고 실용적인 응답을 생성해주세요."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=2000,
+                temperature=0.1
+            )
             
             elapsed_time = time.time() - start_time
             
             # 응답 검증
-            if not response or not response.text:
+            if not response or not response.choices or not response.choices[0].message.content:
                 return {
                     "success": False,
                     "error": "API 응답이 비어있습니다",
                     "response": "죄송합니다. AI 응답이 비어있어 기본 응답을 제공합니다.",
-                    "model": "gemini-1.5-pro",
+                    "model": model,
                     "response_time": elapsed_time
                 }
             
             # 응답 길이 검증
-            response_text = response.text.strip()
+            response_text = response.choices[0].message.content.strip()
             if len(response_text) < 50:  # 너무 짧은 응답은 의심스러움
                 return {
                     "success": False,
                     "error": "API 응답이 너무 짧습니다",
                     "response": "죄송합니다. AI 응답이 너무 짧아 기본 응답을 제공합니다.",
-                    "model": "gemini-1.5-pro",
+                    "model": model,
                     "response_time": elapsed_time
                 }
             
@@ -194,15 +200,15 @@ class GPTHandler:
                     "success": False,
                     "error": "API 응답 시간 초과",
                     "response": "죄송합니다. 응답 생성에 시간이 오래 걸려 기본 응답을 제공합니다.",
-                    "model": "gemini-1.5-pro",
+                    "model": model,
                     "response_time": elapsed_time
                 }
             
             return {
                 "success": True,
                 "response": response_text,
-                "model": "gemini-1.5-pro",
-                "tokens_used": len(response_text.split()),  # 대략적인 토큰 수
+                "model": model,
+                "tokens_used": response.usage.total_tokens if response.usage else 0,
                 "response_time": elapsed_time
             }
             
@@ -211,7 +217,7 @@ class GPTHandler:
                 "success": False,
                 "error": str(e),
                 "response": "죄송합니다. 응답 생성 중 오류가 발생했습니다. 다시 시도해주세요.",
-                "model": "gemini-1.5-pro"
+                "model": model
             }
     
     def parse_response(self, response_text: str) -> Dict[str, Any]:
@@ -452,7 +458,7 @@ class GPTHandler:
     
     def _generate_default_response(self, customer_input: str, issue_type: str, 
                                  condition_1: str, condition_2: str) -> Dict[str, Any]:
-        """기본 응답 생성 (Gemini API 실패 시)"""
+        """기본 응답 생성 (GPT API 실패 시)"""
         
         # 문제 유형별 기본 응답 템플릿
         default_responses = {
@@ -585,14 +591,14 @@ if __name__ == "__main__":
     
     if result["success"]:
         print("✅ 응답 생성 성공")
-        print(f"대응 유형: {result['parsed_response']['response_type']}")
-        print(f"요약: {result['parsed_response']['summary']}")
-        print(f"조치 흐름: {result['parsed_response']['action_flow']}")
-        print(f"이메일 초안: {result['parsed_response']['email_draft']}")
+        print(f"대응 유형: {result['gpt_result']['parsed_response']['response_type']}")
+        print(f"요약: {result['gpt_result']['parsed_response']['summary']}")
+        print(f"조치 흐름: {result['gpt_result']['parsed_response']['action_flow']}")
+        print(f"이메일 초안: {result['gpt_result']['parsed_response']['email_draft']}")
     else:
         print("❌ 응답 생성 실패")
         print(f"오류: {result['error']}")
     
     print("\n" + "="*50)
     print("전체 응답:")
-    print(result['parsed_response']['full_response']) 
+    print(result['gpt_result']['parsed_response']['full_response']) 
