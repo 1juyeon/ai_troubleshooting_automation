@@ -277,9 +277,9 @@ class GeminiHandler:
                     
                     parsed['email_draft'] = '\n'.join(email_lines)
                     
-                    # [예외 처리 기준] 이후의 모든 내용 제거
+                    # [예외 처리 기준] 이후의 모든 내용 제거 (줄바꿈 보존)
                     if '[예외 처리 기준]' in parsed['email_draft']:
-                        parsed['email_draft'] = parsed['email_draft'].split('[예외 처리 기준]')[0].strip()
+                        parsed['email_draft'] = parsed['email_draft'].split('[예외 처리 기준]')[0].strip('\n\r\t ')
                     
                     if parsed['email_draft'] and len(parsed['email_draft']) > 20:  # 의미있는 길이인지 확인
                         break
@@ -354,9 +354,9 @@ class GeminiHandler:
             # 이메일 초안은 앞뒤 공백만 제거하고 줄바꿈은 보존
             parsed['email_draft'] = parsed['email_draft'].strip('\n\r\t ')
             
-            # [예외 처리 기준] 이후의 모든 내용 제거 (폴백 로직에서도)
+            # [예외 처리 기준] 이후의 모든 내용 제거 (폴백 로직에서도, 줄바꿈 보존)
             if '[예외 처리 기준]' in parsed['email_draft']:
-                parsed['email_draft'] = parsed['email_draft'].split('[예외 처리 기준]')[0].strip()
+                parsed['email_draft'] = parsed['email_draft'].split('[예외 처리 기준]')[0].strip('\n\r\t ')
             
             # 빈 값 체크 및 기본값 설정 (더 엄격하게)
             if not parsed['summary'] or len(parsed['summary'].strip()) < 5:
@@ -384,9 +384,16 @@ class GeminiHandler:
                     print(f"패턴 {i+1} 매칭됨: {pattern}")
                     print(f"매칭된 텍스트 길이: {len(match.group(1))}")
                     print(f"매칭된 텍스트 (처음 100자): {match.group(1)[:100]}")
+                    print(f"매칭된 텍스트 전체:")
+                    print(match.group(1))
                     break
             else:
                 print("어떤 패턴도 매칭되지 않음")
+            
+            # 최종 파싱 결과 상세 출력
+            print("=== 최종 파싱 결과 ===")
+            print(f"이메일 초안 전체 내용:")
+            print(repr(parsed['email_draft']))  # repr을 사용하여 줄바꿈 문자도 확인
             
             return parsed
             
