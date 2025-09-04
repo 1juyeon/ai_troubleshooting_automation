@@ -307,7 +307,7 @@ class GPTHandler:
                 email_draft = email_draft.split('[예외 처리 기준]')[0].strip()
             
             # 이메일 초안이 너무 짧거나 구체적인 단계가 없는 경우 정규식으로 재파싱
-            if len(email_draft) < 100 or "1." not in email_draft:
+            if len(email_draft) < 200 or "1." not in email_draft:
                 print("GPT: 이메일 초안이 짧거나 단계가 없어 정규식으로 재파싱 시도")
                 
                 # 패턴 1: ```로 둘러싸인 이메일 초안 추출
@@ -337,6 +337,18 @@ class GPTHandler:
                             if email_match4:
                                 email_draft = email_match4.group(1).strip()
                                 print(f"GPT: 정규식으로 재파싱 성공 (패턴4) - 길이: {len(email_draft)}")
+            
+            # 추가 검증: 여전히 구체적인 단계가 없으면 더 강력한 패턴 시도
+            if "1." not in email_draft and "```" in response_text:
+                print("GPT: 여전히 구체적인 단계가 없어 추가 패턴 시도")
+                # ```로 시작하는 모든 내용 추출
+                code_block_pattern = r'```\n(.*?)\n```'
+                code_match = re.search(code_block_pattern, response_text, re.DOTALL)
+                if code_match:
+                    potential_email = code_match.group(1).strip()
+                    if "안녕하세요" in potential_email and "감사합니다" in potential_email:
+                        email_draft = potential_email
+                        print(f"GPT: 코드 블록에서 이메일 초안 추출 성공 - 길이: {len(email_draft)}")
             
             # 디버깅을 위한 로그 추가
             print(f"GPT 파싱 결과 - 이메일 초안 길이: {len(email_draft)}")
