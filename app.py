@@ -654,7 +654,9 @@ def show_ai_analysis_modal(selected_row):
 
 감사합니다."""
                         
-                        st.text_area("이메일 내용", email_content, height=150, disabled=True)
+                        # 이메일 내용에 줄바꿈 처리 적용
+                        formatted_email = format_email_content(email_content)
+                        st.text_area("이메일 내용", formatted_email, height=150, disabled=True)
                         
 
                     
@@ -747,8 +749,9 @@ def show_ai_analysis_modal(selected_row):
 
 {email_draft}"""
                     
-                    # 전체 AI 응답 표시
-                    st.text_area("전체 AI 응답", full_response, height=200, disabled=True)
+                    # 전체 AI 응답에 줄바꿈 처리 적용
+                    formatted_full_response = format_ai_response(full_response)
+                    st.text_area("전체 AI 응답", formatted_full_response, height=200, disabled=True)
                     
 
                     
@@ -875,7 +878,9 @@ def show_ai_analysis_modal(selected_row):
 
 감사합니다."""
                 
-                st.text_area("이메일 내용", basic_email, height=150, disabled=True)
+                # 이메일 내용에 줄바꿈 처리 적용
+                formatted_basic_email = format_email_content(basic_email)
+                st.text_area("이메일 내용", formatted_basic_email, height=150, disabled=True)
                 
                 # 전체 AI 응답 표시
                 st.markdown("---")
@@ -901,7 +906,9 @@ def show_ai_analysis_modal(selected_row):
 
 {basic_email}"""
                 
-                st.text_area("전체 AI 응답", full_basic_response, height=200, disabled=True)
+                # 전체 AI 응답에 줄바꿈 처리 적용
+                formatted_full_basic_response = format_ai_response(full_basic_response)
+                st.text_area("전체 AI 응답", formatted_full_basic_response, height=200, disabled=True)
                 
                 st.info("페이지를 새로고침하거나 다시 시도해주세요.")
                 
@@ -1059,6 +1066,63 @@ def render_pagination_controls(current_page, total_pages, total_items, items_per
             st.rerun()
     
     st.markdown("---")
+
+def format_email_content(email_content: str) -> str:
+    """이메일 내용의 줄바꿈을 개선하여 가독성을 높입니다."""
+    if not email_content:
+        return ""
+    
+    # 기본 정리
+    formatted = email_content.strip()
+    
+    # 연속된 공백을 하나로 통일
+    formatted = ' '.join(formatted.split())
+    
+    # 제목과 본문 사이에 빈 줄 추가
+    formatted = re.sub(r'(제목:.*?)(고객님)', r'\1\n\n\2', formatted)
+    
+    # 문단 구분을 위한 줄바꿈 추가
+    # "고객님 안녕하세요." 다음에 빈 줄 추가
+    formatted = re.sub(r'(고객님 안녕하세요\.)', r'\1\n', formatted)
+    
+    # "감사합니다." 앞에 빈 줄 추가
+    formatted = re.sub(r'(\n감사합니다\.)', r'\n\n\1', formatted)
+    
+    # 번호가 있는 항목 앞에 줄바꿈 추가
+    formatted = re.sub(r'(\d+\.)', r'\n\1', formatted)
+    
+    # 첫 번째 줄바꿈 제거
+    formatted = formatted.lstrip('\n')
+    
+    return formatted
+
+def format_ai_response(ai_response: str) -> str:
+    """AI 응답의 줄바꿈을 개선하여 가독성을 높입니다."""
+    if not ai_response:
+        return ""
+    
+    # 기본 정리
+    formatted = ai_response.strip()
+    
+    # 연속된 공백을 하나로 통일
+    formatted = ' '.join(formatted.split())
+    
+    # 섹션 구분을 위한 줄바꿈 추가
+    formatted = re.sub(r'(\[대응유형\])', r'\n\1', formatted)
+    formatted = re.sub(r'(\[응답내용\])', r'\n\n\1', formatted)
+    
+    # 각 항목 앞에 줄바꿈 추가
+    formatted = re.sub(r'(- 요약:)', r'\n\1', formatted)
+    formatted = re.sub(r'(- 조치 흐름:)', r'\n\n\1', formatted)
+    formatted = re.sub(r'(- 이메일 초안:)', r'\n\n\1', formatted)
+    
+    # 조치 흐름의 번호가 있는 항목 앞에 줄바꿈 추가
+    formatted = re.sub(r'(\d+\.)', r'\n\1', formatted)
+    
+    # 첫 번째 줄바꿈 제거
+    formatted = formatted.lstrip('\n')
+    
+    return formatted
 
 def extract_email_from_original_response(original_response: str) -> str:
     """원본 AI 응답에서 이메일 초안을 추출"""
@@ -2032,7 +2096,9 @@ with tab2:
                     email_content = parsed['email_draft']
                 
                 if email_content:
-                    st.text_area("이메일 내용", email_content, height=300)
+                    # 이메일 내용에 줄바꿈 처리 적용
+                    formatted_email = format_email_content(email_content)
+                    st.text_area("이메일 내용", formatted_email, height=300, disabled=True)
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
                     # 디버깅 정보 표시
@@ -2060,7 +2126,9 @@ with tab2:
 - 이메일 초안:
 
 {parsed.get('email_draft', '정보 없음')}"""
-                st.text(full_response)
+                # 전체 AI 응답에 줄바꿈 처리 적용
+                formatted_full_response = format_ai_response(full_response)
+                st.text_area("전체 AI 응답", formatted_full_response, height=200, disabled=True)
             
             # SMS 발송 섹션 추가
             st.markdown("---")
@@ -2194,7 +2262,9 @@ with tab2:
                         email_content = parsed['email_draft']
                     
                     if email_content:
-                        st.text_area("이메일 내용", email_content, height=300)
+                        # 이메일 내용에 줄바꿈 처리 적용
+                        formatted_email = format_email_content(email_content)
+                        st.text_area("이메일 내용", formatted_email, height=300, disabled=True)
                     else:
                         st.warning("⚠️ 이메일 초안 정보가 없습니다.")
                         # 디버깅 정보 표시
