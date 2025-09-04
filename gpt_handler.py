@@ -281,6 +281,11 @@ class GPTHandler:
             
             # 이메일 초안 추출 - "이메일 초안:" 다음에 오는 텍스트
             email_patterns = [
+                # --- 구분자가 있는 경우
+                r'이메일\s*초안[:\s]*\n---\n(.*?)\n---',
+                # [예외 처리 기준] 전까지
+                r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\s*\[예외\s*처리\s*기준\])',
+                # 기존 패턴들
                 r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\s*$)',
                 r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:$))',
                 r'이메일\s*초안[:\s]*([^\n]+)'
@@ -296,7 +301,8 @@ class GPTHandler:
                         line = line.strip()
                         if line and not any(unwanted in line.lower() for unwanted in [
                             "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
-                            "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오"
+                            "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오",
+                            "---", "[예외 처리 기준]"
                         ]):
                             email_lines.append(line)
                     email_draft = '\n'.join(email_lines)
@@ -335,6 +341,9 @@ class GPTHandler:
                         email_content = line.split(":", 1)[1].strip() if ":" in line else ""
                         if email_content and len(email_content) > 10:
                             email_draft = email_content + "\n"
+                    elif line.strip() == "---" and current_section == "email":
+                        # 이메일 초안의 --- 구분자 시작
+                        continue
                     else:
                         # 현재 섹션에 내용 추가
                         if current_section == "summary" and not summary:
@@ -349,12 +358,21 @@ class GPTHandler:
                             ]):
                                 if re.match(r'^\d+\.', line) or (line and not line.startswith('-')):
                                     action_flow = line + "\n"
-                        elif current_section == "email" and not email_draft:
+                        elif current_section == "email":
+                            # 이메일 섹션 종료 조건 확인
+                            if line.strip() == "---" or "[예외 처리 기준]" in line:
+                                current_section = ""
+                                continue
+                            
                             if len(line) > 5 and not any(unwanted in line.lower() for unwanted in [
                                 "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
-                                "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오"
+                                "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오",
+                                "---", "[예외 처리 기준]"
                             ]):
-                                email_draft = line + "\n"
+                                if email_draft:
+                                    email_draft += line + "\n"
+                                else:
+                                    email_draft = line + "\n"
             
             # 줄바꿈 정리
             action_flow = action_flow.strip()
