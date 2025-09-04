@@ -656,7 +656,7 @@ def show_ai_analysis_modal(selected_row):
                         
                         # 이메일 내용에 줄바꿈 처리 적용
                         formatted_email = format_email_content(email_content)
-                        create_enhanced_text_area("이메일 내용", formatted_email, height=150, disabled=True)
+                        st.text_area("이메일 내용", formatted_email, height=150, disabled=True)
                         
 
                     
@@ -751,7 +751,7 @@ def show_ai_analysis_modal(selected_row):
                     
                     # 전체 AI 응답에 줄바꿈 처리 적용
                     formatted_full_response = format_ai_response(full_response)
-                    create_enhanced_text_area("전체 AI 응답", formatted_full_response, height=200, disabled=True)
+                    st.text_area("전체 AI 응답", formatted_full_response, height=200, disabled=True)
                     
 
                     
@@ -880,7 +880,7 @@ def show_ai_analysis_modal(selected_row):
                 
                 # 이메일 내용에 줄바꿈 처리 적용
                 formatted_basic_email = format_email_content(basic_email)
-                create_enhanced_text_area("이메일 내용", formatted_basic_email, height=150, disabled=True)
+                st.text_area("이메일 내용", formatted_basic_email, height=150, disabled=True)
                 
                 # 전체 AI 응답 표시
                 st.markdown("---")
@@ -908,7 +908,7 @@ def show_ai_analysis_modal(selected_row):
                 
                 # 전체 AI 응답에 줄바꿈 처리 적용
                 formatted_full_basic_response = format_ai_response(full_basic_response)
-                create_enhanced_text_area("전체 AI 응답", formatted_full_basic_response, height=200, disabled=True)
+                st.text_area("전체 AI 응답", formatted_full_basic_response, height=200, disabled=True)
                 
                 st.info("페이지를 새로고침하거나 다시 시도해주세요.")
                 
@@ -1123,36 +1123,6 @@ def format_ai_response(ai_response: str) -> str:
     formatted = formatted.lstrip('\n')
     
     return formatted
-
-def create_enhanced_text_area(label: str, value: str, height: int = 200, disabled: bool = True):
-    """향상된 텍스트 영역을 생성합니다. 텍스트를 진하게 표시하고 크기를 유동적으로 조정합니다."""
-    if not value:
-        return st.text_area(label, value, height=height, disabled=disabled)
-    
-    # 텍스트 길이에 따라 높이 조정
-    lines = value.count('\n') + 1
-    min_height = max(height, 100)
-    max_height = 500
-    dynamic_height = min(max(min_height, lines * 20 + 50), max_height)
-    
-    # CSS 스타일 적용
-    st.markdown(f"""
-    <style>
-    .enhanced-text-area {{
-        font-weight: bold !important;
-        font-size: 14px !important;
-        line-height: 1.5 !important;
-    }}
-    </style>
-    """, unsafe_allow_html=True)
-    
-    return st.text_area(
-        label, 
-        value, 
-        height=dynamic_height, 
-        disabled=disabled,
-        key=f"enhanced_{label}_{hash(value)}"
-    )
 
 def extract_email_from_original_response(original_response: str) -> str:
     """원본 AI 응답에서 이메일 초안을 추출"""
@@ -2110,7 +2080,7 @@ with tab2:
             with col10:
                 st.markdown("#### 📧 이메일 초안")
                 
-                # original_ai_response에서 이메일 초안을 직접 추출하여 표시
+                # 이력 관리 탭과 동일한 방식으로 이메일 초안 추출
                 email_content = None
                 
                 # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1)
@@ -2121,13 +2091,10 @@ with tab2:
                 if not email_content and result.get('full_analysis_result'):
                     email_content = extract_email_from_analysis_result(result['full_analysis_result'])
                 
-                # 3. 파싱된 email_draft 사용 (최후 수단)
-                if not email_content and parsed.get('email_draft') and len(parsed['email_draft'].strip()) > 20:
-                    email_content = parsed['email_draft']
-                
-                # 4. original_ai_response가 있지만 추출이 안된 경우 원본 그대로 사용
-                if not email_content and result.get('original_ai_response'):
-                    email_content = result['original_ai_response']
+                # 3. 파싱된 email_draft 사용 (우선순위 3)
+                email_draft = parsed.get('email_draft', '')
+                if not email_content and email_draft and len(email_draft.strip()) > 20:
+                    email_content = email_draft
                 
                 if email_content:
                     # 이메일 내용에 줄바꿈 처리 적용
@@ -2146,8 +2113,61 @@ with tab2:
             
             # 전체 응답
             with st.expander("📄 전체 AI 응답"):
-                # full_response를 parsed 딕셔너리에서 재구성
-                full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
+                # 이력 관리 탭과 동일한 방식으로 전체 AI 응답 구성
+                full_response = None
+                
+                # full_analysis_result에서 전체 AI 응답 구성 시도
+                if result.get('full_analysis_result'):
+                    full_result = result['full_analysis_result']
+                    if 'ai_result' in full_result:
+                        ai_result = full_result['ai_result']
+                        if 'parsed_response' in ai_result:
+                            parsed_full = ai_result['parsed_response']
+                            
+                            # 파싱된 데이터가 비어있는지 확인하고 기본값 설정
+                            summary = parsed_full.get('summary', '') or '요약 정보가 없습니다.'
+                            action_flow = parsed_full.get('action_flow', '') or '조치 흐름 정보가 없습니다.'
+                            email_draft = parsed_full.get('email_draft', '') or '이메일 초안 정보가 없습니다.'
+                            
+                            full_response = f"""[대응유형] {parsed_full.get('response_type', '해결안')}
+
+[응답내용]
+
+- 요약: {summary}
+
+- 조치 흐름:
+
+{action_flow}
+
+- 이메일 초안:
+
+{email_draft}"""
+                        elif 'response' in ai_result:
+                            # GPT API 응답인 경우 파싱
+                            parsed_full = _parse_gpt_response(ai_result['response'])
+                            
+                            # 파싱된 데이터가 비어있는지 확인하고 기본값 설정
+                            summary = parsed_full.get('summary', '') or '요약 정보가 없습니다.'
+                            action_flow = parsed_full.get('action_flow', '') or '조치 흐름 정보가 없습니다.'
+                            email_draft = parsed_full.get('email_draft', '') or '이메일 초안 정보가 없습니다.'
+                            
+                            full_response = f"""[대응유형] {parsed_full.get('response_type', '해결안')}
+
+[응답내용]
+
+- 요약: {summary}
+
+- 조치 흐름:
+
+{action_flow}
+
+- 이메일 초안:
+
+{email_draft}"""
+                
+                # full_analysis_result에서 구성 실패한 경우 기본 방식 사용
+                if not full_response:
+                    full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
 
 [응답내용]
 
@@ -2160,6 +2180,7 @@ with tab2:
 - 이메일 초안:
 
 {parsed.get('email_draft', '정보 없음')}"""
+                
                 # 전체 AI 응답에 줄바꿈 처리 적용
                 formatted_full_response = format_ai_response(full_response)
                 st.text_area("전체 AI 응답", formatted_full_response, height=200, disabled=True)
@@ -2280,7 +2301,7 @@ with tab2:
                 with col10:
                     st.markdown("#### 📧 이메일 초안")
                     
-                    # original_ai_response에서 이메일 초안을 직접 추출하여 표시
+                    # 이력 관리 탭과 동일한 방식으로 이메일 초안 추출
                     email_content = None
                     
                     # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1)
@@ -2291,13 +2312,10 @@ with tab2:
                     if not email_content and result.get('full_analysis_result'):
                         email_content = extract_email_from_analysis_result(result['full_analysis_result'])
                     
-                    # 3. 파싱된 email_draft 사용 (최후 수단)
-                    if not email_content and parsed.get('email_draft') and len(parsed['email_draft'].strip()) > 20:
-                        email_content = parsed['email_draft']
-                    
-                    # 4. original_ai_response가 있지만 추출이 안된 경우 원본 그대로 사용
-                    if not email_content and result.get('original_ai_response'):
-                        email_content = result['original_ai_response']
+                    # 3. 파싱된 email_draft 사용 (우선순위 3)
+                    email_draft = parsed.get('email_draft', '')
+                    if not email_content and email_draft and len(email_draft.strip()) > 20:
+                        email_content = email_draft
                     
                     if email_content:
                         # 이메일 내용에 줄바꿈 처리 적용
