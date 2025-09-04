@@ -2167,19 +2167,24 @@ with tab2:
                 
                 # full_analysis_result에서 구성 실패한 경우 기본 방식 사용
                 if not full_response:
+                    # 이력 관리 탭과 동일한 방식으로 기본값 설정
+                    summary = parsed.get('summary', '') or '요약 정보가 없습니다.'
+                    action_flow = parsed.get('action_flow', '') or '조치 흐름 정보가 없습니다.'
+                    email_draft = parsed.get('email_draft', '') or '이메일 초안 정보가 없습니다.'
+                    
                     full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
 
 [응답내용]
 
-- 요약: {parsed.get('summary', '정보 없음')}
+- 요약: {summary}
 
 - 조치 흐름:
 
-{parsed.get('action_flow', '정보 없음')}
+{action_flow}
 
 - 이메일 초안:
 
-{parsed.get('email_draft', '정보 없음')}"""
+{email_draft}"""
                 
                 # 전체 AI 응답에 줄바꿈 처리 적용
                 formatted_full_response = format_ai_response(full_response)
