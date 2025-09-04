@@ -80,7 +80,7 @@ class GeminiHandler:
             with open("프롬프트.txt", "r", encoding="utf-8") as f:
                 return f.read()
         except Exception as e:
-            # 간단한 기본 프롬프트 템플릿
+            # 개선된 기본 프롬프트 템플릿
             return """[고객 문의 내용]
 {customer_input}
 
@@ -92,26 +92,38 @@ class GeminiHandler:
 - 조건 2: {condition_2}
 
 [대응안 작성 지침]
-아래 형식을 참고하여, 실무자가 이해하기 쉽도록 자연스럽고 정확하게 응답을 생성하십시오.
+아래 형식을 정확히 따라 상세하고 실용적인 응답을 생성하십시오.
 
-[대응유형] 해결안 / 질문 / 출동 중 하나를 선택하십시오.
+[대응유형]
+해결안 / 질문 / 출동 중 하나를 선택하십시오.
 
 [응답내용]
-- 요약: 고객 문의의 핵심 내용을 간결하게 정리하십시오.
 
-- 조치 흐름: 아래 형식을 따라 단계별로 줄바꿈하며 번호를 붙여 설명하십시오.
-1. 단계 제목: 해당 단계에서 수행할 조치 설명
-2. 단계 제목: 해당 단계에서 수행할 조치 설명
-3. 단계 제목: 해당 단계에서 수행할 조치 설명
+요약: {customer_input}에 대한 핵심 내용을 구체적이고 명확하게 정리하십시오. 문제의 원인과 영향 범위를 포함하여 작성하십시오.
 
-※ 각 단계는 짧고 명확하게, 실무자가 바로 이해할 수 있도록 작성하십시오.
+조치 흐름: 
+1. 첫 번째 조치 단계: 구체적인 조치 내용과 예상 소요 시간
+2. 두 번째 조치 단계: 세부적인 실행 방법과 주의사항
+3. 세 번째 조치 단계: 검증 방법과 다음 단계 제시
+4. 추가 조치가 필요한 경우: 예방 조치나 모니터링 방안
 
-- 이메일 초안: 고객에게 보낼 수 있는 실제 이메일 본문 형식으로 작성하십시오. 조치 흐름의 각 단계를 구체적으로 포함하여 고객이 이해하기 쉽게 작성하십시오. 간결하고 정중한 표현을 사용하십시오.
+이메일 초안: 
+안녕하세요,
+
+{customer_input}에 대한 답변드립니다.
+
+[구체적인 내용을 상세하게 작성하십시오. 고객이 이해하기 쉽도록 기술적 용어는 설명과 함께 사용하십시오.]
+
+추가 문의사항이 있으시면 언제든 연락주시기 바랍니다.
+
+감사합니다.
 
 [예외 처리 기준]
 - 조건 정보가 불충분하거나 고객 상태가 불명확한 경우 → "추가 확인이 필요합니다. 다음 질문을 해주세요."라고 안내하십시오.
 - 문제가 시나리오 DB에 존재하지 않거나, 적절한 해결책이 없는 경우 → "현장 출동이 필요할 수 있습니다."로 안내하십시오.
-- 확실한 답변이 불가능한 경우에도 → "현장 확인 후 조치가 필요합니다" 또는 "엔지니어 출동을 권장합니다" 등으로 마무리하십시오."""
+- 확실한 답변이 불가능한 경우에도 → "현장 확인 후 조치가 필요합니다" 또는 "엔지니어 출동을 권장합니다" 등으로 마무리하십시오.
+
+**중요: 위 형식을 정확히 따라 응답하십시오. 각 섹션은 반드시 포함되어야 하며, 구체적이고 실용적인 내용으로 작성하십시오.**"""
     
     def build_prompt(self, 
                     customer_input: str,
@@ -294,7 +306,7 @@ class GeminiHandler:
                 parsed['email_draft'] = parsed['email_draft'].split('[예외 처리 기준]')[0].strip()
             
             # 이메일 초안이 너무 짧거나 구체적인 단계가 없는 경우 정규식으로 재파싱
-            if len(parsed['email_draft']) < 200 or "1." not in parsed['email_draft']:
+            if len(parsed['email_draft']) < 100 or "1." not in parsed['email_draft']:
                 print("Gemini: 이메일 초안이 짧거나 단계가 없어 정규식으로 재파싱 시도")
                 
                 # 패턴 1: ```로 둘러싸인 이메일 초안 추출
@@ -324,18 +336,6 @@ class GeminiHandler:
                             if email_match4:
                                 parsed['email_draft'] = email_match4.group(1).strip()
                                 print(f"Gemini: 정규식으로 재파싱 성공 (패턴4) - 길이: {len(parsed['email_draft'])}")
-            
-            # 추가 검증: 여전히 구체적인 단계가 없으면 더 강력한 패턴 시도
-            if "1." not in parsed['email_draft'] and "```" in response_text:
-                print("Gemini: 여전히 구체적인 단계가 없어 추가 패턴 시도")
-                # ```로 시작하는 모든 내용 추출
-                code_block_pattern = r'```\n(.*?)\n```'
-                code_match = re.search(code_block_pattern, response_text, re.DOTALL)
-                if code_match:
-                    potential_email = code_match.group(1).strip()
-                    if "안녕하세요" in potential_email and "감사합니다" in potential_email:
-                        parsed['email_draft'] = potential_email
-                        print(f"Gemini: 코드 블록에서 이메일 초안 추출 성공 - 길이: {len(parsed['email_draft'])}")
             
             # 빈 값 체크 및 기본값 설정
             if not parsed['summary'] or len(parsed['summary']) < 5:

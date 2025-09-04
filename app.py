@@ -1912,12 +1912,8 @@ with tab2:
             
             # 전체 응답
             with st.expander("📄 전체 AI 응답"):
-                # original_ai_response가 있으면 그대로 표시, 없으면 파싱된 내용으로 재구성
-                if 'original_ai_response' in result and result['original_ai_response']:
-                    st.text(result['original_ai_response'])
-                else:
-                    # full_response를 parsed 딕셔너리에서 재구성
-                    full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
+                # full_response를 parsed 딕셔너리에서 재구성
+                full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
 
 [응답내용]
 
@@ -1930,7 +1926,7 @@ with tab2:
 - 이메일 초안:
 
 {parsed.get('email_draft', '정보 없음')}"""
-                    st.text(full_response)
+                st.text(full_response)
             
             # SMS 발송 섹션 추가
             st.markdown("---")
