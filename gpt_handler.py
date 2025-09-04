@@ -374,9 +374,10 @@ class GPTHandler:
                                 else:
                                     email_draft = line + "\n"
             
-            # 줄바꿈 정리
+            # 줄바꿈 정리 (이메일 초안은 줄바꿈 보존)
             action_flow = action_flow.strip()
-            email_draft = email_draft.strip()
+            # 이메일 초안은 앞뒤 공백만 제거하고 줄바꿈은 보존
+            email_draft = email_draft.strip('\n\r\t ')
             
             # 빈 값 체크 및 기본값 설정 (더 엄격하게)
             if not summary or len(summary.strip()) < 5:

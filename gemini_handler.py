@@ -336,9 +336,10 @@ class GeminiHandler:
                                 else:
                                     parsed['email_draft'] = line + "\n"
             
-            # 줄바꿈 정리
+            # 줄바꿈 정리 (이메일 초안은 줄바꿈 보존)
             parsed['action_flow'] = parsed['action_flow'].strip()
-            parsed['email_draft'] = parsed['email_draft'].strip()
+            # 이메일 초안은 앞뒤 공백만 제거하고 줄바꿈은 보존
+            parsed['email_draft'] = parsed['email_draft'].strip('\n\r\t ')
             
             # 빈 값 체크 및 기본값 설정 (더 엄격하게)
             if not parsed['summary'] or len(parsed['summary'].strip()) < 5:
@@ -347,6 +348,11 @@ class GeminiHandler:
                 parsed['action_flow'] = "AI 분석 결과를 파싱할 수 없습니다. 단계별 조치 사항을 확인해주세요."
             if not parsed['email_draft'] or len(parsed['email_draft'].strip()) < 20:
                 parsed['email_draft'] = "AI 분석 결과를 파싱할 수 없습니다. 이메일 초안을 확인해주세요."
+            
+            # 디버깅을 위한 로그 추가
+            print(f"Gemini 파싱 결과 - 이메일 초안 길이: {len(parsed['email_draft'])}")
+            print(f"Gemini 파싱 결과 - 이메일 초안 (처음 200자): {parsed['email_draft'][:200]}")
+            print(f"Gemini 파싱 결과 - 이메일 초안 줄바꿈 개수: {parsed['email_draft'].count(chr(10))}")
             
             return parsed
             
