@@ -1068,26 +1068,33 @@ def extract_email_from_original_response(original_response: str) -> str:
     try:
         import re
         
-        # 패턴 1: "이메일 초안:" 다음의 내용 추출 (더 정확한 패턴)
+        # 제공된 예시를 기반으로 한 정확한 패턴
+        # "- 이메일 초안:" 다음에 빈 줄이 있고, 그 다음에 "제목:"으로 시작하는 이메일
         email_patterns = [
-            # "- 이메일 초안:" 다음의 내용 (가장 일반적)
-            r'- 이메일\s*초안[:\s]*\n(.*?)(?=\n\s*\[예외\s*처리\s*기준\]|$)',
-            # "이메일 초안:" 다음의 내용
-            r'이메일\s*초안[:\s]*\n(.*?)(?=\n\s*\[예외\s*처리\s*기준\]|$)',
-            # "감사합니다."로 끝나는 이메일
-            r'- 이메일\s*초안[:\s]*\n(.*?감사합니다\.\s*\n?\s*)(?=\n\s*$)',
-            r'이메일\s*초안[:\s]*\n(.*?감사합니다\.\s*\n?\s*)(?=\n\s*$)',
-            # 응답 끝까지
-            r'- 이메일\s*초안[:\s]*\n(.*?)(?=\n\s*$)',
-            r'이메일\s*초안[:\s]*\n(.*?)(?=\n\s*$)',
+            # 가장 정확한 패턴: "- 이메일 초안:" 다음에 빈 줄, 그 다음에 "제목:"으로 시작
+            r'- 이메일\s*초안[:\s]*\n\s*\n제목[:\s].*?감사합니다\.',
+            # "이메일 초안:" 다음에 빈 줄, 그 다음에 "제목:"으로 시작
+            r'이메일\s*초안[:\s]*\n\s*\n제목[:\s].*?감사합니다\.',
+            # "- 이메일 초안:" 다음에 바로 "제목:"으로 시작
+            r'- 이메일\s*초안[:\s]*\n제목[:\s].*?감사합니다\.',
+            # "이메일 초안:" 다음에 바로 "제목:"으로 시작
+            r'이메일\s*초안[:\s]*\n제목[:\s].*?감사합니다\.',
+            # "- 이메일 초안:" 다음에 빈 줄, 그 다음에 "안녕하세요"로 시작
+            r'- 이메일\s*초안[:\s]*\n\s*\n안녕하세요.*?감사합니다\.',
+            # "이메일 초안:" 다음에 빈 줄, 그 다음에 "안녕하세요"로 시작
+            r'이메일\s*초안[:\s]*\n\s*\n안녕하세요.*?감사합니다\.',
+            # "- 이메일 초안:" 다음에 바로 "안녕하세요"로 시작
+            r'- 이메일\s*초안[:\s]*\n안녕하세요.*?감사합니다\.',
+            # "이메일 초안:" 다음에 바로 "안녕하세요"로 시작
+            r'이메일\s*초안[:\s]*\n안녕하세요.*?감사합니다\.',
         ]
         
         for pattern in email_patterns:
             match = re.search(pattern, original_response, re.DOTALL)
             if match:
-                email_content = match.group(1).strip()
+                email_content = match.group(0).strip()
                 # 이메일 내용이 충분히 길고 의미있는지 확인
-                if len(email_content) > 50:
+                if len(email_content) > 100:
                     # 불필요한 텍스트 제거
                     email_content = re.sub(r'^[\s\n]*', '', email_content)  # 앞쪽 공백 제거
                     email_content = re.sub(r'[\s\n]*$', '', email_content)  # 뒤쪽 공백 제거
@@ -1106,7 +1113,7 @@ def extract_email_from_original_response(original_response: str) -> str:
                 if len(email_content) > 50:
                     return email_content
         
-        # 패턴 3: "제목:"으로 시작하는 이메일 형태 (제공된 예시와 같은 형식)
+        # 패턴 3: "제목:"으로 시작하는 이메일 형태 (전체 응답에서 찾기)
         title_email_pattern = r'제목[:\s].*?감사합니다\.'
         match = re.search(title_email_pattern, original_response, re.DOTALL)
         if match:
@@ -1115,7 +1122,7 @@ def extract_email_from_original_response(original_response: str) -> str:
                 return email_content
         
         # 패턴 4: "안녕하세요"로 시작하고 "감사합니다"로 끝나는 이메일 형태
-        greeting_email_pattern = r'안녕하세요[^]*?감사합니다\.'
+        greeting_email_pattern = r'안녕하세요.*?감사합니다\.'
         match = re.search(greeting_email_pattern, original_response, re.DOTALL)
         if match:
             email_content = match.group(0).strip()
@@ -2039,7 +2046,9 @@ with tab2:
                     # 디버깅 정보 표시
                     with st.expander("🔍 디버깅 정보"):
                         st.write("**original_ai_response 존재:**", bool(result.get('original_ai_response')))
-                        st.write("**original_ai_response 내용 (처음 500자):**", result.get('original_ai_response', '')[:500])
+                        st.write("**original_ai_response 내용 (처음 1000자):**")
+                        st.text(result.get('original_ai_response', '')[:1000])
+                        st.write("**추출된 이메일 초안:**", repr(email_content))
                         st.write("**full_analysis_result 존재:**", bool(result.get('full_analysis_result')))
                         st.write("**파싱된 email_draft:**", repr(parsed.get('email_draft', '')))
             
@@ -2199,7 +2208,9 @@ with tab2:
                         # 디버깅 정보 표시
                         with st.expander("🔍 디버깅 정보"):
                             st.write("**original_ai_response 존재:**", bool(result.get('original_ai_response')))
-                            st.write("**original_ai_response 내용 (처음 500자):**", result.get('original_ai_response', '')[:500])
+                            st.write("**original_ai_response 내용 (처음 1000자):**")
+                            st.text(result.get('original_ai_response', '')[:1000])
+                            st.write("**추출된 이메일 초안:**", repr(email_content))
                             st.write("**full_analysis_result 존재:**", bool(result.get('full_analysis_result')))
                             st.write("**파싱된 email_draft:**", repr(parsed.get('email_draft', '')))
         
