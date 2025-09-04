@@ -215,8 +215,10 @@ class GeminiHandler:
             }
     
     def _parse_response(self, response_text: str) -> Dict[str, Any]:
-        """Gemini 응답을 파싱하여 구조화된 데이터로 변환"""
+        """Gemini 응답을 파싱하여 구조화된 데이터로 변환 - 간단하고 안정적인 방식"""
         try:
+            import re
+            
             # 기본 구조
             parsed = {
                 'response_type': '해결안',
@@ -231,207 +233,89 @@ class GeminiHandler:
             elif '출동' in response_text:
                 parsed['response_type'] = '출동'
             
-            # 요약 추출
-            summary_match = re.search(r'요약[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\n|\n조치|\n이메일|$)', response_text, re.DOTALL)
-            if summary_match:
-                parsed['summary'] = summary_match.group(1).strip()
+            # 간단한 섹션별 파싱
+            lines = response_text.split('\n')
+            current_section = ""
+            section_content = {"summary": [], "action": [], "email": []}
             
-            # 조치 흐름 추출
-            action_match = re.search(r'조치 흐름[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\n|\n이메일|$)', response_text, re.DOTALL)
-            if action_match:
-                parsed['action_flow'] = action_match.group(1).strip()
-            
-            # 이메일 초안 추출 - GPT 핸들러와 동일한 로직 적용
-            email_patterns = [
-                # --- 구분자가 있는 경우
-                r'이메일\s*초안[:\s]*\n---\n(.*?)\n---',
-                # [예외 처리 기준] 전까지
-                r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\s*\[예외\s*처리\s*기준\])',
-                # 감사합니다.로 끝나는 경우 (빈 줄 포함)
-                r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?감사합니다\.\s*\n?\s*)',
-                # 빈 줄 두 개로 끝나는 경우
-                r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\s*\n)',
-                # 기존 패턴들
-                r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n\s*$)',
-                r'이메일\s*초안[:\s]*([^\n]+(?:\n[^\n]+)*?)(?=\n(?:$))',
-                r'이메일\s*초안[:\s]*([^\n]+)'
-            ]
-            
-            for pattern in email_patterns:
-                email_match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
-                if email_match:
-                    email_text = email_match.group(1)
-                    # 앞뒤 공백만 제거하고 줄바꿈은 보존
-                    email_text = email_text.strip('\n\r\t ')
-                    
-                    # 불필요한 텍스트 제거 (줄바꿈 보존)
-                    email_lines = []
-                    for line in email_text.split('\n'):
-                        line_stripped = line.strip()
-                        if line_stripped and not any(unwanted in line_stripped.lower() for unwanted in [
-                            "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
-                            "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오",
-                            "---", "[예외 처리 기준]"
-                        ]):
-                            # 원본 줄의 공백 구조를 최대한 보존
-                            email_lines.append(line.rstrip())
-                        elif not line_stripped:
-                            # 빈 줄도 보존 (이메일 형식 유지)
-                            email_lines.append("")
-                    
-                    parsed['email_draft'] = '\n'.join(email_lines)
-                    
-                    # [예외 처리 기준] 이후의 모든 내용 제거 (줄바꿈 보존)
-                    if '[예외 처리 기준]' in parsed['email_draft']:
-                        parsed['email_draft'] = parsed['email_draft'].split('[예외 처리 기준]')[0].strip('\n\r\t ')
-                    
-                    if parsed['email_draft'] and len(parsed['email_draft']) > 20:  # 의미있는 길이인지 확인
-                        break
-            
-            # 특별한 이메일 초안 파싱 로직 (제공된 데이터 구조에 맞춤)
-            if not parsed['email_draft'] or len(parsed['email_draft'].strip()) < 50:
-                # "제목:" 으로 시작하는 이메일 초안 패턴 찾기
-                title_pattern = r'이메일\s*초안[:\s]*\n(제목[:\s]*.*?감사합니다\.\s*\n?\s*)'
-                title_match = re.search(title_pattern, response_text, re.DOTALL | re.IGNORECASE)
-                if title_match:
-                    email_content = title_match.group(1).strip()
-                    # 불필요한 텍스트 제거
-                    email_lines = []
-                    for line in email_content.split('\n'):
-                        line_stripped = line.strip()
-                        if line_stripped and not any(unwanted in line_stripped.lower() for unwanted in [
-                            "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
-                            "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오",
-                            "---", "[예외 처리 기준]"
-                        ]):
-                            email_lines.append(line.rstrip())
-                        elif not line_stripped:
-                            email_lines.append("")
-                    parsed['email_draft'] = '\n'.join(email_lines)
-                    print(f"특별한 이메일 파싱 성공: {len(parsed['email_draft'])}자")
-            
-            # 정규식 파싱이 실패한 경우 더 강력한 폴백 로직
-            if not parsed['summary'] or not parsed['action_flow'] or not parsed['email_draft']:
-                # 줄별 파싱으로 보완
-                lines = response_text.split('\n')
-                current_section = ""
-                section_content = {"summary": [], "action": [], "email": []}
+            for i, line in enumerate(lines):
+                line_original = line  # 원본 줄 보존
+                line_clean = line.strip()
                 
-                for i, line in enumerate(lines):
-                    line = line.strip()
-                    if not line:
-                        continue
-                    
-                    # 섹션 시작점 감지 (더 유연하게)
-                    line_lower = line.lower()
-                    if "요약" in line_lower and ":" in line:
-                        current_section = "summary"
-                        # 요약 내용이 같은 줄에 있는 경우
-                        summary_content = line.split(":", 1)[1].strip() if ":" in line else ""
-                        if summary_content and len(summary_content) > 5:
-                            parsed['summary'] = summary_content
-                    elif "조치" in line_lower and "흐름" in line_lower and ":" in line:
-                        current_section = "action"
-                        # 조치 흐름 내용이 같은 줄에 있는 경우
-                        action_content = line.split(":", 1)[1].strip() if ":" in line else ""
-                        if action_content and len(action_content) > 5:
-                            parsed['action_flow'] = action_content + "\n"
-                    elif "이메일" in line_lower and "초안" in line_lower and ":" in line:
-                        current_section = "email"
-                        # 이메일 초안 내용이 같은 줄에 있는 경우
-                        email_content = line.split(":", 1)[1].strip() if ":" in line else ""
-                        if email_content and len(email_content) > 10:
-                            parsed['email_draft'] = email_content + "\n"
-                    elif line.strip() == "---" and current_section == "email":
-                        # 이메일 초안의 --- 구분자 시작
-                        continue
-                    else:
-                        # 현재 섹션에 내용 추가
-                        if current_section == "summary" and not parsed['summary']:
-                            if len(line) > 5 and not any(keyword in line.lower() for keyword in ["조치", "이메일", "[응답내용]", "[대응유형]"]):
-                                parsed['summary'] = line
-                        elif current_section == "action" and not parsed['action_flow']:
-                            if len(line) > 5 and not any(instruction in line.lower() for instruction in [
-                                "아래 형식을 따라", "단계별로 줄바꿈하며", "번호를 붙여 설명하십시오",
-                                "각 단계는 짧고 명확하게", "실무자가 바로 이해할 수 있도록",
-                                "※ 각 단계는", "짧고 명확하게", "실무자가 바로 이해할 수 있도록 작성하십시오",
-                                "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:"
-                            ]):
-                                if re.match(r'^\d+\.', line) or (line and not line.startswith('-')):
-                                    parsed['action_flow'] = line + "\n"
-                        elif current_section == "email":
-                            # 이메일 섹션 종료 조건 확인
-                            if (line.strip() == "---" or "[예외 처리 기준]" in line or 
-                                (line.strip() == "" and i < len(lines) - 1 and lines[i+1].strip() == "")):
-                                current_section = ""
-                                continue
-                            
-                            # 빈 줄도 이메일 형식 유지를 위해 포함
-                            if line.strip() == "":
-                                if parsed['email_draft']:
-                                    parsed['email_draft'] += "\n"
-                                else:
-                                    parsed['email_draft'] = "\n"
-                            elif len(line) > 5 and not any(unwanted in line.lower() for unwanted in [
-                                "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
-                                "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오",
-                                "---", "[예외 처리 기준]"
-                            ]):
-                                if parsed['email_draft']:
-                                    parsed['email_draft'] += line + "\n"
-                                else:
-                                    parsed['email_draft'] = line + "\n"
+                # 섹션 시작점 감지
+                if "요약" in line_clean.lower() and ":" in line_clean:
+                    current_section = "summary"
+                    # 같은 줄에 내용이 있는 경우
+                    if ":" in line_clean:
+                        content = line_clean.split(":", 1)[1].strip()
+                        if content:
+                            section_content["summary"].append(content)
+                elif "조치" in line_clean.lower() and "흐름" in line_clean.lower() and ":" in line_clean:
+                    current_section = "action"
+                    # 같은 줄에 내용이 있는 경우
+                    if ":" in line_clean:
+                        content = line_clean.split(":", 1)[1].strip()
+                        if content:
+                            section_content["action"].append(content)
+                elif "이메일" in line_clean.lower() and "초안" in line_clean.lower() and ":" in line_clean:
+                    current_section = "email"
+                    # 같은 줄에 내용이 있는 경우
+                    if ":" in line_clean:
+                        content = line_clean.split(":", 1)[1].strip()
+                        if content:
+                            section_content["email"].append(content)
+                elif line_clean == "---" and current_section == "email":
+                    # 이메일 초안의 --- 구분자 시작
+                    continue
+                elif line_clean == "---" and current_section == "email":
+                    # 이메일 초안의 --- 구분자 끝
+                    current_section = ""
+                elif "[예외 처리 기준]" in line_clean:
+                    # 예외 처리 기준 섹션 시작 - 이메일 섹션 종료
+                    if current_section == "email":
+                        current_section = ""
+                elif current_section and line_clean:
+                    # 현재 섹션에 내용 추가 (불필요한 지시사항 제외)
+                    if not any(unwanted in line_clean.lower() for unwanted in [
+                        "[응답내용]", "[대응유형]", "아래 형식을", "실무자가 이해하기", 
+                        "자연스럽고 정확하게", "※ 각 단계는", "짧고 명확하게"
+                    ]):
+                        if current_section == "email":
+                            # 이메일은 원본 줄바꿈 보존
+                            section_content["email"].append(line_original.rstrip())
+                        else:
+                            # 요약과 조치는 정리된 형태로
+                            section_content[current_section].append(line_clean)
+                elif current_section == "email" and not line_clean:
+                    # 이메일 섹션에서 빈 줄도 보존
+                    section_content["email"].append("")
             
-            # 줄바꿈 정리 (이메일 초안은 줄바꿈 보존)
-            parsed['action_flow'] = parsed['action_flow'].strip()
-            # 이메일 초안은 앞뒤 공백만 제거하고 줄바꿈은 보존
-            parsed['email_draft'] = parsed['email_draft'].strip('\n\r\t ')
+            # 결과 조립
+            parsed['summary'] = "\n".join(section_content["summary"]).strip()
+            parsed['action_flow'] = "\n".join(section_content["action"]).strip()
+            parsed['email_draft'] = "\n".join(section_content["email"]).strip()
             
-            # [예외 처리 기준] 이후의 모든 내용 제거 (폴백 로직에서도, 줄바꿈 보존)
+            # [예외 처리 기준] 이후 내용 제거 (이메일 초안만)
             if '[예외 처리 기준]' in parsed['email_draft']:
-                parsed['email_draft'] = parsed['email_draft'].split('[예외 처리 기준]')[0].strip('\n\r\t ')
+                parsed['email_draft'] = parsed['email_draft'].split('[예외 처리 기준]')[0].strip()
             
-            # 빈 값 체크 및 기본값 설정 (더 엄격하게)
-            if not parsed['summary'] or len(parsed['summary'].strip()) < 5:
+            # 빈 값 체크 및 기본값 설정
+            if not parsed['summary'] or len(parsed['summary']) < 5:
                 parsed['summary'] = "AI 분석 결과를 파싱할 수 없습니다. 고객 문의 내용을 확인해주세요."
-            if not parsed['action_flow'] or len(parsed['action_flow'].strip()) < 10:
+            if not parsed['action_flow'] or len(parsed['action_flow']) < 10:
                 parsed['action_flow'] = "AI 분석 결과를 파싱할 수 없습니다. 단계별 조치 사항을 확인해주세요."
-            if not parsed['email_draft'] or len(parsed['email_draft'].strip()) < 20:
+            if not parsed['email_draft'] or len(parsed['email_draft']) < 20:
                 parsed['email_draft'] = "AI 분석 결과를 파싱할 수 없습니다. 이메일 초안을 확인해주세요."
             
             # 디버깅을 위한 로그 추가
             print(f"Gemini 파싱 결과 - 이메일 초안 길이: {len(parsed['email_draft'])}")
             print(f"Gemini 파싱 결과 - 이메일 초안 (처음 200자): {parsed['email_draft'][:200]}")
             print(f"Gemini 파싱 결과 - 이메일 초안 줄바꿈 개수: {parsed['email_draft'].count(chr(10))}")
-            print(f"Gemini 원본 응답에서 이메일 초안 부분:")
-            email_start = response_text.find("이메일 초안")
-            if email_start != -1:
-                email_part = response_text[email_start:email_start+500]
-                print(email_part)
-            
-            # 정규식 패턴별 매칭 결과 확인
-            print("=== 정규식 패턴 매칭 결과 ===")
-            for i, pattern in enumerate(email_patterns):
-                match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
-                if match:
-                    print(f"패턴 {i+1} 매칭됨: {pattern}")
-                    print(f"매칭된 텍스트 길이: {len(match.group(1))}")
-                    print(f"매칭된 텍스트 (처음 100자): {match.group(1)[:100]}")
-                    print(f"매칭된 텍스트 전체:")
-                    print(match.group(1))
-                    break
-            else:
-                print("어떤 패턴도 매칭되지 않음")
-            
-            # 최종 파싱 결과 상세 출력
-            print("=== 최종 파싱 결과 ===")
-            print(f"이메일 초안 전체 내용:")
-            print(repr(parsed['email_draft']))  # repr을 사용하여 줄바꿈 문자도 확인
             
             return parsed
             
         except Exception as e:
-            print(f"응답 파싱 오류: {e}")
+            print(f"Gemini 응답 파싱 오류: {e}")
             return {
                 'response_type': '해결안',
                 'summary': response_text[:500] + "..." if len(response_text) > 500 else response_text,
