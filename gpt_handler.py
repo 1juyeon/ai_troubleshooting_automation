@@ -294,17 +294,25 @@ class GPTHandler:
             for pattern in email_patterns:
                 email_match = re.search(pattern, response_text, re.DOTALL | re.IGNORECASE)
                 if email_match:
-                    email_text = email_match.group(1).strip()
-                    # 불필요한 텍스트 제거
+                    email_text = email_match.group(1)
+                    # 앞뒤 공백만 제거하고 줄바꿈은 보존
+                    email_text = email_text.strip('\n\r\t ')
+                    
+                    # 불필요한 텍스트 제거 (줄바꿈 보존)
                     email_lines = []
                     for line in email_text.split('\n'):
-                        line = line.strip()
-                        if line and not any(unwanted in line.lower() for unwanted in [
+                        line_stripped = line.strip()
+                        if line_stripped and not any(unwanted in line_stripped.lower() for unwanted in [
                             "[응답내용]", "[대응유형]", "요약:", "조치 흐름:", "이메일 초안:",
                             "아래 형식을 참고하여", "실무자가 이해하기 쉽도록", "자연스럽고 정확하게 응답을 생성하십시오",
                             "---", "[예외 처리 기준]"
                         ]):
-                            email_lines.append(line)
+                            # 원본 줄의 공백 구조를 최대한 보존
+                            email_lines.append(line.rstrip())
+                        elif not line_stripped:
+                            # 빈 줄도 보존 (이메일 형식 유지)
+                            email_lines.append("")
+                    
                     email_draft = '\n'.join(email_lines)
                     if email_draft and len(email_draft) > 20:  # 의미있는 길이인지 확인
                         break
