@@ -1068,7 +1068,7 @@ def extract_email_from_original_response(original_response: str) -> str:
     try:
         import re
         
-        # 패턴 1: "이메일 초안:" 다음의 내용 추출
+        # 패턴 1: "이메일 초안:" 다음의 내용 추출 (조치 흐름 포함 고려)
         email_patterns = [
             r'이메일\s*초안[:\s]*\n(.*?)(?=\n\s*\[예외\s*처리\s*기준\]|$)',
             r'이메일\s*초안[:\s]*\n(.*?감사합니다\.\s*\n?\s*)(?=\n\s*$)',
@@ -1080,7 +1080,11 @@ def extract_email_from_original_response(original_response: str) -> str:
             match = re.search(pattern, original_response, re.DOTALL)
             if match:
                 email_content = match.group(1).strip()
-                if len(email_content) > 50:  # 의미있는 길이인지 확인
+                # 조치 흐름이 포함된 이메일인지 확인 (1., 2., 3. 등이 포함되어 있으면)
+                if len(email_content) > 50 and (
+                    any(num in email_content for num in ['1.', '2.', '3.', '4.', '5.']) or
+                    '조치' in email_content or '단계' in email_content or '방법' in email_content
+                ):
                     return email_content
         
         # 패턴 2: ```로 둘러싸인 이메일 초안
@@ -1089,6 +1093,15 @@ def extract_email_from_original_response(original_response: str) -> str:
         if match:
             email_content = match.group(1).strip()
             if len(email_content) > 50:
+                return email_content
+        
+        # 패턴 3: 조치 흐름이 이메일에 포함된 경우를 위한 추가 패턴
+        # "안녕하세요"로 시작하고 "감사합니다"로 끝나는 이메일 형태
+        email_with_actions_pattern = r'안녕하세요[^]*?감사합니다\.'
+        match = re.search(email_with_actions_pattern, original_response, re.DOTALL)
+        if match:
+            email_content = match.group(0).strip()
+            if len(email_content) > 100:  # 충분한 길이인지 확인
                 return email_content
         
         return ""
