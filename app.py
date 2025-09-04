@@ -1069,50 +1069,25 @@ def extract_email_from_original_response(original_response: str) -> str:
         import re
         
         # 제공된 예시를 기반으로 한 정확한 패턴
-        # "- 이메일 초안:" 다음에 빈 줄이 있고, 그 다음에 "제목:"으로 시작하는 이메일
+        # "- 이메일 초안:" 다음에 바로 이메일 내용이 시작하는 경우
         
-        # 패턴 1: "- 이메일 초안:" 다음에 빈 줄, 그 다음에 "제목:"으로 시작하는 이메일
-        # 가장 정확한 패턴으로 먼저 시도
-        email_pattern = r'- 이메일\s*초안[:\s]*\n\s*\n제목[:\s].*?감사합니다\.'
+        # 패턴 1: "- 이메일 초안:" 다음에 바로 이메일 내용이 시작하는 경우 (가장 일반적)
+        email_pattern = r'- 이메일\s*초안[:\s]*\n(.*?감사합니다\.)'
         match = re.search(email_pattern, original_response, re.DOTALL)
         if match:
-            email_content = match.group(0).strip()
-            # "- 이메일 초안:" 부분 제거
-            email_content = re.sub(r'^- 이메일\s*초안[:\s]*\n\s*\n', '', email_content)
-            if len(email_content) > 100:
+            email_content = match.group(1).strip()
+            if len(email_content) > 50:
                 return email_content
         
-        # 패턴 2: "이메일 초안:" 다음에 빈 줄, 그 다음에 "제목:"으로 시작하는 이메일
-        email_pattern = r'이메일\s*초안[:\s]*\n\s*\n제목[:\s].*?감사합니다\.'
+        # 패턴 2: "이메일 초안:" 다음에 바로 이메일 내용이 시작하는 경우
+        email_pattern = r'이메일\s*초안[:\s]*\n(.*?감사합니다\.)'
         match = re.search(email_pattern, original_response, re.DOTALL)
         if match:
-            email_content = match.group(0).strip()
-            # "이메일 초안:" 부분 제거
-            email_content = re.sub(r'^이메일\s*초안[:\s]*\n\s*\n', '', email_content)
-            if len(email_content) > 100:
+            email_content = match.group(1).strip()
+            if len(email_content) > 50:
                 return email_content
         
-        # 패턴 3: "- 이메일 초안:" 다음에 바로 "제목:"으로 시작하는 이메일
-        email_pattern = r'- 이메일\s*초안[:\s]*\n제목[:\s].*?감사합니다\.'
-        match = re.search(email_pattern, original_response, re.DOTALL)
-        if match:
-            email_content = match.group(0).strip()
-            # "- 이메일 초안:" 부분 제거
-            email_content = re.sub(r'^- 이메일\s*초안[:\s]*\n', '', email_content)
-            if len(email_content) > 100:
-                return email_content
-        
-        # 패턴 4: "이메일 초안:" 다음에 바로 "제목:"으로 시작하는 이메일
-        email_pattern = r'이메일\s*초안[:\s]*\n제목[:\s].*?감사합니다\.'
-        match = re.search(email_pattern, original_response, re.DOTALL)
-        if match:
-            email_content = match.group(0).strip()
-            # "이메일 초안:" 부분 제거
-            email_content = re.sub(r'^이메일\s*초안[:\s]*\n', '', email_content)
-            if len(email_content) > 100:
-                return email_content
-        
-        # 패턴 5: ```로 둘러싸인 이메일 초안
+        # 패턴 3: ```로 둘러싸인 이메일 초안
         code_patterns = [
             r'- 이메일\s*초안[:\s]*\n```\n(.*?)\n```',
             r'이메일\s*초안[:\s]*\n```\n(.*?)\n```',
@@ -1125,7 +1100,7 @@ def extract_email_from_original_response(original_response: str) -> str:
                 if len(email_content) > 50:
                     return email_content
         
-        # 패턴 6: "제목:"으로 시작하는 이메일 형태 (전체 응답에서 찾기)
+        # 패턴 4: "제목:"으로 시작하는 이메일 형태 (전체 응답에서 찾기)
         title_email_pattern = r'제목[:\s].*?감사합니다\.'
         match = re.search(title_email_pattern, original_response, re.DOTALL)
         if match:
@@ -1133,7 +1108,7 @@ def extract_email_from_original_response(original_response: str) -> str:
             if len(email_content) > 100:
                 return email_content
         
-        # 패턴 7: "안녕하세요"로 시작하고 "감사합니다"로 끝나는 이메일 형태
+        # 패턴 5: "안녕하세요"로 시작하고 "감사합니다"로 끝나는 이메일 형태
         greeting_email_pattern = r'안녕하세요.*?감사합니다\.'
         match = re.search(greeting_email_pattern, original_response, re.DOTALL)
         if match:
