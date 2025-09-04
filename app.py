@@ -654,102 +654,12 @@ def show_ai_analysis_modal(selected_row):
 
 감사합니다."""
                         
-                        # 이메일 내용을 그대로 출력 (줄바꿈 유지)
-                        st.text_area("이메일 내용", email_content, height=150, disabled=True)
+                        # 이메일 내용에 줄바꿈 처리 적용
+                        formatted_email = format_email_content(email_content)
+                        st.text_area("이메일 내용", formatted_email, height=150, disabled=True)
                         
 
                     
-                    # 전체 AI 응답 섹션 추가
-                    st.markdown("---")
-                    st.markdown("### 📄 전체 AI 응답")
-                    
-                    # MongoDB 데이터 구조에 맞게 전체 AI 응답 구성
-                    if full_result and 'ai_result' in full_result:
-                        ai_result = full_result['ai_result']
-                        if 'parsed_response' in ai_result:
-                            parsed = ai_result['parsed_response']
-                            
-                            # 파싱된 데이터가 비어있는지 확인하고 기본값 설정
-                            summary = parsed.get('summary', '') or '요약 정보가 없습니다.'
-                            action_flow = parsed.get('action_flow', '') or '조치 흐름 정보가 없습니다.'
-                            email_draft = parsed.get('email_draft', '') or '이메일 초안 정보가 없습니다.'
-                            
-                            full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
-
-[응답내용]
-
-- 요약: {summary}
-
-- 조치 흐름:
-
-{action_flow}
-
-- 이메일 초안:
-
-{email_draft}"""
-                        elif 'response' in ai_result:
-                            # GPT API 응답인 경우 파싱
-                            parsed = _parse_gpt_response(ai_result['response'])
-                            
-                            # 파싱된 데이터가 비어있는지 확인하고 기본값 설정
-                            summary = parsed.get('summary', '') or '요약 정보가 없습니다.'
-                            action_flow = parsed.get('action_flow', '') or '조치 흐름 정보가 없습니다.'
-                            email_draft = parsed.get('email_draft', '') or '이메일 초안 정보가 없습니다.'
-                            
-                            full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
-
-[응답내용]
-
-- 요약: {summary}
-
-- 조치 흐름:
-
-{action_flow}
-
-- 이메일 초안:
-
-{email_draft}"""
-                        else:
-                            # 기본 데이터에서 추출
-                            summary = analysis_data.get('summary', '') or '요약 정보가 없습니다.'
-                            action_flow = analysis_data.get('action_flow', '') or '조치 흐름 정보가 없습니다.'
-                            email_draft = analysis_data.get('email_draft', '') or '이메일 초안 정보가 없습니다.'
-                            
-                            full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
-
-[응답내용]
-
-- 요약: {summary}
-
-- 조치 흐름:
-
-{action_flow}
-
-- 이메일 초안:
-
-{email_draft}"""
-                    else:
-                        # 기본 데이터에서 추출
-                        summary = analysis_data.get('summary', '') or '요약 정보가 없습니다.'
-                        action_flow = analysis_data.get('action_flow', '') or '조치 흐름 정보가 없습니다.'
-                        email_draft = analysis_data.get('email_draft', '') or '이메일 초안 정보가 없습니다.'
-                        
-                        full_response = f"""[대응유형] {analysis_data.get('response_type', '해결안')}
-
-[응답내용]
-
-- 요약: {summary}
-
-- 조치 흐름:
-
-{action_flow}
-
-- 이메일 초안:
-
-{email_draft}"""
-                    
-                    # 전체 AI 응답을 그대로 출력 (줄바꿈 유지)
-                    st.text_area("전체 AI 응답", full_response, height=200, disabled=True)
                     
 
                     
@@ -876,35 +786,10 @@ def show_ai_analysis_modal(selected_row):
 
 감사합니다."""
                 
-                # 이메일 내용을 그대로 출력 (줄바꿈 유지)
-                st.text_area("이메일 내용", basic_email, height=150, disabled=True)
+                # 이메일 내용에 줄바꿈 처리 적용
+                formatted_basic_email = format_email_content(basic_email)
+                st.text_area("이메일 내용", formatted_basic_email, height=150, disabled=True)
                 
-                # 전체 AI 응답 표시
-                st.markdown("---")
-                st.markdown("### 📄 전체 AI 응답")
-                
-                full_basic_response = f"""[대응유형] 해결안
-
-[응답내용]
-
-- 요약: 고객님께서 {selected_row.get('문의유형', '문의')}에 대한 문의를 주셨습니다.
-
-- 조치 흐름:
-
-1. 문제 상황 파악 및 분석
-
-2. 적절한 해결 방안 제시
-
-3. 필요시 추가 정보 요청
-
-4. 해결 완료 확인
-
-- 이메일 초안:
-
-{basic_email}"""
-                
-                # 전체 AI 응답을 그대로 출력 (줄바꿈 유지)
-                st.text_area("전체 AI 응답", full_basic_response, height=200, disabled=True)
                 
                 st.info("페이지를 새로고침하거나 다시 시도해주세요.")
                 
@@ -2079,8 +1964,9 @@ with tab2:
                     email_content = email_draft
                 
                 if email_content:
-                    # 이메일 내용을 그대로 출력 (줄바꿈 유지)
-                    st.text_area("이메일 내용", email_content, height=300, disabled=True)
+                    # 이메일 내용에 줄바꿈 처리 적용
+                    formatted_email = format_email_content(email_content)
+                    st.text_area("이메일 내용", formatted_email, height=300, disabled=True)
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
                     # 디버깅 정보 표시
@@ -2303,8 +2189,9 @@ with tab2:
                         email_content = email_draft
                     
                     if email_content:
-                        # 이메일 내용을 그대로 출력 (줄바꿈 유지)
-                        st.text_area("이메일 내용", email_content, height=300, disabled=True)
+                        # 이메일 내용에 줄바꿈 처리 적용
+                        formatted_email = format_email_content(email_content)
+                        st.text_area("이메일 내용", formatted_email, height=300, disabled=True)
                     else:
                         st.warning("⚠️ 이메일 초안 정보가 없습니다.")
                         # 디버깅 정보 표시
