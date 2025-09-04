@@ -616,10 +616,25 @@ def show_ai_analysis_modal(selected_row):
                     
                     with col6:
                         st.markdown("#### 📧 이메일 초안")
+                        
+                        # 이메일 초안 추출 시도 (여러 방법으로)
+                        email_content = None
+                        
+                        # 1. 파싱된 email_draft가 있는 경우
                         email_draft = analysis_data.get('email_draft', '')
-                        if email_draft:
+                        if email_draft and len(email_draft.strip()) > 20:
                             email_content = email_draft
-                        else:
+                        
+                        # 2. original_ai_response에서 이메일 초안 추출
+                        if not email_content and analysis_data.get('original_ai_response'):
+                            email_content = extract_email_from_original_response(analysis_data['original_ai_response'])
+                        
+                        # 3. full_analysis_result에서 이메일 초안 추출
+                        if not email_content and analysis_data.get('full_analysis_result'):
+                            email_content = extract_email_from_analysis_result(analysis_data['full_analysis_result'])
+                        
+                        # 4. 기본 이메일 템플릿
+                        if not email_content:
                             email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
 
 고객님 안녕하세요.
@@ -1044,6 +1059,75 @@ def render_pagination_controls(current_page, total_pages, total_items, items_per
             st.rerun()
     
     st.markdown("---")
+
+def extract_email_from_original_response(original_response: str) -> str:
+    """원본 AI 응답에서 이메일 초안을 추출"""
+    if not original_response:
+        return ""
+    
+    try:
+        import re
+        
+        # 패턴 1: "이메일 초안:" 다음의 내용 추출
+        email_patterns = [
+            r'이메일\s*초안[:\s]*\n(.*?)(?=\n\s*\[예외\s*처리\s*기준\]|$)',
+            r'이메일\s*초안[:\s]*\n(.*?감사합니다\.\s*\n?\s*)(?=\n\s*$)',
+            r'이메일\s*초안[:\s]*\n(.*?)(?=\n\s*\[응답내용\]|$)',
+            r'이메일\s*초안[:\s]*\n(.*?)(?=\n\s*$)',
+        ]
+        
+        for pattern in email_patterns:
+            match = re.search(pattern, original_response, re.DOTALL)
+            if match:
+                email_content = match.group(1).strip()
+                if len(email_content) > 50:  # 의미있는 길이인지 확인
+                    return email_content
+        
+        # 패턴 2: ```로 둘러싸인 이메일 초안
+        code_pattern = r'이메일\s*초안[:\s]*\n```\n(.*?)\n```'
+        match = re.search(code_pattern, original_response, re.DOTALL)
+        if match:
+            email_content = match.group(1).strip()
+            if len(email_content) > 50:
+                return email_content
+        
+        return ""
+        
+    except Exception as e:
+        print(f"이메일 추출 오류: {e}")
+        return ""
+
+def extract_email_from_analysis_result(analysis_result: dict) -> str:
+    """분석 결과에서 이메일 초안을 추출"""
+    try:
+        # ai_result에서 raw_response 추출
+        if 'ai_result' in analysis_result:
+            ai_result = analysis_result['ai_result']
+            
+            # Gemini 결과에서 추출
+            if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
+                return extract_email_from_original_response(ai_result['gemini_result']['raw_response'])
+            
+            # GPT 결과에서 추출
+            if 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
+                return extract_email_from_original_response(ai_result['gpt_result']['raw_response'])
+            
+            # 직접 response가 있는 경우
+            if 'response' in ai_result:
+                return extract_email_from_original_response(ai_result['response'])
+        
+        # 직접 gemini_result나 gpt_result가 있는 경우
+        if 'gemini_result' in analysis_result and 'raw_response' in analysis_result['gemini_result']:
+            return extract_email_from_original_response(analysis_result['gemini_result']['raw_response'])
+        
+        if 'gpt_result' in analysis_result and 'raw_response' in analysis_result['gpt_result']:
+            return extract_email_from_original_response(analysis_result['gpt_result']['raw_response'])
+        
+        return ""
+        
+    except Exception as e:
+        print(f"분석 결과에서 이메일 추출 오류: {e}")
+        return ""
 
 def _parse_gpt_response(response_text: str) -> dict:
     """GPT API 응답을 파싱하여 구조화된 데이터로 변환"""
@@ -1901,14 +1985,31 @@ with tab2:
             
             with col10:
                 st.markdown("#### 📧 이메일 초안")
-                if parsed.get('email_draft'):
-                    # 이메일 내용을 원본 그대로 표시 (전체 AI 응답과 동일하게)
+                
+                # 이메일 초안 추출 시도 (여러 방법으로)
+                email_content = None
+                
+                # 1. 파싱된 email_draft가 있는 경우
+                if parsed.get('email_draft') and len(parsed['email_draft'].strip()) > 20:
                     email_content = parsed['email_draft']
+                
+                # 2. original_ai_response에서 이메일 초안 추출
+                if not email_content and result.get('original_ai_response'):
+                    email_content = extract_email_from_original_response(result['original_ai_response'])
+                
+                # 3. full_analysis_result에서 이메일 초안 추출
+                if not email_content and result.get('full_analysis_result'):
+                    email_content = extract_email_from_analysis_result(result['full_analysis_result'])
+                
+                if email_content:
                     st.text_area("이메일 내용", email_content, height=300)
-                    
-
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
+                    # 디버깅 정보 표시
+                    with st.expander("🔍 디버깅 정보"):
+                        st.write("**파싱된 email_draft:**", repr(parsed.get('email_draft', '')))
+                        st.write("**original_ai_response 존재:**", bool(result.get('original_ai_response')))
+                        st.write("**full_analysis_result 존재:**", bool(result.get('full_analysis_result')))
             
             # 전체 응답
             with st.expander("📄 전체 AI 응답"):
@@ -2043,14 +2144,31 @@ with tab2:
                 
                 with col10:
                     st.markdown("#### 📧 이메일 초안")
-                    if parsed.get('email_draft'):
-                        # 이메일 내용을 원본 그대로 표시 (전체 AI 응답과 동일하게)
+                    
+                    # 이메일 초안 추출 시도 (여러 방법으로)
+                    email_content = None
+                    
+                    # 1. 파싱된 email_draft가 있는 경우
+                    if parsed.get('email_draft') and len(parsed['email_draft'].strip()) > 20:
                         email_content = parsed['email_draft']
+                    
+                    # 2. original_ai_response에서 이메일 초안 추출
+                    if not email_content and result.get('original_ai_response'):
+                        email_content = extract_email_from_original_response(result['original_ai_response'])
+                    
+                    # 3. full_analysis_result에서 이메일 초안 추출
+                    if not email_content and result.get('full_analysis_result'):
+                        email_content = extract_email_from_analysis_result(result['full_analysis_result'])
+                    
+                    if email_content:
                         st.text_area("이메일 내용", email_content, height=300)
-                        
-
                     else:
                         st.warning("⚠️ 이메일 초안 정보가 없습니다.")
+                        # 디버깅 정보 표시
+                        with st.expander("🔍 디버깅 정보"):
+                            st.write("**파싱된 email_draft:**", repr(parsed.get('email_draft', '')))
+                            st.write("**original_ai_response 존재:**", bool(result.get('original_ai_response')))
+                            st.write("**full_analysis_result 존재:**", bool(result.get('full_analysis_result')))
         
         # 유사 사례
         if result['similar_cases']:
