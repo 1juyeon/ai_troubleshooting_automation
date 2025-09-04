@@ -265,12 +265,12 @@ class GPTHandler:
                         content = line_clean.split(":", 1)[1].strip()
                         if content:
                             section_content["email"].append(content)
-                elif line_clean == "---" and current_section == "email":
-                    # 이메일 초안의 --- 구분자 시작
+                elif line_clean == "```" and current_section == "email":
+                    # 이메일 초안의 ``` 구분자 시작/끝
                     continue
                 elif line_clean == "---" and current_section == "email":
-                    # 이메일 초안의 --- 구분자 끝
-                    current_section = ""
+                    # 이메일 초안의 --- 구분자 시작/끝
+                    continue
                 elif "[예외 처리 기준]" in line_clean:
                     # 예외 처리 기준 섹션 시작 - 이메일 섹션 종료
                     if current_section == "email":
@@ -299,6 +299,30 @@ class GPTHandler:
             # [예외 처리 기준] 이후 내용 제거 (이메일 초안만)
             if '[예외 처리 기준]' in email_draft:
                 email_draft = email_draft.split('[예외 처리 기준]')[0].strip()
+            
+            # 이메일 초안이 너무 짧거나 구체적인 단계가 없는 경우 정규식으로 재파싱
+            if len(email_draft) < 100 or "1." not in email_draft:
+                print("GPT: 이메일 초안이 짧거나 단계가 없어 정규식으로 재파싱 시도")
+                # ```로 둘러싸인 이메일 초안 추출
+                email_pattern = r'이메일\s*초안[:\s]*\n```\n(.*?)\n```'
+                email_match = re.search(email_pattern, response_text, re.DOTALL)
+                if email_match:
+                    email_draft = email_match.group(1).strip()
+                    print(f"GPT: 정규식으로 재파싱 성공 - 길이: {len(email_draft)}")
+                else:
+                    # ``` 없이 이메일 초안 추출
+                    email_pattern2 = r'이메일\s*초안[:\s]*\n(.*?)(?=\n\[예외\s*처리\s*기준\]|$)'
+                    email_match2 = re.search(email_pattern2, response_text, re.DOTALL)
+                    if email_match2:
+                        email_draft = email_match2.group(1).strip()
+                        print(f"GPT: 정규식으로 재파싱 성공 (패턴2) - 길이: {len(email_draft)}")
+            
+            # 디버깅을 위한 로그 추가
+            print(f"GPT 파싱 결과 - 이메일 초안 길이: {len(email_draft)}")
+            print(f"GPT 파싱 결과 - 이메일 초안 (처음 300자): {email_draft[:300]}")
+            print(f"GPT 파싱 결과 - 이메일 초안 줄바꿈 개수: {email_draft.count(chr(10))}")
+            print(f"GPT 파싱 결과 - 이메일 초안 전체 내용:")
+            print(repr(email_draft))
             
             # 빈 값 체크 및 기본값 설정
             if not summary or len(summary) < 5:
