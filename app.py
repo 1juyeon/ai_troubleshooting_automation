@@ -341,7 +341,11 @@ st.markdown("""
         justify-content: center !important;
     }
     
-    /* 이메일 초안 텍스트 색상 통일 */
+    /* 이메일 초안 텍스트 색상 강제 변경 */
+    .stTextArea textarea {
+        color: #000000 !important;
+    }
+    
     .stTextArea textarea[disabled] {
         color: #000000 !important;
         background-color: #f0f2f6 !important;
@@ -354,7 +358,54 @@ st.markdown("""
     .stTextArea textarea:not([disabled]) {
         color: #000000 !important;
     }
+    
+    /* 더 구체적인 선택자로 강제 적용 */
+    div[data-testid="stTextArea"] textarea {
+        color: #000000 !important;
+    }
+    
+    div[data-testid="stTextArea"] textarea[disabled] {
+        color: #000000 !important;
+    }
+    
+    /* Streamlit의 내부 클래스 타겟팅 */
+    .stTextArea > div > div > textarea {
+        color: #000000 !important;
+    }
+    
+    .stTextArea > div > div > textarea[disabled] {
+        color: #000000 !important;
+    }
 </style>
+
+<script>
+// JavaScript로 강제로 텍스트 색상 변경
+setTimeout(function() {
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(function(textarea) {
+        textarea.style.color = '#000000';
+        textarea.style.setProperty('color', '#000000', 'important');
+    });
+}, 1000);
+
+// DOM 변경 감지하여 지속적으로 적용
+const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+        if (mutation.type === 'childList') {
+            const textareas = document.querySelectorAll('textarea');
+            textareas.forEach(function(textarea) {
+                textarea.style.color = '#000000';
+                textarea.style.setProperty('color', '#000000', 'important');
+            });
+        }
+    });
+});
+
+observer.observe(document.body, {
+    childList: true,
+    subtree: true
+});
+</script>
 """, unsafe_allow_html=True)
 
 # MongoDB 연결 상태 확인 및 초기화
