@@ -340,70 +340,7 @@ st.markdown("""
         align-items: center !important;
         justify-content: center !important;
     }
-    
-    /* 이메일 초안 readonly 스타일 */
-    .email-readonly textarea {
-        color: #000000 !important;
-        background-color: #f0f2f6 !important;
-        cursor: text !important;
-        user-select: text !important;
-    }
-    
-    .email-readonly textarea:focus {
-        outline: 2px solid #1f77b4 !important;
-        outline-offset: 2px !important;
-    }
 </style>
-
-<script>
-// 이메일 초안 textarea를 readonly로 만들기
-function makeTextareaReadonly() {
-    const textareas = document.querySelectorAll('.email-readonly textarea');
-    textareas.forEach(function(textarea) {
-        // 텍스트 선택은 가능하지만 편집은 불가능하게 만들기
-        textarea.addEventListener('keydown', function(e) {
-            // Ctrl+A, Ctrl+C, Ctrl+V (붙여넣기 방지), Ctrl+X (잘라내기 방지) 등은 허용
-            if (e.ctrlKey && (e.key === 'a' || e.key === 'c')) {
-                return; // Ctrl+A, Ctrl+C는 허용
-            }
-            // 다른 모든 키 입력 방지
-            e.preventDefault();
-        });
-        
-        // 마우스 우클릭으로 편집 방지
-        textarea.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-        });
-        
-        // 드래그 앤 드롭 방지
-        textarea.addEventListener('drop', function(e) {
-            e.preventDefault();
-        });
-        
-        // 붙여넣기 방지
-        textarea.addEventListener('paste', function(e) {
-            e.preventDefault();
-        });
-    });
-}
-
-// 페이지 로드 시 실행
-setTimeout(makeTextareaReadonly, 1000);
-
-// DOM 변경 감지하여 새로 추가되는 textarea에도 적용
-const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-        if (mutation.type === 'childList') {
-            makeTextareaReadonly();
-        }
-    });
-});
-
-observer.observe(document.body, {
-    childList: true,
-    subtree: true
-});
-</script>
 """, unsafe_allow_html=True)
 
 # MongoDB 연결 상태 확인 및 초기화
@@ -850,9 +787,7 @@ def show_ai_analysis_modal(selected_row):
                 
                 # 이메일 내용에 줄바꿈 처리 적용
                 formatted_basic_email = format_email_content(basic_email)
-                st.markdown('<div class="email-readonly">', unsafe_allow_html=True)
-                st.text_area("이메일 내용", formatted_basic_email, height=150, key="basic_email_readonly")
-                st.markdown('</div>', unsafe_allow_html=True)
+                st.text_area("이메일 내용", formatted_basic_email, height=150, disabled=True)
                 
                 
                 st.info("페이지를 새로고침하거나 다시 시도해주세요.")
@@ -2058,9 +1993,7 @@ with tab2:
                 
                 if email_content:
                     # DB original_ai_response의 이메일 초안을 그대로 표시 (줄바꿈 유지)
-                    st.markdown('<div class="email-readonly">', unsafe_allow_html=True)
-                    st.text_area("이메일 내용", email_content, height=500, key=f"email_readonly_1_{hash(str(email_content))}")
-                    st.markdown('</div>', unsafe_allow_html=True)
+                    st.text_area("이메일 내용", email_content, height=200, disabled=True)
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
             
@@ -2228,9 +2161,7 @@ with tab2:
                     
                     if email_content:
                         # DB original_ai_response의 이메일 초안을 그대로 표시 (줄바꿈 유지)
-                        st.markdown('<div class="email-readonly">', unsafe_allow_html=True)
-                        st.text_area("이메일 내용", email_content, height=500, key=f"email_readonly_2_{hash(str(email_content))}")
-                        st.markdown('</div>', unsafe_allow_html=True)
+                        st.text_area("이메일 내용", email_content, height=200, disabled=True)
                     else:
                         st.warning("⚠️ 이메일 초안 정보가 없습니다.")
         
