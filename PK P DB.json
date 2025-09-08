@@ -117,7 +117,7 @@
   ],
   "PK P 웹 접속 안됨": [
     {
-      "condition_1": "윈도우 서비스에서 톰캣 작동 여부를 확인하였는가?",
+      "condition_1": "윈도우 서비스에서 Apache Tomcat 8.5 Tomcat8 톰캣 작동 여부를 확인하였는가?",
       "condition_2": "톰캣이 꺼져 있는가?",
       "solution": "톰캣 서비스 시작",
       "onsite_needed": "N"
