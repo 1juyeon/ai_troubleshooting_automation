@@ -445,19 +445,7 @@ PKP 웹 접속 불가 현상에 대한 문의 주셔서 감사합니다.
 
 감사합니다."""
         
-        st.markdown("**이메일 내용**")
-        st.markdown(f"""
-        <div style="
-            background-color: #f0f2f6; 
-            padding: 15px; 
-            border-radius: 5px; 
-            border: 1px solid #ddd;
-            min-height: 400px;
-            color: #000000;
-            font-family: monospace;
-            white-space: pre-wrap;
-        ">{email_content}</div>
-        """, unsafe_allow_html=True)
+        st.text_area("이메일 내용", email_content, height=500)
         
 
     
@@ -667,19 +655,7 @@ def show_ai_analysis_modal(selected_row):
 감사합니다."""
                         
                         # DB original_ai_response의 이메일 초안을 그대로 표시 (줄바꿈 유지)
-                        st.markdown("**이메일 내용**")
-                        st.markdown(f"""
-                        <div style="
-                            background-color: #f0f2f6; 
-                            padding: 15px; 
-                            border-radius: 5px; 
-                            border: 1px solid #ddd;
-                            min-height: 400px;
-                            color: #000000;
-                            font-family: monospace;
-                            white-space: pre-wrap;
-                        ">{email_content}</div>
-                        """, unsafe_allow_html=True)
+                        st.text_area("이메일 내용", email_content, height=500)
                         
 
                     
@@ -2017,19 +1993,7 @@ with tab2:
                 
                 if email_content:
                     # DB original_ai_response의 이메일 초안을 그대로 표시 (줄바꿈 유지)
-                    st.markdown("**이메일 내용**")
-                    st.markdown(f"""
-                    <div style="
-                        background-color: #f0f2f6; 
-                        padding: 15px; 
-                        border-radius: 5px; 
-                        border: 1px solid #ddd;
-                        min-height: 400px;
-                        color: #000000;
-                        font-family: monospace;
-                        white-space: pre-wrap;
-                    ">{email_content}</div>
-                    """, unsafe_allow_html=True)
+                    st.text_area("이메일 내용", email_content, height=200, disabled=True)
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
             
@@ -2197,19 +2161,7 @@ with tab2:
                     
                     if email_content:
                         # DB original_ai_response의 이메일 초안을 그대로 표시 (줄바꿈 유지)
-                        st.markdown("**이메일 내용**")
-                        st.markdown(f"""
-                        <div style="
-                            background-color: #f0f2f6; 
-                            padding: 15px; 
-                            border-radius: 5px; 
-                            border: 1px solid #ddd;
-                            min-height: 400px;
-                            color: #000000;
-                            font-family: monospace;
-                            white-space: pre-wrap;
-                        ">{email_content}</div>
-                        """, unsafe_allow_html=True)
+                        st.text_area("이메일 내용", email_content, height=200, disabled=True)
                     else:
                         st.warning("⚠️ 이메일 초안 정보가 없습니다.")
         
