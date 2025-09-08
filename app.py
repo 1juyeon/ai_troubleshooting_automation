@@ -1005,7 +1005,7 @@ def format_ai_response(ai_response: str) -> str:
     return formatted
 
 def extract_email_from_original_response(original_response: str) -> str:
-    """원본 AI 응답에서 이메일 초안을 추출하여 그대로 반환"""
+    """원본 AI 응답에서 이메일 초안을 추출하여 줄바꿈을 보존하여 반환"""
     if not original_response:
         return ""
     
@@ -1016,32 +1016,32 @@ def extract_email_from_original_response(original_response: str) -> str:
         email_pattern = r'- 이메일\s*초안[:\s]*\n(.*?감사합니다\.)'
         match = re.search(email_pattern, original_response, re.DOTALL)
         if match:
-            email_content = match.group(1).strip()
-            if len(email_content) > 50:
+            email_content = match.group(1)
+            if len(email_content.strip()) > 50:
                 return email_content
         
         # "이메일 초안:" 다음에 이메일 내용이 있는 경우 추출
         email_pattern = r'이메일\s*초안[:\s]*\n(.*?감사합니다\.)'
         match = re.search(email_pattern, original_response, re.DOTALL)
         if match:
-            email_content = match.group(1).strip()
-            if len(email_content) > 50:
+            email_content = match.group(1)
+            if len(email_content.strip()) > 50:
                 return email_content
         
         # "제목:"으로 시작하는 이메일 형태 찾기
         title_email_pattern = r'제목[:\s].*?감사합니다\.'
         match = re.search(title_email_pattern, original_response, re.DOTALL)
         if match:
-            email_content = match.group(0).strip()
-            if len(email_content) > 100:
+            email_content = match.group(0)
+            if len(email_content.strip()) > 100:
                 return email_content
         
         # "안녕하세요"로 시작하고 "감사합니다"로 끝나는 이메일 형태 찾기
         greeting_email_pattern = r'안녕하세요.*?감사합니다\.'
         match = re.search(greeting_email_pattern, original_response, re.DOTALL)
         if match:
-            email_content = match.group(0).strip()
-            if len(email_content) > 100:
+            email_content = match.group(0)
+            if len(email_content.strip()) > 100:
                 return email_content
         
         # 이메일 추출이 실패한 경우 original_ai_response 전체를 그대로 반환
@@ -1946,37 +1946,50 @@ with tab2:
             with col10:
                 st.markdown("#### 📧 이메일 초안")
                 
-                # 이력 관리 탭과 동일한 방식으로 이메일 초안 추출
+                # 이력 관리 탭과 완전히 동일한 방식으로 이메일 초안 추출
                 email_content = None
                 
-                # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1)
-                original_ai_response = None
+                # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1) - 이력 관리와 동일
                 if result.get('original_ai_response'):
-                    original_ai_response = result['original_ai_response']
+                    email_content = extract_email_from_original_response(result['original_ai_response'])
                 elif result.get('ai_result'):
                     ai_result = result['ai_result']
                     if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
-                        original_ai_response = ai_result['gemini_result']['raw_response']
+                        email_content = extract_email_from_original_response(ai_result['gemini_result']['raw_response'])
                     elif 'response' in ai_result:
-                        original_ai_response = ai_result['response']
+                        email_content = extract_email_from_original_response(ai_result['response'])
                     elif 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
-                        original_ai_response = ai_result['gpt_result']['raw_response']
+                        email_content = extract_email_from_original_response(ai_result['gpt_result']['raw_response'])
                 
-                if original_ai_response:
-                    email_content = extract_email_from_original_response(original_ai_response)
-                
-                # 2. full_analysis_result에서 이메일 초안 추출 (우선순위 2)
+                # 2. full_analysis_result에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
                 if not email_content and result.get('full_analysis_result'):
                     email_content = extract_email_from_analysis_result(result['full_analysis_result'])
                 
-                # 3. result에서 직접 email_draft 가져오기 (이력 관리와 동일한 우선순위)
-                if not email_content and result.get('email_draft') and len(result.get('email_draft', '').strip()) > 20:
-                    email_content = result.get('email_draft')
-                
-                # 4. 파싱된 email_draft 사용 (우선순위 4)
-                email_draft = parsed.get('email_draft', '')
+                # 3. 파싱된 email_draft 사용 (우선순위 3) - 이력 관리와 동일
+                email_draft = result.get('email_draft', '')
                 if not email_content and email_draft and len(email_draft.strip()) > 20:
                     email_content = email_draft
+                
+                # 4. 기본 이메일 템플릿 (최후 수단) - 이력 관리와 동일
+                if not email_content:
+                    email_content = f"""제목: {result.get('issue_type', '문의')} 답변
+
+고객님 안녕하세요.
+
+{result.get('issue_type', '문의')}에 대한 문의 주셔서 감사합니다.
+
+현재 상황을 분석한 결과, 추가 정보가 필요한 상황입니다.
+
+**필요한 정보:**
+1. 구체적인 오류 메시지
+2. 발생 시점 및 빈도
+3. 사용 환경 정보
+
+자세한 내용은 담당 엔지니어가 확인 후 답변 드리겠습니다.
+
+추가 문의사항이 있으시면 언제든 연락 주세요.
+
+감사합니다."""
                 
                 if email_content:
                     # DB original_ai_response의 이메일 초안을 그대로 표시 (줄바꿈 유지)
@@ -2101,37 +2114,50 @@ with tab2:
                 with col10:
                     st.markdown("#### 📧 이메일 초안")
                     
-                    # 이력 관리 탭과 동일한 방식으로 이메일 초안 추출
+                    # 이력 관리 탭과 완전히 동일한 방식으로 이메일 초안 추출
                     email_content = None
                     
-                    # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1)
-                    original_ai_response = None
+                    # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1) - 이력 관리와 동일
                     if result.get('original_ai_response'):
-                        original_ai_response = result['original_ai_response']
+                        email_content = extract_email_from_original_response(result['original_ai_response'])
                     elif result.get('ai_result'):
                         ai_result = result['ai_result']
                         if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
-                            original_ai_response = ai_result['gemini_result']['raw_response']
+                            email_content = extract_email_from_original_response(ai_result['gemini_result']['raw_response'])
                         elif 'response' in ai_result:
-                            original_ai_response = ai_result['response']
+                            email_content = extract_email_from_original_response(ai_result['response'])
                         elif 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
-                            original_ai_response = ai_result['gpt_result']['raw_response']
+                            email_content = extract_email_from_original_response(ai_result['gpt_result']['raw_response'])
                     
-                    if original_ai_response:
-                        email_content = extract_email_from_original_response(original_ai_response)
-                    
-                    # 2. full_analysis_result에서 이메일 초안 추출 (우선순위 2)
+                    # 2. full_analysis_result에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
                     if not email_content and result.get('full_analysis_result'):
                         email_content = extract_email_from_analysis_result(result['full_analysis_result'])
                     
-                    # 3. result에서 직접 email_draft 가져오기 (이력 관리와 동일한 우선순위)
-                    if not email_content and result.get('email_draft') and len(result.get('email_draft', '').strip()) > 20:
-                        email_content = result.get('email_draft')
-                    
-                    # 4. 파싱된 email_draft 사용 (우선순위 4)
-                    email_draft = parsed.get('email_draft', '')
+                    # 3. 파싱된 email_draft 사용 (우선순위 3) - 이력 관리와 동일
+                    email_draft = result.get('email_draft', '')
                     if not email_content and email_draft and len(email_draft.strip()) > 20:
                         email_content = email_draft
+                    
+                    # 4. 기본 이메일 템플릿 (최후 수단) - 이력 관리와 동일
+                    if not email_content:
+                        email_content = f"""제목: {result.get('issue_type', '문의')} 답변
+
+고객님 안녕하세요.
+
+{result.get('issue_type', '문의')}에 대한 문의 주셔서 감사합니다.
+
+현재 상황을 분석한 결과, 추가 정보가 필요한 상황입니다.
+
+**필요한 정보:**
+1. 구체적인 오류 메시지
+2. 발생 시점 및 빈도
+3. 사용 환경 정보
+
+자세한 내용은 담당 엔지니어가 확인 후 답변 드리겠습니다.
+
+추가 문의사항이 있으시면 언제든 연락 주세요.
+
+감사합니다."""
                     
                     if email_content:
                         # DB original_ai_response의 이메일 초안을 그대로 표시 (줄바꿈 유지)
