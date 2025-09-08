@@ -654,9 +654,8 @@ def show_ai_analysis_modal(selected_row):
 
 감사합니다."""
                         
-                        # 이메일 내용에 줄바꿈 처리 적용
-                        formatted_email = format_email_content(email_content)
-                        st.text_area("이메일 내용", formatted_email, height=150, disabled=True)
+                        # DB original_ai_response의 이메일 초안을 그대로 표시 (줄바꿈 유지)
+                        st.text_area("이메일 내용", email_content, height=200, disabled=True)
                         
 
                     
@@ -1968,9 +1967,8 @@ with tab2:
                     email_content = email_draft
                 
                 if email_content:
-                    # 이메일 내용에 줄바꿈 처리 적용
-                    formatted_email = format_email_content(email_content)
-                    st.text_area("이메일 내용", formatted_email, height=150, disabled=True)
+                    # DB original_ai_response의 이메일 초안을 그대로 표시 (줄바꿈 유지)
+                    st.text_area("이메일 내용", email_content, height=200, disabled=True)
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
             
@@ -2112,9 +2110,8 @@ with tab2:
                         email_content = email_draft
                     
                     if email_content:
-                        # 이메일 내용에 줄바꿈 처리 적용
-                        formatted_email = format_email_content(email_content)
-                        st.text_area("이메일 내용", formatted_email, height=150, disabled=True)
+                        # DB original_ai_response의 이메일 초안을 그대로 표시 (줄바꿈 유지)
+                        st.text_area("이메일 내용", email_content, height=200, disabled=True)
                     else:
                         st.warning("⚠️ 이메일 초안 정보가 없습니다.")
         
