@@ -429,24 +429,41 @@ def show_ai_analysis(selected_row):
         # 이력 관리 탭과 완전히 동일한 방식으로 이메일 초안 추출
         email_content = None
         
-        # 현재 분석 결과에서 이메일 초안 추출
+        # 현재 분석 결과에서 이메일 초안 추출 (이력관리와 완전히 동일한 로직)
         if st.session_state.get('analysis_result'):
             analysis_data = st.session_state.analysis_result
             
+            # 이력관리와 동일한 방식으로 이메일 추출
             # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1) - 이력 관리와 동일
             if analysis_data.get('original_ai_response'):
                 email_content = extract_email_from_original_response(analysis_data['original_ai_response'])
+                print(f"🔍 AI 분석 결과 탭 - original_ai_response에서 이메일 추출: {len(email_content) if email_content else 0}자")
             
             # 2. full_analysis_result에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
             if not email_content and analysis_data.get('full_analysis_result'):
                 email_content = extract_email_from_analysis_result(analysis_data['full_analysis_result'])
+                print(f"🔍 AI 분석 결과 탭 - full_analysis_result에서 이메일 추출: {len(email_content) if email_content else 0}자")
             
             # 3. 파싱된 email_draft 사용 (우선순위 3) - 이력 관리와 동일
             email_draft = analysis_data.get('email_draft', '')
             if not email_content and email_draft and len(email_draft.strip()) > 20:
                 email_content = email_draft
+                print(f"🔍 AI 분석 결과 탭 - email_draft에서 이메일 추출: {len(email_content) if email_content else 0}자")
+            
+            # 4. ai_result에서 직접 추출 (이력관리와 동일한 추가 로직)
+            if not email_content and analysis_data.get('ai_result'):
+                ai_result = analysis_data['ai_result']
+                if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
+                    email_content = extract_email_from_original_response(ai_result['gemini_result']['raw_response'])
+                    print(f"🔍 AI 분석 결과 탭 - gemini raw_response에서 이메일 추출: {len(email_content) if email_content else 0}자")
+                elif 'response' in ai_result:
+                    email_content = extract_email_from_original_response(ai_result['response'])
+                    print(f"🔍 AI 분석 결과 탭 - ai_result response에서 이메일 추출: {len(email_content) if email_content else 0}자")
+                elif 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
+                    email_content = extract_email_from_original_response(ai_result['gpt_result']['raw_response'])
+                    print(f"🔍 AI 분석 결과 탭 - gpt raw_response에서 이메일 추출: {len(email_content) if email_content else 0}자")
         
-        # 4. 기본 이메일 템플릿 (최후 수단) - 이력 관리와 동일
+        # 5. 기본 이메일 템플릿 (최후 수단) - 이력 관리와 동일
         if not email_content:
             email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
 
