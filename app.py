@@ -425,26 +425,49 @@ def show_ai_analysis(selected_row):
     
     with col6:
         st.markdown("#### 📧 이메일 초안")
-        email_content = """제목: PKP 웹 접속 불가 문의 답변
+        
+        # 이력 관리 탭과 완전히 동일한 방식으로 이메일 초안 추출
+        email_content = None
+        
+        # 현재 분석 결과에서 이메일 초안 추출
+        if st.session_state.get('analysis_result'):
+            analysis_data = st.session_state.analysis_result
+            
+            # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1) - 이력 관리와 동일
+            if analysis_data.get('original_ai_response'):
+                email_content = extract_email_from_original_response(analysis_data['original_ai_response'])
+            
+            # 2. full_analysis_result에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
+            if not email_content and analysis_data.get('full_analysis_result'):
+                email_content = extract_email_from_analysis_result(analysis_data['full_analysis_result'])
+            
+            # 3. 파싱된 email_draft 사용 (우선순위 3) - 이력 관리와 동일
+            email_draft = analysis_data.get('email_draft', '')
+            if not email_content and email_draft and len(email_draft.strip()) > 20:
+                email_content = email_draft
+        
+        # 4. 기본 이메일 템플릿 (최후 수단) - 이력 관리와 동일
+        if not email_content:
+            email_content = f"""제목: {selected_row.get('문의유형', '문의')} 답변
 
 고객님 안녕하세요.
 
-PKP 웹 접속 불가 현상에 대한 문의 주셔서 감사합니다.
+{selected_row.get('문의유형', '문의')}에 대한 문의 주셔서 감사합니다.
 
-웹 접속 불가 현상은 여러 가지 원인으로 발생할 수 있습니다. 먼저 아래 내용을 확인 부탁드립니다.
+현재 상황을 분석한 결과, 추가 정보가 필요한 상황입니다.
 
-1. 컴퓨터의 윈도우 서비스 목록에서 "Apache Tomcat" 서비스가 실행 중인지 확인해주세요.
-2. 웹 브라우저에서 `http://localhost:8080/` (포트 번호는 환경에 따라 다를 수 있습니다) 에 접속하여 톰캣 기본 페이지가 정상적으로 표시되는지 확인해주세요.
+**필요한 정보:**
+1. 구체적인 오류 메시지
+2. 발생 시점 및 빈도
+3. 사용 환경 정보
 
-위의 내용 확인 후에도 문제가 지속될 경우, 아래 정보를 회신해주시면 더 정확한 지원을 드릴 수 있습니다.
+자세한 내용은 담당 엔지니어가 확인 후 답변 드리겠습니다.
 
-- 톰캣 서비스 실행 여부
-- `http://localhost:8080/` 접속 결과 (에러 메시지 등)
-
-빠른 시간 안에 문제를 해결하실 수 있도록 최선을 다하겠습니다.
+추가 문의사항이 있으시면 언제든 연락 주세요.
 
 감사합니다."""
         
+        # DB original_ai_response의 이메일 초안을 그대로 표시 (줄바꿈 유지)
         st.markdown("**이메일 내용**")
         st.markdown(
             f"""
@@ -1059,46 +1082,55 @@ def format_ai_response(ai_response: str) -> str:
     return formatted
 
 def extract_email_from_original_response(original_response: str) -> str:
-    """원본 AI 응답에서 이메일 초안을 추출하여 줄바꿈을 보존하여 반환"""
+    """원본 AI 응답에서 이메일 초안을 추출하여 줄바꿈을 보존하여 반환 (GPT, Gemini 모두 지원)"""
     if not original_response:
         return ""
     
     try:
         import re
         
-        # "- 이메일 초안:" 다음에 이메일 내용이 있는 경우 추출
+        # 1. "- 이메일 초안:" 다음에 이메일 내용이 있는 경우 추출 (우선순위 1)
         email_pattern = r'- 이메일\s*초안[:\s]*\n(.*?감사합니다\.)'
         match = re.search(email_pattern, original_response, re.DOTALL)
         if match:
-            email_content = match.group(1)
-            if len(email_content.strip()) > 50:
+            email_content = match.group(1).strip()
+            if len(email_content) > 50:
                 return email_content
         
-        # "이메일 초안:" 다음에 이메일 내용이 있는 경우 추출
+        # 2. "이메일 초안:" 다음에 이메일 내용이 있는 경우 추출 (우선순위 2)
         email_pattern = r'이메일\s*초안[:\s]*\n(.*?감사합니다\.)'
         match = re.search(email_pattern, original_response, re.DOTALL)
         if match:
-            email_content = match.group(1)
-            if len(email_content.strip()) > 50:
+            email_content = match.group(1).strip()
+            if len(email_content) > 50:
                 return email_content
         
-        # "제목:"으로 시작하는 이메일 형태 찾기
+        # 3. "제목:"으로 시작하는 이메일 형태 찾기 (우선순위 3)
         title_email_pattern = r'제목[:\s].*?감사합니다\.'
         match = re.search(title_email_pattern, original_response, re.DOTALL)
         if match:
-            email_content = match.group(0)
-            if len(email_content.strip()) > 100:
+            email_content = match.group(0).strip()
+            if len(email_content) > 100:
                 return email_content
         
-        # "안녕하세요"로 시작하고 "감사합니다"로 끝나는 이메일 형태 찾기
+        # 4. "안녕하세요"로 시작하고 "감사합니다"로 끝나는 이메일 형태 찾기 (우선순위 4)
         greeting_email_pattern = r'안녕하세요.*?감사합니다\.'
         match = re.search(greeting_email_pattern, original_response, re.DOTALL)
         if match:
-            email_content = match.group(0)
-            if len(email_content.strip()) > 100:
+            email_content = match.group(0).strip()
+            if len(email_content) > 100:
                 return email_content
         
-        # 이메일 추출이 실패한 경우 original_ai_response 전체를 그대로 반환
+        # 5. "고객님 안녕하세요"로 시작하는 이메일 형태 찾기 (우선순위 5)
+        customer_greeting_pattern = r'고객님\s*안녕하세요.*?감사합니다\.'
+        match = re.search(customer_greeting_pattern, original_response, re.DOTALL)
+        if match:
+            email_content = match.group(0).strip()
+            if len(email_content) > 100:
+                return email_content
+        
+        # 6. 이메일 추출이 실패한 경우 original_ai_response 전체를 그대로 반환
+        print("⚠️ 이메일 초안을 추출할 수 없어 전체 응답을 반환합니다.")
         return original_response
         
     except Exception as e:
