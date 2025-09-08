@@ -1946,7 +1946,7 @@ with tab2:
             with col10:
                 st.markdown("#### 📧 이메일 초안")
                 
-                # 이력 관리 탭과 완전히 동일한 방식으로 이메일 초안 추출
+                # 이력 관리 탭과 동일한 방식으로 이메일 초안 추출
                 email_content = None
                 
                 # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1)
@@ -1957,31 +1957,14 @@ with tab2:
                 if not email_content and result.get('full_analysis_result'):
                     email_content = extract_email_from_analysis_result(result['full_analysis_result'])
                 
-                # 3. 파싱된 email_draft 사용 (우선순위 3) - 이력 관리와 동일
-                email_draft = result.get('email_draft', '')
+                # 3. result에서 직접 email_draft 가져오기 (이력 관리와 동일한 우선순위)
+                if not email_content and result.get('email_draft') and len(result.get('email_draft', '').strip()) > 20:
+                    email_content = result.get('email_draft')
+                
+                # 4. 파싱된 email_draft 사용 (우선순위 4)
+                email_draft = parsed.get('email_draft', '')
                 if not email_content and email_draft and len(email_draft.strip()) > 20:
                     email_content = email_draft
-                
-                # 4. 기본 이메일 템플릿 (최후 수단) - 이력 관리와 동일
-                if not email_content:
-                    email_content = f"""제목: {result.get('issue_type', '문의')} 답변
-
-고객님 안녕하세요.
-
-{result.get('issue_type', '문의')}에 대한 문의 주셔서 감사합니다.
-
-현재 상황을 분석한 결과, 추가 정보가 필요한 상황입니다.
-
-**필요한 정보:**
-1. 구체적인 오류 메시지
-2. 발생 시점 및 빈도
-3. 사용 환경 정보
-
-자세한 내용은 담당 엔지니어가 확인 후 답변 드리겠습니다.
-
-추가 문의사항이 있으시면 언제든 연락 주세요.
-
-감사합니다."""
                 
                 if email_content:
                     # DB original_ai_response의 이메일 초안을 그대로 표시 (줄바꿈 유지)
@@ -2106,7 +2089,7 @@ with tab2:
                 with col10:
                     st.markdown("#### 📧 이메일 초안")
                     
-                    # 이력 관리 탭과 완전히 동일한 방식으로 이메일 초안 추출
+                    # 이력 관리 탭과 동일한 방식으로 이메일 초안 추출
                     email_content = None
                     
                     # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1)
@@ -2117,31 +2100,14 @@ with tab2:
                     if not email_content and result.get('full_analysis_result'):
                         email_content = extract_email_from_analysis_result(result['full_analysis_result'])
                     
-                    # 3. 파싱된 email_draft 사용 (우선순위 3) - 이력 관리와 동일
-                    email_draft = result.get('email_draft', '')
+                    # 3. result에서 직접 email_draft 가져오기 (이력 관리와 동일한 우선순위)
+                    if not email_content and result.get('email_draft') and len(result.get('email_draft', '').strip()) > 20:
+                        email_content = result.get('email_draft')
+                    
+                    # 4. 파싱된 email_draft 사용 (우선순위 4)
+                    email_draft = parsed.get('email_draft', '')
                     if not email_content and email_draft and len(email_draft.strip()) > 20:
                         email_content = email_draft
-                    
-                    # 4. 기본 이메일 템플릿 (최후 수단) - 이력 관리와 동일
-                    if not email_content:
-                        email_content = f"""제목: {result.get('issue_type', '문의')} 답변
-
-고객님 안녕하세요.
-
-{result.get('issue_type', '문의')}에 대한 문의 주셔서 감사합니다.
-
-현재 상황을 분석한 결과, 추가 정보가 필요한 상황입니다.
-
-**필요한 정보:**
-1. 구체적인 오류 메시지
-2. 발생 시점 및 빈도
-3. 사용 환경 정보
-
-자세한 내용은 담당 엔지니어가 확인 후 답변 드리겠습니다.
-
-추가 문의사항이 있으시면 언제든 연락 주세요.
-
-감사합니다."""
                     
                     if email_content:
                         # DB original_ai_response의 이메일 초안을 그대로 표시 (줄바꿈 유지)
