@@ -1946,32 +1946,25 @@ with tab2:
             with col10:
                 st.markdown("#### 📧 이메일 초안")
                 
-                # 이력 관리 탭과 완전히 동일한 방식으로 이메일 초안 추출
+                # AI 분석 결과에서 직접 이메일 초안 추출 (이력 관리와 다른 방식)
                 email_content = None
                 
-                # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1) - 이력 관리와 동일
-                if result.get('original_ai_response'):
-                    email_content = extract_email_from_original_response(result['original_ai_response'])
-                elif result.get('ai_result'):
+                # 1. parsed_response에서 직접 email_draft 추출 (우선순위 1)
+                if result.get('ai_result'):
                     ai_result = result['ai_result']
-                    if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
-                        email_content = extract_email_from_original_response(ai_result['gemini_result']['raw_response'])
-                    elif 'response' in ai_result:
-                        email_content = extract_email_from_original_response(ai_result['response'])
-                    elif 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
-                        email_content = extract_email_from_original_response(ai_result['gpt_result']['raw_response'])
+                    
+                        # Gemini 결과에서 parsed_response 추출
+                        if 'gemini_result' in ai_result and 'parsed_response' in ai_result['gemini_result']:
+                            parsed_response = ai_result['gemini_result']['parsed_response']
+                            email_content = parsed_response.get('email_draft', '')
+                        
+                        # GPT 결과에서 parsed_response 추출
+                        elif 'parsed_response' in ai_result:
+                            parsed_response = ai_result['parsed_response']
+                            email_content = parsed_response.get('email_draft', '')
                 
-                # 2. full_analysis_result에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
-                if not email_content and result.get('full_analysis_result'):
-                    email_content = extract_email_from_analysis_result(result['full_analysis_result'])
-                
-                # 3. 파싱된 email_draft 사용 (우선순위 3) - 이력 관리와 동일
-                email_draft = result.get('email_draft', '')
-                if not email_content and email_draft and len(email_draft.strip()) > 20:
-                    email_content = email_draft
-                
-                # 4. 기본 이메일 템플릿 (최후 수단) - 이력 관리와 동일
-                if not email_content:
+                # 2. 기본 이메일 템플릿 (최후 수단)
+                if not email_content or len(email_content.strip()) < 20:
                     email_content = f"""제목: {result.get('issue_type', '문의')} 답변
 
 고객님 안녕하세요.
@@ -2114,32 +2107,25 @@ with tab2:
                 with col10:
                     st.markdown("#### 📧 이메일 초안")
                     
-                    # 이력 관리 탭과 완전히 동일한 방식으로 이메일 초안 추출
+                    # AI 분석 결과에서 직접 이메일 초안 추출 (이력 관리와 다른 방식)
                     email_content = None
                     
-                    # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1) - 이력 관리와 동일
-                    if result.get('original_ai_response'):
-                        email_content = extract_email_from_original_response(result['original_ai_response'])
-                    elif result.get('ai_result'):
+                    # 1. parsed_response에서 직접 email_draft 추출 (우선순위 1)
+                    if result.get('ai_result'):
                         ai_result = result['ai_result']
-                        if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
-                            email_content = extract_email_from_original_response(ai_result['gemini_result']['raw_response'])
-                        elif 'response' in ai_result:
-                            email_content = extract_email_from_original_response(ai_result['response'])
-                        elif 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
-                            email_content = extract_email_from_original_response(ai_result['gpt_result']['raw_response'])
+                        
+                        # Gemini 결과에서 parsed_response 추출
+                        if 'gemini_result' in ai_result and 'parsed_response' in ai_result['gemini_result']:
+                            parsed_response = ai_result['gemini_result']['parsed_response']
+                            email_content = parsed_response.get('email_draft', '')
+                        
+                        # GPT 결과에서 parsed_response 추출
+                        elif 'parsed_response' in ai_result:
+                            parsed_response = ai_result['parsed_response']
+                            email_content = parsed_response.get('email_draft', '')
                     
-                    # 2. full_analysis_result에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
-                    if not email_content and result.get('full_analysis_result'):
-                        email_content = extract_email_from_analysis_result(result['full_analysis_result'])
-                    
-                    # 3. 파싱된 email_draft 사용 (우선순위 3) - 이력 관리와 동일
-                    email_draft = result.get('email_draft', '')
-                    if not email_content and email_draft and len(email_draft.strip()) > 20:
-                        email_content = email_draft
-                    
-                    # 4. 기본 이메일 템플릿 (최후 수단) - 이력 관리와 동일
-                    if not email_content:
+                    # 2. 기본 이메일 템플릿 (최후 수단)
+                    if not email_content or len(email_content.strip()) < 20:
                         email_content = f"""제목: {result.get('issue_type', '문의')} 답변
 
 고객님 안녕하세요.
