@@ -1966,95 +1966,10 @@ with tab2:
                 if email_content:
                     # 이메일 내용에 줄바꿈 처리 적용
                     formatted_email = format_email_content(email_content)
-                    st.text_area("이메일 내용", formatted_email, height=300, disabled=True)
+                    st.text_area("이메일 내용", formatted_email, height=150, disabled=True)
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
-                    # 디버깅 정보 표시
-                    with st.expander("🔍 디버깅 정보"):
-                        st.write("**original_ai_response 존재:**", bool(result.get('original_ai_response')))
-                        st.write("**original_ai_response 내용 (처음 1000자):**")
-                        st.text(result.get('original_ai_response', '')[:1000])
-                        st.write("**추출된 이메일 초안:**", repr(email_content))
-                        st.write("**full_analysis_result 존재:**", bool(result.get('full_analysis_result')))
-                        st.write("**파싱된 email_draft:**", repr(parsed.get('email_draft', '')))
             
-            # 전체 응답
-            with st.expander("📄 전체 AI 응답"):
-                # 이력 관리 탭과 동일한 방식으로 전체 AI 응답 구성
-                full_response = None
-                
-                # full_analysis_result에서 전체 AI 응답 구성 시도
-                if result.get('full_analysis_result'):
-                    full_result = result['full_analysis_result']
-                    if 'ai_result' in full_result:
-                        ai_result = full_result['ai_result']
-                        if 'parsed_response' in ai_result:
-                            parsed_full = ai_result['parsed_response']
-                            
-                            # 파싱된 데이터가 비어있는지 확인하고 기본값 설정
-                            summary = parsed_full.get('summary', '') or '요약 정보가 없습니다.'
-                            action_flow = parsed_full.get('action_flow', '') or '조치 흐름 정보가 없습니다.'
-                            email_draft = parsed_full.get('email_draft', '') or '이메일 초안 정보가 없습니다.'
-                            
-                            full_response = f"""[대응유형] {parsed_full.get('response_type', '해결안')}
-
-[응답내용]
-
-- 요약: {summary}
-
-- 조치 흐름:
-
-{action_flow}
-
-- 이메일 초안:
-
-{email_draft}"""
-                        elif 'response' in ai_result:
-                            # GPT API 응답인 경우 파싱
-                            parsed_full = _parse_gpt_response(ai_result['response'])
-                            
-                            # 파싱된 데이터가 비어있는지 확인하고 기본값 설정
-                            summary = parsed_full.get('summary', '') or '요약 정보가 없습니다.'
-                            action_flow = parsed_full.get('action_flow', '') or '조치 흐름 정보가 없습니다.'
-                            email_draft = parsed_full.get('email_draft', '') or '이메일 초안 정보가 없습니다.'
-                            
-                            full_response = f"""[대응유형] {parsed_full.get('response_type', '해결안')}
-
-[응답내용]
-
-- 요약: {summary}
-
-- 조치 흐름:
-
-{action_flow}
-
-- 이메일 초안:
-
-{email_draft}"""
-                
-                # full_analysis_result에서 구성 실패한 경우 기본 방식 사용
-                if not full_response:
-                    # 이력 관리 탭과 동일한 방식으로 기본값 설정
-                    summary = parsed.get('summary', '') or '요약 정보가 없습니다.'
-                    action_flow = parsed.get('action_flow', '') or '조치 흐름 정보가 없습니다.'
-                    email_draft = parsed.get('email_draft', '') or '이메일 초안 정보가 없습니다.'
-                    
-                    full_response = f"""[대응유형] {parsed.get('response_type', '해결안')}
-
-[응답내용]
-
-- 요약: {summary}
-
-- 조치 흐름:
-
-{action_flow}
-
-- 이메일 초안:
-
-{email_draft}"""
-                
-                # 전체 AI 응답을 그대로 출력 (줄바꿈 유지)
-                st.text_area("전체 AI 응답", full_response, height=200, disabled=True)
             
             # SMS 발송 섹션 추가
             st.markdown("---")
@@ -2191,17 +2106,9 @@ with tab2:
                     if email_content:
                         # 이메일 내용에 줄바꿈 처리 적용
                         formatted_email = format_email_content(email_content)
-                        st.text_area("이메일 내용", formatted_email, height=300, disabled=True)
+                        st.text_area("이메일 내용", formatted_email, height=150, disabled=True)
                     else:
                         st.warning("⚠️ 이메일 초안 정보가 없습니다.")
-                        # 디버깅 정보 표시
-                        with st.expander("🔍 디버깅 정보"):
-                            st.write("**original_ai_response 존재:**", bool(result.get('original_ai_response')))
-                            st.write("**original_ai_response 내용 (처음 1000자):**")
-                            st.text(result.get('original_ai_response', '')[:1000])
-                            st.write("**추출된 이메일 초안:**", repr(email_content))
-                            st.write("**full_analysis_result 존재:**", bool(result.get('full_analysis_result')))
-                            st.write("**파싱된 email_draft:**", repr(parsed.get('email_draft', '')))
         
         # 유사 사례
         if result['similar_cases']:
