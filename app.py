@@ -1005,7 +1005,7 @@ def format_ai_response(ai_response: str) -> str:
     return formatted
 
 def extract_email_from_original_response(original_response: str) -> str:
-    """원본 AI 응답에서 이메일 초안을 추출하여 줄바꿈을 보존하여 반환"""
+    """원본 AI 응답에서 이메일 초안을 추출하여 그대로 반환"""
     if not original_response:
         return ""
     
@@ -1016,32 +1016,32 @@ def extract_email_from_original_response(original_response: str) -> str:
         email_pattern = r'- 이메일\s*초안[:\s]*\n(.*?감사합니다\.)'
         match = re.search(email_pattern, original_response, re.DOTALL)
         if match:
-            email_content = match.group(1)
-            if len(email_content.strip()) > 50:
+            email_content = match.group(1).strip()
+            if len(email_content) > 50:
                 return email_content
         
         # "이메일 초안:" 다음에 이메일 내용이 있는 경우 추출
         email_pattern = r'이메일\s*초안[:\s]*\n(.*?감사합니다\.)'
         match = re.search(email_pattern, original_response, re.DOTALL)
         if match:
-            email_content = match.group(1)
-            if len(email_content.strip()) > 50:
+            email_content = match.group(1).strip()
+            if len(email_content) > 50:
                 return email_content
         
         # "제목:"으로 시작하는 이메일 형태 찾기
         title_email_pattern = r'제목[:\s].*?감사합니다\.'
         match = re.search(title_email_pattern, original_response, re.DOTALL)
         if match:
-            email_content = match.group(0)
-            if len(email_content.strip()) > 100:
+            email_content = match.group(0).strip()
+            if len(email_content) > 100:
                 return email_content
         
         # "안녕하세요"로 시작하고 "감사합니다"로 끝나는 이메일 형태 찾기
         greeting_email_pattern = r'안녕하세요.*?감사합니다\.'
         match = re.search(greeting_email_pattern, original_response, re.DOTALL)
         if match:
-            email_content = match.group(0)
-            if len(email_content.strip()) > 100:
+            email_content = match.group(0).strip()
+            if len(email_content) > 100:
                 return email_content
         
         # 이메일 추출이 실패한 경우 original_ai_response 전체를 그대로 반환
