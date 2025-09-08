@@ -1089,47 +1089,77 @@ def extract_email_from_original_response(original_response: str) -> str:
     try:
         import re
         
+        # 디버깅을 위한 로그
+        print(f"🔍 이메일 추출 시작 - 원본 응답 길이: {len(original_response)}자")
+        print(f"🔍 원본 응답 미리보기: {original_response[:200]}...")
+        
         # 1. "- 이메일 초안:" 다음에 이메일 내용이 있는 경우 추출 (우선순위 1)
-        email_pattern = r'- 이메일\s*초안[:\s]*\n(.*?감사합니다\.)'
+        # 감사합니다 뒤에 추가 내용이 있을 수 있으므로 더 유연하게 매칭
+        email_pattern = r'- 이메일\s*초안[:\s]*\n(.*?)(?=\n\n|\n- |\n\[|\n※|\Z)'
         match = re.search(email_pattern, original_response, re.DOTALL)
         if match:
             email_content = match.group(1).strip()
-            if len(email_content) > 50:
+            # 이메일 내용이 충분히 길고 "감사합니다"를 포함하는지 확인
+            if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
+                print(f"✅ 이메일 추출 성공 (패턴 1): {len(email_content)}자")
                 return email_content
         
         # 2. "이메일 초안:" 다음에 이메일 내용이 있는 경우 추출 (우선순위 2)
-        email_pattern = r'이메일\s*초안[:\s]*\n(.*?감사합니다\.)'
+        email_pattern = r'이메일\s*초안[:\s]*\n(.*?)(?=\n\n|\n- |\n\[|\n※|\Z)'
         match = re.search(email_pattern, original_response, re.DOTALL)
         if match:
             email_content = match.group(1).strip()
-            if len(email_content) > 50:
+            if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
+                print(f"✅ 이메일 추출 성공 (패턴 2): {len(email_content)}자")
                 return email_content
         
         # 3. "제목:"으로 시작하는 이메일 형태 찾기 (우선순위 3)
-        title_email_pattern = r'제목[:\s].*?감사합니다\.'
+        title_email_pattern = r'제목[:\s].*?(?=\n\n|\n- |\n\[|\n※|\Z)'
         match = re.search(title_email_pattern, original_response, re.DOTALL)
         if match:
             email_content = match.group(0).strip()
-            if len(email_content) > 100:
+            if len(email_content) > 100 and ('감사합니다' in email_content or '안녕하세요' in email_content):
+                print(f"✅ 이메일 추출 성공 (패턴 3): {len(email_content)}자")
                 return email_content
         
         # 4. "고객님 안녕하세요"로 시작하는 이메일 형태 찾기 (우선순위 4)
-        customer_greeting_pattern = r'고객님\s*안녕하세요.*?감사합니다\.'
+        customer_greeting_pattern = r'고객님\s*안녕하세요.*?(?=\n\n|\n- |\n\[|\n※|\Z)'
         match = re.search(customer_greeting_pattern, original_response, re.DOTALL)
         if match:
             email_content = match.group(0).strip()
-            if len(email_content) > 100:
+            if len(email_content) > 100 and ('감사합니다' in email_content or '안녕하세요' in email_content):
+                print(f"✅ 이메일 추출 성공 (패턴 4): {len(email_content)}자")
                 return email_content
         
-        # 5. "안녕하세요"로 시작하고 "감사합니다"로 끝나는 이메일 형태 찾기 (우선순위 5)
-        greeting_email_pattern = r'안녕하세요.*?감사합니다\.'
+        # 5. "안녕하세요"로 시작하는 이메일 형태 찾기 (우선순위 5)
+        greeting_email_pattern = r'안녕하세요.*?(?=\n\n|\n- |\n\[|\n※|\Z)'
         match = re.search(greeting_email_pattern, original_response, re.DOTALL)
         if match:
             email_content = match.group(0).strip()
-            if len(email_content) > 100:
+            if len(email_content) > 100 and ('감사합니다' in email_content or '안녕하세요' in email_content):
+                print(f"✅ 이메일 추출 성공 (패턴 5): {len(email_content)}자")
                 return email_content
         
-        # 6. 이메일 추출이 실패한 경우 original_ai_response 전체를 그대로 반환
+        # 6. 더 포괄적인 이메일 패턴 찾기 (우선순위 6)
+        # "안녕하세요" 또는 "고객님"으로 시작하고 "감사합니다"로 끝나는 긴 텍스트
+        comprehensive_pattern = r'(안녕하세요|고객님\s*안녕하세요).*?감사합니다[\.]?'
+        match = re.search(comprehensive_pattern, original_response, re.DOTALL)
+        if match:
+            email_content = match.group(0).strip()
+            if len(email_content) > 100:
+                print(f"✅ 이메일 추출 성공 (패턴 6): {len(email_content)}자")
+                return email_content
+        
+        # 7. "제목:"으로 시작하는 패턴 (마침표 없이)
+        title_pattern = r'제목[:\s].*?감사합니다[\.]?'
+        match = re.search(title_pattern, original_response, re.DOTALL)
+        if match:
+            email_content = match.group(0).strip()
+            if len(email_content) > 100:
+                print(f"✅ 이메일 추출 성공 (패턴 7): {len(email_content)}자")
+                return email_content
+        
+        # 8. 이메일 추출이 실패한 경우 original_ai_response 전체를 그대로 반환
         print("⚠️ 이메일 초안을 추출할 수 없어 전체 응답을 반환합니다.")
         return original_response
         
