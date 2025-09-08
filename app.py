@@ -1958,7 +1958,11 @@ with tab2:
                 if not email_content and result.get('full_analysis_result'):
                     email_content = extract_email_from_analysis_result(result['full_analysis_result'])
                 
-                # 3. 파싱된 email_draft 사용 (우선순위 3)
+                # 3. result에서 직접 email_draft 가져오기 (이력 관리와 동일한 우선순위)
+                if not email_content and result.get('email_draft') and len(result.get('email_draft', '').strip()) > 20:
+                    email_content = result.get('email_draft')
+                
+                # 4. 파싱된 email_draft 사용 (우선순위 4)
                 email_draft = parsed.get('email_draft', '')
                 if not email_content and email_draft and len(email_draft.strip()) > 20:
                     email_content = email_draft
@@ -2098,7 +2102,11 @@ with tab2:
                     if not email_content and result.get('full_analysis_result'):
                         email_content = extract_email_from_analysis_result(result['full_analysis_result'])
                     
-                    # 3. 파싱된 email_draft 사용 (우선순위 3)
+                    # 3. result에서 직접 email_draft 가져오기 (이력 관리와 동일한 우선순위)
+                    if not email_content and result.get('email_draft') and len(result.get('email_draft', '').strip()) > 20:
+                        email_content = result.get('email_draft')
+                    
+                    # 4. 파싱된 email_draft 사용 (우선순위 4)
                     email_draft = parsed.get('email_draft', '')
                     if not email_content and email_draft and len(email_draft.strip()) > 20:
                         email_content = email_draft
