@@ -1950,8 +1950,20 @@ with tab2:
                 email_content = None
                 
                 # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1)
+                original_ai_response = None
                 if result.get('original_ai_response'):
-                    email_content = extract_email_from_original_response(result['original_ai_response'])
+                    original_ai_response = result['original_ai_response']
+                elif result.get('ai_result'):
+                    ai_result = result['ai_result']
+                    if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
+                        original_ai_response = ai_result['gemini_result']['raw_response']
+                    elif 'response' in ai_result:
+                        original_ai_response = ai_result['response']
+                    elif 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
+                        original_ai_response = ai_result['gpt_result']['raw_response']
+                
+                if original_ai_response:
+                    email_content = extract_email_from_original_response(original_ai_response)
                 
                 # 2. full_analysis_result에서 이메일 초안 추출 (우선순위 2)
                 if not email_content and result.get('full_analysis_result'):
@@ -2093,8 +2105,20 @@ with tab2:
                     email_content = None
                     
                     # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1)
+                    original_ai_response = None
                     if result.get('original_ai_response'):
-                        email_content = extract_email_from_original_response(result['original_ai_response'])
+                        original_ai_response = result['original_ai_response']
+                    elif result.get('ai_result'):
+                        ai_result = result['ai_result']
+                        if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
+                            original_ai_response = ai_result['gemini_result']['raw_response']
+                        elif 'response' in ai_result:
+                            original_ai_response = ai_result['response']
+                        elif 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
+                            original_ai_response = ai_result['gpt_result']['raw_response']
+                    
+                    if original_ai_response:
+                        email_content = extract_email_from_original_response(original_ai_response)
                     
                     # 2. full_analysis_result에서 이메일 초안 추출 (우선순위 2)
                     if not email_content and result.get('full_analysis_result'):
