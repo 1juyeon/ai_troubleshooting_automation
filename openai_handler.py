@@ -166,7 +166,7 @@ class OpenAIHandler:
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.1,
-                max_tokens=4000  # 이메일 초안이 잘리지 않도록 토큰 제한 증가
+                max_tokens=2000
             )
             
             # 응답 추출

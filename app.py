@@ -1113,17 +1113,17 @@ def extract_email_from_original_response(original_response: str) -> str:
             if len(email_content) > 100:
                 return email_content
         
-        # 4. "안녕하세요"로 시작하고 "감사합니다"로 끝나는 이메일 형태 찾기 (우선순위 4)
-        greeting_email_pattern = r'안녕하세요.*?감사합니다\.'
-        match = re.search(greeting_email_pattern, original_response, re.DOTALL)
+        # 4. "고객님 안녕하세요"로 시작하는 이메일 형태 찾기 (우선순위 4)
+        customer_greeting_pattern = r'고객님\s*안녕하세요.*?감사합니다\.'
+        match = re.search(customer_greeting_pattern, original_response, re.DOTALL)
         if match:
             email_content = match.group(0).strip()
             if len(email_content) > 100:
                 return email_content
         
-        # 5. "고객님 안녕하세요"로 시작하는 이메일 형태 찾기 (우선순위 5)
-        customer_greeting_pattern = r'고객님\s*안녕하세요.*?감사합니다\.'
-        match = re.search(customer_greeting_pattern, original_response, re.DOTALL)
+        # 5. "안녕하세요"로 시작하고 "감사합니다"로 끝나는 이메일 형태 찾기 (우선순위 5)
+        greeting_email_pattern = r'안녕하세요.*?감사합니다\.'
+        match = re.search(greeting_email_pattern, original_response, re.DOTALL)
         if match:
             email_content = match.group(0).strip()
             if len(email_content) > 100:
@@ -1220,6 +1220,10 @@ def _parse_gpt_response(response_text: str) -> dict:
                 current_section = 'action_flow'
             elif '- 이메일 초안:' in line:
                 current_section = 'email_draft'
+                # 이메일 초안 헤더 제거하고 내용이 있으면 바로 추가
+                email_content = line.replace('- 이메일 초안:', '').strip()
+                if email_content:
+                    parsed['email_draft'] += email_content + '\n'
             elif line.startswith('1.') or line.startswith('2.') or line.startswith('3.') or line.startswith('4.') or line.startswith('5.'):
                 # 조치 흐름 항목
                 if current_section == 'action_flow':
@@ -1237,11 +1241,12 @@ def _parse_gpt_response(response_text: str) -> dict:
                 ]):
                     parsed['action_flow'] += line + '\n'
             elif current_section == 'email_draft':
-                # 이메일 초안에서 불필요한 텍스트 제거
+                # 이메일 초안 내용 추가 (불필요한 텍스트만 제거)
                 if not any(unwanted in line for unwanted in [
                     '[응답내용]', '[대응유형]', '- 요약:', '- 조치 흐름:', '- 이메일 초안:',
                     '아래 형식을 참고하여', '실무자가 이해하기 쉽도록', '자연스럽고 정확하게 응답을 생성하십시오'
                 ]):
+                    # 이메일 초안 내용을 그대로 추가
                     parsed['email_draft'] += line + '\n'
         
         # 요약에서 "- 요약:" 제거 (혹시 남아있을 경우)
