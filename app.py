@@ -1825,6 +1825,18 @@ with tab1:
                         'timestamp': get_safe_timestamp()
                     }
                     
+                    # original_ai_response 추가 (GPT와 Gemini 모두 지원)
+                    if ai_result.get('success') and ai_result.get('response'):
+                        # GPT 응답인 경우
+                        analysis_result['original_ai_response'] = ai_result['response']
+                    elif ai_result.get('success') and 'gemini_result' in ai_result:
+                        # Gemini 응답인 경우
+                        gemini_result = ai_result['gemini_result']
+                        if 'raw_response' in gemini_result:
+                            analysis_result['original_ai_response'] = gemini_result['raw_response']
+                        elif 'response' in gemini_result:
+                            analysis_result['original_ai_response'] = gemini_result['response']
+                    
                     st.session_state.analysis_result = analysis_result
                     
                     st.session_state.inquiry_data = {
