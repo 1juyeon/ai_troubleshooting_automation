@@ -1400,13 +1400,8 @@ def _parse_gemini_response(response_text: str) -> dict:
         parsed['summary'] = parsed['summary'].replace('요약:', '').strip()
         
         # 이메일 초안을 GEMINI 전용 함수로 다시 추출하여 정확성 보장
-        # 항상 원본 응답에서 이메일 초안을 다시 추출 (기존 파싱 결과 무시)
-        extracted_email = extract_email_from_gemini_response(response_text)
-        if extracted_email:
-            parsed['email_draft'] = extracted_email
-            print(f"✅ GEMINI 파싱 - 이메일 초안 재추출 성공: {len(extracted_email)}자")
-        else:
-            print("⚠️ GEMINI 파싱 - 이메일 초안 재추출 실패, 기존 파싱 결과 사용")
+        # GEMINI 파싱에서는 이미 파싱된 email_draft를 그대로 사용 (재추출 불필요)
+        print(f"✅ GEMINI 파싱 - 파싱된 email_draft 사용: {len(parsed['email_draft'])}자")
         
         # 디버깅을 위한 로그 추가
         print(f"GEMINI 파싱 결과 - 요약: {parsed['summary'][:50]}...")

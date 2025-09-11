@@ -305,37 +305,8 @@ class GeminiHandler:
             if '[예외 처리 기준]' in parsed['email_draft']:
                 parsed['email_draft'] = parsed['email_draft'].split('[예외 처리 기준]')[0].strip()
             
-            # 이메일 초안이 너무 짧거나 구체적인 단계가 없는 경우 정규식으로 재파싱
-            if len(parsed['email_draft']) < 100 or "1." not in parsed['email_draft']:
-                print("Gemini: 이메일 초안이 짧거나 단계가 없어 정규식으로 재파싱 시도")
-                
-                # 패턴 1: ```로 둘러싸인 이메일 초안 추출
-                email_pattern1 = r'이메일\s*초안[:\s]*\n```\n(.*?)\n```'
-                email_match1 = re.search(email_pattern1, response_text, re.DOTALL)
-                if email_match1:
-                    parsed['email_draft'] = email_match1.group(1).strip()
-                    print(f"Gemini: 정규식으로 재파싱 성공 (패턴1) - 길이: {len(parsed['email_draft'])}")
-                else:
-                    # 패턴 2: "감사합니다."로 끝나는 이메일 초안 추출 (빈 줄 포함)
-                    email_pattern2 = r'이메일\s*초안[:\s]*\n(.*?감사합니다\.\s*\n?\s*)(?=\n\s*$)'
-                    email_match2 = re.search(email_pattern2, response_text, re.DOTALL)
-                    if email_match2:
-                        parsed['email_draft'] = email_match2.group(1).strip()
-                        print(f"Gemini: 정규식으로 재파싱 성공 (패턴2) - 길이: {len(parsed['email_draft'])}")
-                    else:
-                        # 패턴 3: [예외 처리 기준] 전까지의 이메일 초안 추출
-                        email_pattern3 = r'이메일\s*초안[:\s]*\n(.*?)(?=\n\s*\[예외\s*처리\s*기준\])'
-                        email_match3 = re.search(email_pattern3, response_text, re.DOTALL)
-                        if email_match3:
-                            parsed['email_draft'] = email_match3.group(1).strip()
-                            print(f"Gemini: 정규식으로 재파싱 성공 (패턴3) - 길이: {len(parsed['email_draft'])}")
-                        else:
-                            # 패턴 4: 응답 끝까지의 이메일 초안 추출
-                            email_pattern4 = r'이메일\s*초안[:\s]*\n(.*?)(?=\n\s*$)'
-                            email_match4 = re.search(email_pattern4, response_text, re.DOTALL)
-                            if email_match4:
-                                parsed['email_draft'] = email_match4.group(1).strip()
-                                print(f"Gemini: 정규식으로 재파싱 성공 (패턴4) - 길이: {len(parsed['email_draft'])}")
+            # GEMINI 파싱에서는 이미 파싱된 email_draft를 그대로 사용 (재파싱 불필요)
+            print(f"Gemini: 파싱된 email_draft 사용 - 길이: {len(parsed['email_draft'])}")
             
             # 빈 값 체크 및 기본값 설정
             if not parsed['summary'] or len(parsed['summary']) < 5:
