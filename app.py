@@ -649,18 +649,21 @@ def show_ai_analysis_modal(selected_row):
                         # original_ai_response에서 이메일 초안을 직접 추출하여 표시
                         email_content = None
                         
-                        # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1)
-                        if analysis_data.get('original_ai_response'):
-                            email_content = extract_email_from_original_response(analysis_data['original_ai_response'])
+                        # 1. 파싱된 email_draft 사용 (우선순위 1) - DB에 저장된 정확한 이메일 초안
+                        email_draft = analysis_data.get('email_draft', '')
+                        if email_draft and len(email_draft.strip()) > 20:
+                            email_content = email_draft
+                            print(f"✅ 이력 관리 모달 - DB email_draft 사용: {len(email_content)}자")
                         
-                        # 2. full_analysis_result에서 이메일 초안 추출 (우선순위 2)
+                        # 2. original_ai_response에서 이메일 초안 추출 (우선순위 2)
+                        if not email_content and analysis_data.get('original_ai_response'):
+                            email_content = extract_email_from_original_response(analysis_data['original_ai_response'])
+                            print(f"✅ 이력 관리 모달 - original_ai_response에서 추출: {len(email_content)}자")
+                        
+                        # 3. full_analysis_result에서 이메일 초안 추출 (우선순위 3)
                         if not email_content and analysis_data.get('full_analysis_result'):
                             email_content = extract_email_from_analysis_result(analysis_data['full_analysis_result'])
-                        
-                        # 3. 파싱된 email_draft 사용 (우선순위 3)
-                        email_draft = analysis_data.get('email_draft', '')
-                        if not email_content and email_draft and len(email_draft.strip()) > 20:
-                            email_content = email_draft
+                            print(f"✅ 이력 관리 모달 - full_analysis_result에서 추출: {len(email_content)}자")
                         
                         # 4. 기본 이메일 템플릿 (최후 수단)
                         if not email_content:
@@ -813,7 +816,16 @@ def show_ai_analysis_modal(selected_row):
 4. 해결 완료 확인""")
                 
                 st.markdown("#### 📧 이메일 초안")
-                basic_email = f"""제목: {selected_row.get('문의유형', '문의')} 답변
+                
+                # DB에 저장된 email_draft가 있는지 먼저 확인
+                email_draft = selected_row.get('email_draft', '')
+                if email_draft and len(email_draft.strip()) > 20:
+                    # DB에 저장된 이메일 초안 사용
+                    formatted_basic_email = email_draft
+                    print(f"✅ 이력 관리 기본 응답 - DB email_draft 사용: {len(formatted_basic_email)}자")
+                else:
+                    # 기본 이메일 템플릿 사용
+                    basic_email = f"""제목: {selected_row.get('문의유형', '문의')} 답변
 
 고객님 안녕하세요.
 
@@ -831,9 +843,9 @@ def show_ai_analysis_modal(selected_row):
 추가 문의사항이 있으시면 언제든 연락 주세요.
 
 감사합니다."""
-                
-                # 이메일 내용에 줄바꿈 처리 적용
-                formatted_basic_email = format_email_content(basic_email)
+                    
+                    # 이메일 내용에 줄바꿈 처리 적용
+                    formatted_basic_email = format_email_content(basic_email)
                 st.markdown("**이메일 내용**")
                 st.markdown(
                     f"""
@@ -2192,26 +2204,32 @@ with tab2:
                 # 이력 관리 탭과 완전히 동일한 방식으로 이메일 초안 추출
                 email_content = None
                 
-                # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1) - 이력 관리와 동일
-                if result.get('original_ai_response'):
+                # 1. 파싱된 email_draft 사용 (우선순위 1) - DB에 저장된 정확한 이메일 초안
+                email_draft = result.get('email_draft', '')
+                if email_draft and len(email_draft.strip()) > 20:
+                    email_content = email_draft
+                    print(f"✅ DB email_draft 사용: {len(email_content)}자")
+                
+                # 2. original_ai_response에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
+                if not email_content and result.get('original_ai_response'):
                     email_content = extract_email_from_original_response(result['original_ai_response'])
-                elif result.get('ai_result'):
+                    print(f"✅ original_ai_response에서 추출: {len(email_content)}자")
+                elif not email_content and result.get('ai_result'):
                     ai_result = result['ai_result']
                     if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
                         email_content = extract_email_from_original_response(ai_result['gemini_result']['raw_response'])
+                        print(f"✅ gemini_result에서 추출: {len(email_content)}자")
                     elif 'response' in ai_result:
                         email_content = extract_email_from_original_response(ai_result['response'])
+                        print(f"✅ ai_result response에서 추출: {len(email_content)}자")
                     elif 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
                         email_content = extract_email_from_original_response(ai_result['gpt_result']['raw_response'])
+                        print(f"✅ gpt_result에서 추출: {len(email_content)}자")
                 
-                # 2. full_analysis_result에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
+                # 3. full_analysis_result에서 이메일 초안 추출 (우선순위 3) - 이력 관리와 동일
                 if not email_content and result.get('full_analysis_result'):
                     email_content = extract_email_from_analysis_result(result['full_analysis_result'])
-                
-                # 3. 파싱된 email_draft 사용 (우선순위 3) - 이력 관리와 동일
-                email_draft = result.get('email_draft', '')
-                if not email_content and email_draft and len(email_draft.strip()) > 20:
-                    email_content = email_draft
+                    print(f"✅ full_analysis_result에서 추출: {len(email_content)}자")
                 
                 # 4. 기본 이메일 템플릿 (최후 수단) - 이력 관리와 동일
                 if not email_content:
