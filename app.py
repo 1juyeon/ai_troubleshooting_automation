@@ -1090,23 +1090,46 @@ def extract_email_from_gpt_response(original_response: str) -> str:
         import re
         
         print(f"🔍 GPT 이메일 추출 시작 - 원본 응답 길이: {len(original_response)}자")
+        print(f"🔍 원본 응답 미리보기: {original_response[:300]}...")
         
-        # GPT 응답 패턴: "- 이메일 초안:" 다음에 ```로 감싸진 내용
-        gpt_pattern = r'- 이메일\s*초안[:\s]*\n```\n(.*?)\n```'
-        match = re.search(gpt_pattern, original_response, re.DOTALL)
+        # GPT 응답 패턴 1: "- 이메일 초안:" 다음에 ```로 감싸진 내용
+        gpt_pattern1 = r'- 이메일\s*초안[:\s]*\n```\n(.*?)\n```'
+        match = re.search(gpt_pattern1, original_response, re.DOTALL)
         if match:
             email_content = match.group(1).strip()
             if len(email_content) > 50:
-                print(f"✅ GPT 이메일 추출 성공: {len(email_content)}자")
+                print(f"✅ GPT 이메일 추출 성공 (패턴 1): {len(email_content)}자")
+                print(f"📧 추출된 이메일 미리보기: {email_content[:200]}...")
                 return email_content
         
-        # GPT 응답 패턴 2: "- 이메일 초안:" 다음에 이메일 내용 (``` 없이)
-        gpt_pattern2 = r'- 이메일\s*초안[:\s]*\n(.*?)(?=\n\n|\n- |\n\[|\Z)'
+        # GPT 응답 패턴 2: "- 이메일 초안:" 다음에 이메일 내용 (``` 없이, 더 포괄적)
+        gpt_pattern2 = r'- 이메일\s*초안[:\s]*\n(.*?)(?=\n\n|\n- |\n\[|\n※|\Z)'
         match = re.search(gpt_pattern2, original_response, re.DOTALL)
         if match:
             email_content = match.group(1).strip()
             if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
                 print(f"✅ GPT 이메일 추출 성공 (패턴 2): {len(email_content)}자")
+                print(f"📧 추출된 이메일 미리보기: {email_content[:200]}...")
+                return email_content
+        
+        # GPT 응답 패턴 3: "- 이메일 초안:" 다음에 이메일 내용 (더 유연한 종료 조건)
+        gpt_pattern3 = r'- 이메일\s*초안[:\s]*\n(.*?)(?=\n\n- |\n\[|\n※|\Z)'
+        match = re.search(gpt_pattern3, original_response, re.DOTALL)
+        if match:
+            email_content = match.group(1).strip()
+            if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
+                print(f"✅ GPT 이메일 추출 성공 (패턴 3): {len(email_content)}자")
+                print(f"📧 추출된 이메일 미리보기: {email_content[:200]}...")
+                return email_content
+        
+        # GPT 응답 패턴 4: "- 이메일 초안:" 다음에 이메일 내용 (가장 포괄적)
+        gpt_pattern4 = r'- 이메일\s*초안[:\s]*\n(.*?)(?=\n- |\n\[|\n※|\Z)'
+        match = re.search(gpt_pattern4, original_response, re.DOTALL)
+        if match:
+            email_content = match.group(1).strip()
+            if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
+                print(f"✅ GPT 이메일 추출 성공 (패턴 4): {len(email_content)}자")
+                print(f"📧 추출된 이메일 미리보기: {email_content[:200]}...")
                 return email_content
         
         print("⚠️ GPT 이메일 초안을 추출할 수 없습니다.")
@@ -1268,6 +1291,16 @@ def _parse_gpt_response(response_text: str) -> dict:
                 email_content = line.replace('- 이메일 초안:', '').strip()
                 if email_content:
                     parsed['email_draft'] += email_content + '\n'
+                # ```로 시작하는 경우 다음 줄부터 이메일 내용으로 처리
+                if i + 1 < len(lines):
+                    next_line = lines[i + 1].strip()
+                    if next_line.startswith('```'):
+                        # ``` 다음 줄부터 이메일 내용 시작
+                        for j in range(i + 2, len(lines)):
+                            content_line = lines[j].strip()
+                            if content_line == '```':
+                                break
+                            parsed['email_draft'] += content_line + '\n'
             elif line.startswith('1.') or line.startswith('2.') or line.startswith('3.') or line.startswith('4.') or line.startswith('5.'):
                 # 조치 흐름 항목
                 if current_section == 'action_flow':
@@ -1297,11 +1330,13 @@ def _parse_gpt_response(response_text: str) -> dict:
         parsed['summary'] = parsed['summary'].replace('- 요약:', '').strip()
         
         # 이메일 초안을 GPT 전용 함수로 다시 추출하여 정확성 보장
-        if parsed['email_draft']:
-            # 원본 응답에서 이메일 초안을 다시 추출
-            extracted_email = extract_email_from_gpt_response(response_text)
-            if extracted_email:
-                parsed['email_draft'] = extracted_email
+        # 항상 원본 응답에서 이메일 초안을 다시 추출 (기존 파싱 결과 무시)
+        extracted_email = extract_email_from_gpt_response(response_text)
+        if extracted_email:
+            parsed['email_draft'] = extracted_email
+            print(f"✅ GPT 파싱 - 이메일 초안 재추출 성공: {len(extracted_email)}자")
+        else:
+            print("⚠️ GPT 파싱 - 이메일 초안 재추출 실패, 기존 파싱 결과 사용")
         
         # 디버깅을 위한 로그 추가
         print(f"GPT 파싱 결과 - 요약: {parsed['summary'][:50]}...")
