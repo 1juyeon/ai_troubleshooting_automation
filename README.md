@@ -41,7 +41,7 @@ GOOGLE_API_KEY = "your-google-api-key"
 ```
 
 **지원하는 AI 모델:**
-- **Gemini 모델**: 1.5 Pro, 1.5 Flash, 2.0 Pro, 2.0 Flash
+- **Gemini 모델**: 1.5 Pro, 1.5 Flash, 2.0 Flash (실험적)
 - **GPT 모델**: GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo
 
 ### 4. 앱 실행
@@ -60,9 +60,10 @@ streamlit run app.py
 - **AI 모델 선택**: 사이드바에서 원하는 AI 모델 선택
   - Gemini 1.5 Pro: 가장 정확하고 상세한 분석
   - Gemini 1.5 Flash: 빠른 응답, 기본 분석
-  - Gemini 2.0 Pro: 최신 기술, 고품질 분석
-  - Gemini 2.0 Flash: 빠른 응답, 고품질
-  - GPT 모델들: OpenAI 기반 분석
+  - Gemini 2.0 Flash: 최신 기술, 빠른 응답 (실험적)
+  - GPT-4o: OpenAI 최신 모델, 고품질 분석
+  - GPT-4 Turbo: 빠른 응답, 고품질
+  - GPT-3.5 Turbo: 빠른 응답, 기본 분석
 - 선택된 AI 모델이 자동으로 분석 수행
 
 ### 3. 결과 확인
@@ -89,13 +90,19 @@ streamlit_pratice/
 ├── scenario_db.py            # 시나리오 데이터베이스
 ├── vector_search.py          # 벡터 검색 래퍼
 ├── gemini_handler.py         # Gemini AI 핸들러 (다중 모델 지원)
-├── gpt_handler.py            # 기존 Gemini AI 핸들러 (호환성)
-├── database.py               # 기본 데이터베이스
+├── openai_handler.py         # OpenAI GPT 핸들러
+├── gpt_handler.py            # GPT 핸들러 (호환성)
+├── database.py               # 기본 데이터베이스 (JSON)
 ├── multi_user_database.py    # 다중 사용자 데이터베이스
+├── mongodb_handler.py        # MongoDB Atlas 핸들러
 ├── vector_db.py              # 벡터 데이터베이스
+├── solapi_handler.py         # SOLAPI SMS 핸들러
 ├── requirements.txt           # 의존성 목록
 ├── README.md                 # 프로젝트 문서
-├── safe_deployment_guide.md  # 배포 가이드
+├── mongodb_atlas_setup_guide.md  # MongoDB 설정 가이드
+├── safe_deployment_guide.md  # 안전 배포 가이드
+├── streamlit_cloud_deployment_guide.md  # Streamlit Cloud 배포 가이드
+├── SOLAPI_설정_가이드.md     # SOLAPI 설정 가이드
 ├── 프롬프트.txt              # AI 프롬프트 템플릿
 ├── user_data/                # 사용자 데이터
 ├── user_sessions/            # 사용자 세션
@@ -105,12 +112,16 @@ streamlit_pratice/
 ## 🔧 기술 스택
 
 - **AI 모델**: 
-  - **Gemini 모델**: 1.5 Pro, 1.5 Flash, 2.0 Pro, 2.0 Flash
+  - **Gemini 모델**: 1.5 Pro, 1.5 Flash, 2.0 Flash (실험적)
   - **GPT 모델**: GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo
 - **웹 프레임워크**: Streamlit
-- **벡터 데이터베이스**: ChromaDB
+- **데이터베이스**: 
+  - **로컬**: JSON 파일 기반
+  - **클라우드**: MongoDB Atlas
+- **벡터 검색**: scikit-learn 기반 텍스트 유사도
 - **데이터 처리**: Pandas, NumPy
 - **API 통신**: Requests
+- **SMS 발송**: SOLAPI
 
 ## 📝 라이선스
 

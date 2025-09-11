@@ -23,8 +23,18 @@
 Streamlit Cloud 대시보드에서 다음 설정을 추가하세요:
 
 ```toml
-# Gemini API 키 (필수)
+# Gemini API 키 (필수 - 모든 Gemini 모델 사용 가능)
 GEMINI_API_KEY = "your-actual-gemini-api-key"
+
+# OpenAI API 키 (선택사항 - GPT 모델 사용)
+OPENAI_API_KEY = "your-openai-api-key"
+
+# MongoDB Atlas 연결 문자열 (선택사항 - 클라우드 데이터 저장)
+MONGODB_URI = "mongodb+srv://username:password@cluster.mongodb.net/database?retryWrites=true&w=majority"
+
+# SOLAPI API 키 (선택사항 - SMS 발송 기능)
+SOLAPI_API_KEY = "your-solapi-api-key"
+SOLAPI_API_SECRET = "your-solapi-api-secret"
 
 # 기존 호환성 유지 (선택사항)
 GOOGLE_API_KEY = "your-google-api-key"
@@ -35,6 +45,10 @@ GOOGLE_API_KEY = "your-google-api-key"
 
 ```bash
 export GEMINI_API_KEY="your-actual-gemini-api-key"
+export OPENAI_API_KEY="your-openai-api-key"
+export MONGODB_URI="your-mongodb-connection-string"
+export SOLAPI_API_KEY="your-solapi-api-key"
+export SOLAPI_API_SECRET="your-solapi-api-secret"
 export GOOGLE_API_KEY="your-google-api-key"
 ```
 

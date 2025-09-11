@@ -223,10 +223,10 @@ MONGODB_URI = "mongodb+srv://privkeeper_user:PrivKeeper2024!@privkeeper-cluster.
 
 MongoDB Atlas 설정이 완료되면:
 
-1. **PostgreSQL 백업 저장소** 추가 고려
-2. **Google Sheets 연동** 구현
-3. **자동 백업 및 동기화** 기능 개발
-4. **데이터 분석 대시보드** 구축
+1. **데이터 모니터링** 설정
+2. **백업 정책** 수립
+3. **성능 최적화** 진행
+4. **보안 강화** 적용
 
 ---
 
