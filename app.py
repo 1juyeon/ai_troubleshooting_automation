@@ -2892,7 +2892,7 @@ with tab4:
     st.markdown("## 📚 사용 가이드")
     
     st.markdown("### 🎯 시스템 개요")
-    st.markdown("PrivKeeper P 장애 대응 자동화 시스템은 Gemini AI 기반 고객 문의 자동 분석 및 응답 도구입니다.")
+    st.markdown("PrivKeeper P 장애 대응 자동화 시스템은 다중 AI 모델 기반 고객 문의 자동 분석 및 응답 도구입니다.")
 
     st.markdown("### 📋 사용 방법")
 
@@ -2901,7 +2901,7 @@ with tab4:
     st.markdown("- 시스템이 자동으로 문제 유형을 분류합니다")
 
     st.markdown("**2단계: AI 분석**")
-    st.markdown("- Gemini AI가 자동으로 증상 분석, 원인 추정, 조치 방향 제시")
+    st.markdown("- 선택한 AI 모델이 자동으로 증상 분석, 원인 추정, 조치 방향 제시")
     st.markdown("- 유사 사례 검색을 통한 참고 정보 제공")
     st.markdown("- 고객 응답 이메일 초안 자동 생성")
 
@@ -2912,10 +2912,11 @@ with tab4:
 
     st.markdown("### 🔧 기술 스택")
 
-    st.markdown(f"- **AI 모델:** Google {st.session_state.get('ai_model', 'Gemini 1.5 Pro')}")
-    st.markdown("- **벡터 검색:** ChromaDB")
+    st.markdown("- **AI 모델:** Gemini 1.5 Pro/Flash, Gemini 2.0 Flash, GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo")
+    st.markdown("- **벡터 검색:** scikit-learn 기반 텍스트 유사도")
     st.markdown("- **웹 프레임워크:** Streamlit")
-    st.markdown("- **데이터 소스:** JSON + Excel")
+    st.markdown("- **데이터베이스:** JSON 파일 + MongoDB Atlas (선택사항)")
+    st.markdown("- **데이터 처리:** Pandas, NumPy")
     st.markdown("- **SMS 발송:** SOLAPI")
 
     st.markdown("### ⚠️ 주의사항")
