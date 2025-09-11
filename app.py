@@ -689,7 +689,7 @@ def show_ai_analysis_modal(selected_row):
                         # 이메일 초안을 Streamlit 기본 스타일로 표시
                         st.markdown("**이메일 내용**")
                         email_content = (analysis_data.get('email_draft') or '').replace('\n', '\n\n')
-                        st.text_area("이메일 내용", email_content, height=350)
+                        st.text_area("이메일 내용", email_content, height=350, key="email_content_modal")
                         
 
                     
@@ -831,7 +831,7 @@ def show_ai_analysis_modal(selected_row):
                     # 이메일 내용에 줄바꿈 처리 적용
                     formatted_basic_email = format_email_content(basic_email)
                 st.markdown("**이메일 내용**")
-                st.text_area("", value=formatted_basic_email, height=350, disabled=True)
+                st.text_area("", value=formatted_basic_email, height=350, disabled=True, key="basic_email_display")
                 
                 
                 st.info("페이지를 새로고침하거나 다시 시도해주세요.")
@@ -1800,6 +1800,7 @@ with tab1:
     inquiry_content = st.text_area(
         "고객이 전달한 문의 내용을 상세히 입력해주세요",
         placeholder="예시: 고객이 PrivKeeper P에서 비밀번호 변경을 시도했으나 '인증 실패' 오류가 발생하여 변경이 되지 않는다고 합니다. 고객은 정확한 현재 비밀번호를 입력했다고 확신하고 있습니다.",
+        key="inquiry_content_input",
         height=200
     )
     
@@ -2298,7 +2299,7 @@ with tab2:
                 if email_content:
                     # 이메일 초안을 Streamlit 기본 스타일로 표시
                     email_content = (parsed.get('email_draft') or '').replace('\n', '\n\n')
-                    st.text_area("이메일 내용", value=email_content, height=350)
+                    st.text_area("이메일 내용", value=email_content, height=350, key="email_content_analysis")
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
                     
@@ -2332,7 +2333,7 @@ with tab2:
                     "SMS 메시지",
                     value=f"[{st.session_state.get('ai_model', 'AI')}] {parsed.get('summary', '')[:100] if parsed.get('summary') else '분석 완료'}...",
                     height=100,
-                    key="sms_message"
+                    key="sms_message_analysis"
                 )
                 
                 # SMS 발송 버튼
@@ -2421,26 +2422,32 @@ with tab2:
                     # 이력 관리 탭과 완전히 동일한 방식으로 이메일 초안 추출
                     email_content = None
                     
-                    # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1) - 이력 관리와 동일
-                    if result.get('original_ai_response'):
+                    # 1. 파싱된 email_draft 사용 (우선순위 1) - DB에 저장된 정확한 이메일 초안
+                    email_draft = result.get('email_draft', '')
+                    if email_draft and len(email_draft.strip()) > 20:
+                        email_content = email_draft
+                        print(f"✅ 이력 조회 탭 - email_draft 사용: {len(email_content)}자")
+                    
+                    # 2. original_ai_response에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
+                    if not email_content and result.get('original_ai_response'):
                         email_content = extract_email_from_original_response(result['original_ai_response'])
-                    elif result.get('ai_result'):
+                        print(f"🔍 이력 조회 탭 - original_ai_response에서 추출: {len(email_content) if email_content else 0}자")
+                    elif not email_content and result.get('ai_result'):
                         ai_result = result['ai_result']
                         if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
                             email_content = extract_email_from_original_response(ai_result['gemini_result']['raw_response'])
+                            print(f"🔍 이력 조회 탭 - gemini_result에서 추출: {len(email_content) if email_content else 0}자")
                         elif 'response' in ai_result:
                             email_content = extract_email_from_original_response(ai_result['response'])
+                            print(f"🔍 이력 조회 탭 - ai_result response에서 추출: {len(email_content) if email_content else 0}자")
                         elif 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
                             email_content = extract_email_from_original_response(ai_result['gpt_result']['raw_response'])
+                            print(f"🔍 이력 조회 탭 - gpt_result에서 추출: {len(email_content) if email_content else 0}자")
                     
-                    # 2. full_analysis_result에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
+                    # 3. full_analysis_result에서 이메일 초안 추출 (우선순위 3) - 이력 관리와 동일
                     if not email_content and result.get('full_analysis_result'):
                         email_content = extract_email_from_analysis_result(result['full_analysis_result'])
-                    
-                    # 3. 파싱된 email_draft 사용 (우선순위 3) - 이력 관리와 동일
-                    email_draft = result.get('email_draft', '')
-                    if not email_content and email_draft and len(email_draft.strip()) > 20:
-                        email_content = email_draft
+                        print(f"🔍 이력 조회 탭 - full_analysis_result에서 추출: {len(email_content) if email_content else 0}자")
                     
                     # 4. 기본 이메일 템플릿 (최후 수단) - 이력 관리와 동일
                     if not email_content:
@@ -2466,7 +2473,7 @@ with tab2:
                 if email_content:
                     # 이메일 초안을 Streamlit 기본 스타일로 표시
                     st.markdown("**이메일 내용**")
-                    st.text_area("", value=email_content, height=350)
+                    st.text_area("", value=email_content, height=350, key="email_content_history")
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
         
