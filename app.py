@@ -2201,76 +2201,37 @@ with tab2:
             with col10:
                 st.markdown("#### 📧 이메일 초안")
                 
-                # AI 분석 결과 탭 - DB에 저장된 email_draft 값만 사용 (강제 우선순위)
+                # 이력 관리와 완전히 동일한 방식으로 이메일 초안 추출
                 email_content = None
-                email_draft_found = False
                 
-                print("🔍 AI 분석 결과 탭 - email_draft 검색 시작")
+                # 1. 파싱된 email_draft 사용 (우선순위 1) - DB에 저장된 정확한 이메일 초안
+                email_draft = result.get('email_draft', '')
+                if email_draft and len(email_draft.strip()) > 20:
+                    email_content = email_draft
+                    print(f"✅ AI 분석 결과 탭 - email_draft 사용: {len(email_content)}자")
                 
-                # 1. parsed 객체에서 email_draft 추출 (최우선)
-                if 'parsed' in locals() and parsed and isinstance(parsed, dict):
-                    email_draft = parsed.get('email_draft', '')
-                    print(f"🔍 parsed 객체에서 email_draft 확인: '{email_draft[:50]}...' (길이: {len(email_draft)})")
-                    if email_draft and len(email_draft.strip()) > 20:
-                        email_content = email_draft
-                        email_draft_found = True
-                        print(f"✅ AI 분석 결과 탭 - parsed email_draft 사용: {len(email_content)}자")
-                        print(f"📧 이메일 내용 미리보기: {email_content[:100]}...")
+                # 2. original_ai_response에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
+                if not email_content and result.get('original_ai_response'):
+                    email_content = extract_email_from_original_response(result['original_ai_response'])
+                    print(f"🔍 AI 분석 결과 탭 - original_ai_response에서 추출: {len(email_content) if email_content else 0}자")
+                elif not email_content and result.get('ai_result'):
+                    ai_result = result['ai_result']
+                    if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
+                        email_content = extract_email_from_original_response(ai_result['gemini_result']['raw_response'])
+                        print(f"🔍 AI 분석 결과 탭 - gemini_result에서 추출: {len(email_content) if email_content else 0}자")
+                    elif 'response' in ai_result:
+                        email_content = extract_email_from_original_response(ai_result['response'])
+                        print(f"🔍 AI 분석 결과 탭 - ai_result response에서 추출: {len(email_content) if email_content else 0}자")
+                    elif 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
+                        email_content = extract_email_from_original_response(ai_result['gpt_result']['raw_response'])
+                        print(f"🔍 AI 분석 결과 탭 - gpt_result에서 추출: {len(email_content) if email_content else 0}자")
                 
-                # 2. result에서 직접 email_draft 추출 (백업)
-                if not email_draft_found and 'email_draft' in result:
-                    email_draft = result.get('email_draft', '')
-                    print(f"🔍 result에서 email_draft 확인: '{email_draft[:50]}...' (길이: {len(email_draft)})")
-                    if email_draft and len(email_draft.strip()) > 20:
-                        email_content = email_draft
-                        email_draft_found = True
-                        print(f"✅ AI 분석 결과 탭 - result email_draft 사용: {len(email_content)}자")
-                        print(f"📧 이메일 내용 미리보기: {email_content[:100]}...")
+                # 3. full_analysis_result에서 이메일 초안 추출 (우선순위 3) - 이력 관리와 동일
+                if not email_content and result.get('full_analysis_result'):
+                    email_content = extract_email_from_analysis_result(result['full_analysis_result'])
+                    print(f"🔍 AI 분석 결과 탭 - full_analysis_result에서 추출: {len(email_content) if email_content else 0}자")
                 
-                # 3. parsed_response에서 email_draft 추출 (백업)
-                if not email_draft_found and 'parsed_response' in result:
-                    parsed_response = result['parsed_response']
-                    if isinstance(parsed_response, dict):
-                        email_draft = parsed_response.get('email_draft', '')
-                        print(f"🔍 parsed_response에서 email_draft 확인: '{email_draft[:50]}...' (길이: {len(email_draft)})")
-                        if email_draft and len(email_draft.strip()) > 20:
-                            email_content = email_draft
-                            email_draft_found = True
-                            print(f"✅ AI 분석 결과 탭 - parsed_response email_draft 사용: {len(email_content)}자")
-                            print(f"📧 이메일 내용 미리보기: {email_content[:100]}...")
-                
-                # DB에 저장된 email_draft가 있으면 다른 소스는 사용하지 않음
-                if email_draft_found:
-                    print("✅ DB에 저장된 email_draft를 찾았습니다. 다른 소스는 사용하지 않습니다.")
-                else:
-                    print("⚠️ DB에 저장된 email_draft를 찾을 수 없습니다.")
-                
-                # 4. DB에 저장된 email_draft가 없는 경우에만 다른 소스 사용
-                if not email_draft_found:
-                    print("⚠️ DB에 저장된 email_draft를 찾을 수 없습니다. 다른 소스에서 추출 시도...")
-                    
-                    # original_ai_response에서 이메일 초안 추출
-                    if result.get('original_ai_response'):
-                        email_content = extract_email_from_original_response(result['original_ai_response'])
-                        print(f"✅ original_ai_response에서 추출: {len(email_content)}자")
-                    elif result.get('ai_result'):
-                        ai_result = result['ai_result']
-                        if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
-                            email_content = extract_email_from_original_response(ai_result['gemini_result']['raw_response'])
-                            print(f"✅ gemini_result에서 추출: {len(email_content)}자")
-                        elif 'response' in ai_result:
-                            email_content = extract_email_from_original_response(ai_result['response'])
-                            print(f"✅ ai_result response에서 추출: {len(email_content)}자")
-                        elif 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
-                            email_content = extract_email_from_original_response(ai_result['gpt_result']['raw_response'])
-                            print(f"✅ gpt_result에서 추출: {len(email_content)}자")
-                    
-                    # full_analysis_result에서 이메일 초안 추출
-                    if not email_content and result.get('full_analysis_result'):
-                        email_content = extract_email_from_analysis_result(result['full_analysis_result'])
-                        print(f"✅ full_analysis_result에서 추출: {len(email_content)}자")
-                
-                # 5. 기본 이메일 템플릿 (최후 수단) - 이력 관리와 동일
+                # 4. 기본 이메일 템플릿 (최후 수단) - 이력 관리와 동일
                 if not email_content:
                     email_content = f"""제목: {result.get('issue_type', '문의')} 답변
 
@@ -2292,9 +2253,9 @@ with tab2:
 감사합니다."""
                 
                 if email_content:
-                    # 이메일 초안을 Streamlit 기본 스타일로 표시
-                    email_content = email_content.replace('\n', '\n\n')
-                    st.text_area("이메일 내용", value=email_content, height=350, key="email_content_analysis")
+                    # 이력 관리와 동일한 방식으로 이메일 초안 표시
+                    st.markdown("**이메일 내용**")
+                    st.text_area("", value=email_content, height=350, disabled=True, key="email_content_analysis")
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
                     
