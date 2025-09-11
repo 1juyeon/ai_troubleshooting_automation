@@ -2298,7 +2298,7 @@ with tab2:
                 
                 if email_content:
                     # 이메일 초안을 Streamlit 기본 스타일로 표시
-                    email_content = (parsed.get('email_draft') or '').replace('\n', '\n\n')
+                    email_content = email_content.replace('\n', '\n\n')
                     st.text_area("이메일 내용", value=email_content, height=350, key="email_content_analysis")
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
