@@ -686,28 +686,9 @@ def show_ai_analysis_modal(selected_row):
 
 감사합니다."""
                         
-                        # 이메일 초안을 사진과 동일한 스타일로 표시
+                        # 이메일 초안을 Streamlit 기본 스타일로 표시
                         st.markdown("**이메일 내용**")
-                        st.markdown(
-                            f"""
-                            <div style="
-                                background-color: #f5f5f5;
-                                border: 1px solid #ddd;
-                                border-radius: 8px;
-                                padding: 16px;
-                                margin: 8px 0;
-                                font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
-                                font-size: 14px;
-                                line-height: 1.6;
-                                color: #333333;
-                                white-space: pre-wrap;
-                                min-height: 200px;
-                            ">
-                            {email_content}
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
+                        st.text_area("", value=email_content, height=200, disabled=True)
                         
 
                     
@@ -849,26 +830,7 @@ def show_ai_analysis_modal(selected_row):
                     # 이메일 내용에 줄바꿈 처리 적용
                     formatted_basic_email = format_email_content(basic_email)
                 st.markdown("**이메일 내용**")
-                st.markdown(
-                    f"""
-                    <div style="
-                        background-color: #f5f5f5;
-                        border: 1px solid #ddd;
-                        border-radius: 8px;
-                        padding: 16px;
-                        margin: 8px 0;
-                        font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
-                        font-size: 14px;
-                        line-height: 1.6;
-                        color: #333333;
-                        white-space: pre-wrap;
-                        min-height: 200px;
-                    ">
-                    {formatted_basic_email}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                st.text_area("", value=formatted_basic_email, height=200, disabled=True)
                 
                 
                 st.info("페이지를 새로고침하거나 다시 시도해주세요.")
@@ -2535,28 +2497,9 @@ with tab2:
 감사합니다."""
                     
                 if email_content:
-                    # 이메일 초안을 사진과 동일한 스타일로 표시
+                    # 이메일 초안을 Streamlit 기본 스타일로 표시
                     st.markdown("**이메일 내용**")
-                    st.markdown(
-                        f"""
-                        <div style="
-                            background-color: #f5f5f5;
-                            border: 1px solid #ddd;
-                            border-radius: 8px;
-                            padding: 16px;
-                            margin: 8px 0;
-                            font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
-                            font-size: 14px;
-                            line-height: 1.6;
-                            color: #333333;
-                            white-space: pre-wrap;
-                            min-height: 200px;
-                        ">
-                        {email_content}
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+                    st.text_area("", value=email_content, height=200, disabled=True)
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
         
