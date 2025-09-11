@@ -686,14 +686,9 @@ def show_ai_analysis_modal(selected_row):
 
 감사합니다."""
                         
-                        # HTML 태그 제거
-                        import re
-                        clean_email_content = re.sub(r'<[^>]+>', '', email_content)
-                        clean_email_content = clean_email_content.strip()
-                        
                         # 이메일 초안을 Streamlit 기본 스타일로 표시
                         st.markdown("**이메일 내용**")
-                        st.text_area("", value=clean_email_content, height=350, disabled=True)
+                        st.text_area("", value=email_content, height=350, disabled=True)
                         
 
                     
@@ -834,13 +829,8 @@ def show_ai_analysis_modal(selected_row):
                     
                     # 이메일 내용에 줄바꿈 처리 적용
                     formatted_basic_email = format_email_content(basic_email)
-                # HTML 태그 제거
-                import re
-                clean_basic_email = re.sub(r'<[^>]+>', '', formatted_basic_email)
-                clean_basic_email = clean_basic_email.strip()
-                
                 st.markdown("**이메일 내용**")
-                st.text_area("", value=clean_basic_email, height=350, disabled=True)
+                st.text_area("", value=formatted_basic_email, height=350, disabled=True)
                 
                 
                 st.info("페이지를 새로고침하거나 다시 시도해주세요.")
@@ -2305,42 +2295,9 @@ with tab2:
 감사합니다."""
                 
                 if email_content:
-                    # DB original_ai_response의 이메일 초안을 그대로 표시 (줄바꿈 유지)
+                    # 이메일 초안을 Streamlit 기본 스타일로 표시
                     st.markdown("**이메일 내용**")
-                    st.markdown(
-                        f"""
-                        <div style="
-                            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                            color: #212529;
-                            white-space: pre-wrap;
-                            font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
-                            font-size: 14px;
-                            line-height: 1.6;
-                            border: 2px solid #dee2e6;
-                            border-radius: 12px;
-                            padding: 20px;
-                            margin: 10px 0;
-                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                            height: 500px;
-                            overflow-y: auto;
-                            position: relative;
-                        ">
-                        <div style="
-                            background: #007bff;
-                            color: white;
-                            padding: 8px 12px;
-                            margin: -20px -20px 15px -20px;
-                            border-radius: 10px 10px 0 0;
-                            font-weight: 600;
-                            font-size: 13px;
-                        ">
-                        📧 이메일 초안
-                        </div>
-                        {email_content}
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+                    st.text_area("", value=email_content, height=350)
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
             
@@ -2507,14 +2464,9 @@ with tab2:
 감사합니다."""
                     
                 if email_content:
-                    # HTML 태그 제거
-                    import re
-                    clean_email_content = re.sub(r'<[^>]+>', '', email_content)
-                    clean_email_content = clean_email_content.strip()
-                    
                     # 이메일 초안을 Streamlit 기본 스타일로 표시
                     st.markdown("**이메일 내용**")
-                    st.text_area("", value=clean_email_content, height=350, disabled=True)
+                    st.text_area("", value=email_content, height=350)
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
         
