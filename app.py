@@ -527,7 +527,6 @@ def show_ai_analysis_modal(selected_row):
     """선택된 행의 AI 분석 결과를 모달 형태로 표시"""
     with st.container():
         st.markdown("## 🤖 AI 분석 결과")
-        st.success("✅ AI 분석이 완료되었습니다! 아래에서 상세한 결과를 확인하세요.")
         
         # 선택된 데이터 정보 표시
         with st.expander("📋 입력된 문의 정보", expanded=True):
@@ -601,7 +600,6 @@ def show_ai_analysis_modal(selected_row):
             
             # AI 분석 결과 표시 (실제 데이터가 있든 없든 기본 정보는 표시)
             st.markdown("---")
-            st.markdown("### 🔍 AI 분석 결과")
             
             # 문제 유형 분류와 시나리오 매칭 섹션 삭제
             
@@ -620,36 +618,9 @@ def show_ai_analysis_modal(selected_row):
                 # 데이터가 성공적으로 로드되었는지 확인
                 if analysis_data:
                     
-                    # AI 응답 결과
-                    st.markdown("### 🤖 AI 응답")
-                    
                     col5, col6 = st.columns(2)
                     
                     with col5:
-                        st.markdown("#### ❓ 질문")
-                        # 질문 정보 표시
-                        if full_result and 'ai_result' in full_result:
-                            ai_result = full_result['ai_result']
-                            if 'parsed_response' in ai_result:
-                                parsed = ai_result['parsed_response']
-                                question = parsed.get('question', '')
-                                if question:
-                                    st.write(question)
-                                else:
-                                    st.write("질문 정보가 없습니다.")
-                            elif 'response' in ai_result:
-                                # GPT API 응답인 경우 파싱
-                                parsed = _parse_gpt_response(ai_result['response'])
-                                question = parsed.get('question', '')
-                                if question:
-                                    st.write(question)
-                                else:
-                                    st.write("질문 정보가 없습니다.")
-                            else:
-                                st.write("질문 정보가 없습니다.")
-                        else:
-                            st.write("질문 정보가 없습니다.")
-                        
                         st.markdown("#### 📝 요약")
                         summary = analysis_data.get('summary', '')
                         if summary:
