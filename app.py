@@ -1069,132 +1069,137 @@ def format_ai_response(ai_response: str) -> str:
     
     return formatted
 
-def extract_email_from_original_response(original_response: str) -> str:
-    """원본 AI 응답에서 이메일 초안을 추출하여 줄바꿈을 보존하여 반환 (GPT, Gemini 모두 지원)"""
+def extract_email_from_gpt_response(original_response: str) -> str:
+    """GPT 응답에서 이메일 초안을 추출 (GPT 전용)"""
     if not original_response:
         return ""
     
     try:
         import re
         
-        # 디버깅을 위한 로그
-        print(f"🔍 이메일 추출 시작 - 원본 응답 길이: {len(original_response)}자")
-        print(f"🔍 원본 응답 미리보기: {original_response[:200]}...")
+        print(f"🔍 GPT 이메일 추출 시작 - 원본 응답 길이: {len(original_response)}자")
         
-        # 1. "이메일 초안:" 다음에 이메일 내용이 있는 경우 추출 (우선순위 1)
-        # GEMINI 응답에서 이메일 초안 섹션을 정확히 추출
-        email_pattern = r'이메일\s*초안[:\s]*\n\n(.*?)(?=\n\n|\n- |\n\[|\n※|\Z)'
-        match = re.search(email_pattern, original_response, re.DOTALL)
+        # GPT 응답 패턴: "- 이메일 초안:" 다음에 ```로 감싸진 내용
+        gpt_pattern = r'- 이메일\s*초안[:\s]*\n```\n(.*?)\n```'
+        match = re.search(gpt_pattern, original_response, re.DOTALL)
         if match:
             email_content = match.group(1).strip()
-            # 이메일 내용이 충분히 길고 "감사합니다"를 포함하는지 확인
-            if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
-                print(f"✅ 이메일 추출 성공 (패턴 1): {len(email_content)}자")
+            if len(email_content) > 50:
+                print(f"✅ GPT 이메일 추출 성공: {len(email_content)}자")
                 return email_content
         
-        # 2. "이메일 초안:" 다음에 이메일 내용이 있는 경우 추출 (빈 줄 없이, 우선순위 2)
-        email_pattern = r'이메일\s*초안[:\s]*\n(.*?)(?=\n\n|\n- |\n\[|\n※|\Z)'
-        match = re.search(email_pattern, original_response, re.DOTALL)
+        # GPT 응답 패턴 2: "- 이메일 초안:" 다음에 이메일 내용 (``` 없이)
+        gpt_pattern2 = r'- 이메일\s*초안[:\s]*\n(.*?)(?=\n\n|\n- |\n\[|\Z)'
+        match = re.search(gpt_pattern2, original_response, re.DOTALL)
         if match:
             email_content = match.group(1).strip()
             if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
-                print(f"✅ 이메일 추출 성공 (패턴 2): {len(email_content)}자")
+                print(f"✅ GPT 이메일 추출 성공 (패턴 2): {len(email_content)}자")
                 return email_content
         
-        # 3. "- 이메일 초안:" 다음에 이메일 내용이 있는 경우 추출 (우선순위 3)
-        email_pattern = r'- 이메일\s*초안[:\s]*\n(.*?)(?=\n\n|\n- |\n\[|\n※|\Z)'
-        match = re.search(email_pattern, original_response, re.DOTALL)
-        if match:
-            email_content = match.group(1).strip()
-            if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
-                print(f"✅ 이메일 추출 성공 (패턴 3): {len(email_content)}자")
-                return email_content
-        
-        # 4. "제목:"으로 시작하는 이메일 형태 찾기 (우선순위 4)
-        title_email_pattern = r'제목[:\s].*?(?=\n\n|\n- |\n\[|\n※|\Z)'
-        match = re.search(title_email_pattern, original_response, re.DOTALL)
-        if match:
-            email_content = match.group(0).strip()
-            if len(email_content) > 100 and ('감사합니다' in email_content or '안녕하세요' in email_content):
-                print(f"✅ 이메일 추출 성공 (패턴 4): {len(email_content)}자")
-                return email_content
-        
-        # 5. "고객님 안녕하세요"로 시작하는 이메일 형태 찾기 (우선순위 5)
-        customer_greeting_pattern = r'고객님\s*안녕하세요.*?(?=\n\n|\n- |\n\[|\n※|\Z)'
-        match = re.search(customer_greeting_pattern, original_response, re.DOTALL)
-        if match:
-            email_content = match.group(0).strip()
-            if len(email_content) > 100 and ('감사합니다' in email_content or '안녕하세요' in email_content):
-                print(f"✅ 이메일 추출 성공 (패턴 5): {len(email_content)}자")
-                return email_content
-        
-        # 6. "안녕하세요"로 시작하는 이메일 형태 찾기 (우선순위 6)
-        greeting_email_pattern = r'안녕하세요.*?(?=\n\n|\n- |\n\[|\n※|\Z)'
-        match = re.search(greeting_email_pattern, original_response, re.DOTALL)
-        if match:
-            email_content = match.group(0).strip()
-            if len(email_content) > 100 and ('감사합니다' in email_content or '안녕하세요' in email_content):
-                print(f"✅ 이메일 추출 성공 (패턴 6): {len(email_content)}자")
-                return email_content
-        
-        # 7. 더 포괄적인 이메일 패턴 찾기 (우선순위 7)
-        # "안녕하세요" 또는 "고객님"으로 시작하고 "감사합니다"로 끝나는 긴 텍스트
-        comprehensive_pattern = r'(안녕하세요|고객님\s*안녕하세요).*?감사합니다[\.]?'
-        match = re.search(comprehensive_pattern, original_response, re.DOTALL)
-        if match:
-            email_content = match.group(0).strip()
-            if len(email_content) > 100:
-                print(f"✅ 이메일 추출 성공 (패턴 7): {len(email_content)}자")
-                return email_content
-        
-        # 8. "제목:"으로 시작하는 패턴 (마침표 없이)
-        title_pattern = r'제목[:\s].*?감사합니다[\.]?'
-        match = re.search(title_pattern, original_response, re.DOTALL)
-        if match:
-            email_content = match.group(0).strip()
-            if len(email_content) > 100:
-                print(f"✅ 이메일 추출 성공 (패턴 8): {len(email_content)}자")
-                return email_content
-        
-        # 9. 이메일 추출이 실패한 경우 빈 문자열 반환 (전체 응답 반환하지 않음)
-        print("⚠️ 이메일 초안을 추출할 수 없습니다.")
+        print("⚠️ GPT 이메일 초안을 추출할 수 없습니다.")
         return ""
         
     except Exception as e:
+        print(f"GPT 이메일 추출 오류: {e}")
+        return ""
+
+def extract_email_from_gemini_response(original_response: str) -> str:
+    """GEMINI 응답에서 이메일 초안을 추출 (GEMINI 전용)"""
+    if not original_response:
+        return ""
+    
+    try:
+        import re
+        
+        print(f"🔍 GEMINI 이메일 추출 시작 - 원본 응답 길이: {len(original_response)}자")
+        
+        # GEMINI 응답 패턴: "이메일 초안:" 다음에 이메일 내용
+        gemini_pattern = r'이메일\s*초안[:\s]*\n\n(.*?)(?=\n\n|\n- |\n\[|\n※|\Z)'
+        match = re.search(gemini_pattern, original_response, re.DOTALL)
+        if match:
+            email_content = match.group(1).strip()
+            if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
+                print(f"✅ GEMINI 이메일 추출 성공: {len(email_content)}자")
+                return email_content
+        
+        # GEMINI 응답 패턴 2: "이메일 초안:" 다음에 이메일 내용 (빈 줄 없이)
+        gemini_pattern2 = r'이메일\s*초안[:\s]*\n(.*?)(?=\n\n|\n- |\n\[|\n※|\Z)'
+        match = re.search(gemini_pattern2, original_response, re.DOTALL)
+        if match:
+            email_content = match.group(1).strip()
+            if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
+                print(f"✅ GEMINI 이메일 추출 성공 (패턴 2): {len(email_content)}자")
+                return email_content
+        
+        print("⚠️ GEMINI 이메일 초안을 추출할 수 없습니다.")
+        return ""
+        
+    except Exception as e:
+        print(f"GEMINI 이메일 추출 오류: {e}")
+        return ""
+
+def extract_email_from_original_response(original_response: str) -> str:
+    """원본 AI 응답에서 이메일 초안을 추출 (GPT/GEMINI 자동 감지)"""
+    if not original_response:
+        return ""
+    
+    try:
+        import re
+        
+        print(f"🔍 이메일 추출 시작 - 원본 응답 길이: {len(original_response)}자")
+        
+        # GPT 응답인지 GEMINI 응답인지 감지
+        if '- 이메일 초안:' in original_response:
+            print("🔍 GPT 응답으로 감지됨")
+            return extract_email_from_gpt_response(original_response)
+        elif '이메일 초안:' in original_response:
+            print("🔍 GEMINI 응답으로 감지됨")
+            return extract_email_from_gemini_response(original_response)
+        else:
+            print("⚠️ GPT/GEMINI 응답 형식을 감지할 수 없습니다.")
+            return ""
+        
+    except Exception as e:
         print(f"이메일 추출 오류: {e}")
-        # 오류 발생 시 빈 문자열 반환
         return ""
 
 def extract_email_from_analysis_result(analysis_result: dict) -> str:
-    """분석 결과에서 이메일 초안을 추출"""
+    """분석 결과에서 이메일 초안을 추출 (GPT/GEMINI 구분 처리)"""
     try:
         # ai_result에서 raw_response 추출
         if 'ai_result' in analysis_result:
             ai_result = analysis_result['ai_result']
             
-            # Gemini 결과에서 추출
+            # GEMINI 결과에서 추출
             if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
-                return extract_email_from_original_response(ai_result['gemini_result']['raw_response'])
+                print("🔍 GEMINI 분석 결과에서 이메일 추출")
+                return extract_email_from_gemini_response(ai_result['gemini_result']['raw_response'])
             
             # GPT 결과에서 추출 (openai_handler는 'response' 키 사용)
             if 'response' in ai_result:
-                return extract_email_from_original_response(ai_result['response'])
+                print("🔍 GPT 분석 결과에서 이메일 추출")
+                return extract_email_from_gpt_response(ai_result['response'])
             
             # 기존 gpt_result 형태도 지원
             if 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
-                return extract_email_from_original_response(ai_result['gpt_result']['raw_response'])
+                print("🔍 GPT 분석 결과에서 이메일 추출 (gpt_result)")
+                return extract_email_from_gpt_response(ai_result['gpt_result']['raw_response'])
         
         # 직접 gemini_result나 gpt_result가 있는 경우
         if 'gemini_result' in analysis_result and 'raw_response' in analysis_result['gemini_result']:
-            return extract_email_from_original_response(analysis_result['gemini_result']['raw_response'])
+            print("🔍 GEMINI 직접 결과에서 이메일 추출")
+            return extract_email_from_gemini_response(analysis_result['gemini_result']['raw_response'])
         
         # GPT 응답이 직접 있는 경우 (openai_handler는 'response' 키 사용)
         if 'response' in analysis_result:
-            return extract_email_from_original_response(analysis_result['response'])
+            print("🔍 GPT 직접 결과에서 이메일 추출")
+            return extract_email_from_gpt_response(analysis_result['response'])
         
         # 기존 gpt_result 형태도 지원
         if 'gpt_result' in analysis_result and 'raw_response' in analysis_result['gpt_result']:
-            return extract_email_from_original_response(analysis_result['gpt_result']['raw_response'])
+            print("🔍 GPT 직접 결과에서 이메일 추출 (gpt_result)")
+            return extract_email_from_gpt_response(analysis_result['gpt_result']['raw_response'])
         
         return ""
         
@@ -1279,6 +1284,13 @@ def _parse_gpt_response(response_text: str) -> dict:
         # 요약에서 "- 요약:" 제거 (혹시 남아있을 경우)
         parsed['summary'] = parsed['summary'].replace('- 요약:', '').strip()
         
+        # 이메일 초안을 GPT 전용 함수로 다시 추출하여 정확성 보장
+        if parsed['email_draft']:
+            # 원본 응답에서 이메일 초안을 다시 추출
+            extracted_email = extract_email_from_gpt_response(response_text)
+            if extracted_email:
+                parsed['email_draft'] = extracted_email
+        
         # 디버깅을 위한 로그 추가
         print(f"GPT 파싱 결과 - 요약: {parsed['summary'][:50]}...")
         print(f"GPT 파싱 결과 - 조치 흐름: {parsed['action_flow'][:50]}...")
@@ -1288,6 +1300,107 @@ def _parse_gpt_response(response_text: str) -> dict:
         
     except Exception as e:
         print(f"GPT 응답 파싱 오류: {e}")
+        return {
+            'response_type': '해결안',
+            'summary': '응답 파싱 중 오류가 발생했습니다.',
+            'action_flow': '응답을 확인해주세요.',
+            'email_draft': '응답을 확인해주세요.',
+            'question': ''
+        }
+
+def _parse_gemini_response(response_text: str) -> dict:
+    """GEMINI API 응답을 파싱하여 구조화된 데이터로 변환"""
+    try:
+        parsed = {
+            'response_type': '해결안',
+            'summary': '',
+            'action_flow': '',
+            'email_draft': '',
+            'question': ''
+        }
+        
+        # 응답 텍스트를 줄 단위로 분리
+        lines = response_text.split('\n')
+        current_section = None
+        
+        for i, line in enumerate(lines):
+            line = line.strip()
+            if not line:
+                continue
+                
+            # 섹션 헤더 확인 (GEMINI 형식)
+            if '[대응유형]' in line:
+                response_type = line.replace('[대응유형]', '').strip()
+                if response_type in ['해결안', '질문', '출동']:
+                    parsed['response_type'] = response_type
+            elif '[응답내용]' in line:
+                current_section = 'content'
+            elif '요약:' in line:
+                current_section = 'summary'
+                # 요약 내용이 같은 줄에 있는 경우
+                summary_content = line.replace('요약:', '').strip()
+                if summary_content:
+                    parsed['summary'] = summary_content
+                # 다음 줄에 요약 내용이 있는지 확인
+                if i + 1 < len(lines):
+                    next_line = lines[i + 1].strip()
+                    if next_line and not any(keyword in next_line for keyword in ['조치 흐름:', '이메일 초안:', '[응답내용]', '[대응유형]']):
+                        if parsed['summary']:
+                            parsed['summary'] += ' ' + next_line
+                        else:
+                            parsed['summary'] = next_line
+            elif '조치 흐름:' in line:
+                current_section = 'action_flow'
+            elif '이메일 초안:' in line:
+                current_section = 'email_draft'
+                # 이메일 초안 헤더 제거하고 내용이 있으면 바로 추가
+                email_content = line.replace('이메일 초안:', '').strip()
+                if email_content:
+                    parsed['email_draft'] += email_content + '\n'
+            elif line.startswith('1.') or line.startswith('2.') or line.startswith('3.') or line.startswith('4.') or line.startswith('5.'):
+                # 조치 흐름 항목
+                if current_section == 'action_flow':
+                    parsed['action_flow'] += line + '\n'
+            elif current_section == 'summary':
+                if parsed['summary']:  # 이미 내용이 있으면 공백 추가
+                    parsed['summary'] += ' ' + line
+                else:
+                    parsed['summary'] = line
+            elif current_section == 'action_flow':
+                # 조치 흐름에서 불필요한 텍스트 제거
+                if not any(unwanted in line for unwanted in [
+                    '[응답내용]', '[대응유형]', '요약:', '조치 흐름:', '이메일 초안:',
+                    '아래 형식을 참고하여', '실무자가 이해하기 쉽도록', '자연스럽고 정확하게 응답을 생성하십시오'
+                ]):
+                    parsed['action_flow'] += line + '\n'
+            elif current_section == 'email_draft':
+                # 이메일 초안 내용 추가 (불필요한 텍스트만 제거)
+                if not any(unwanted in line for unwanted in [
+                    '[응답내용]', '[대응유형]', '요약:', '조치 흐름:', '이메일 초안:',
+                    '아래 형식을 참고하여', '실무자가 이해하기 쉽도록', '자연스럽고 정확하게 응답을 생성하십시오'
+                ]):
+                    # 이메일 초안 내용을 그대로 추가
+                    parsed['email_draft'] += line + '\n'
+        
+        # 요약에서 "요약:" 제거 (혹시 남아있을 경우)
+        parsed['summary'] = parsed['summary'].replace('요약:', '').strip()
+        
+        # 이메일 초안을 GEMINI 전용 함수로 다시 추출하여 정확성 보장
+        if parsed['email_draft']:
+            # 원본 응답에서 이메일 초안을 다시 추출
+            extracted_email = extract_email_from_gemini_response(response_text)
+            if extracted_email:
+                parsed['email_draft'] = extracted_email
+        
+        # 디버깅을 위한 로그 추가
+        print(f"GEMINI 파싱 결과 - 요약: {parsed['summary'][:50]}...")
+        print(f"GEMINI 파싱 결과 - 조치 흐름: {parsed['action_flow'][:50]}...")
+        print(f"GEMINI 파싱 결과 - 이메일 초안: {parsed['email_draft'][:50]}...")
+        
+        return parsed
+        
+    except Exception as e:
+        print(f"GEMINI 응답 파싱 오류: {e}")
         return {
             'response_type': '해결안',
             'summary': '응답 파싱 중 오류가 발생했습니다.',
@@ -1899,13 +2012,18 @@ with tab1:
                             if 'ai_result' in analysis_result:
                                 ai_result = analysis_result['ai_result']
                                 
-                                if 'gemini_result' in ai_result and 'parsed_response' in ai_result['gemini_result']:
-                                    parsed_data = ai_result['gemini_result']['parsed_response']
-                                elif 'parsed_response' in ai_result:
-                                    parsed_data = ai_result['parsed_response']
-                                elif 'response' in ai_result:
-                                    # GPT API 응답인 경우 파싱
-                                    parsed_data = _parse_gpt_response(ai_result['response'])
+                            if 'gemini_result' in ai_result and 'parsed_response' in ai_result['gemini_result']:
+                                # GEMINI 응답인 경우
+                                parsed_data = ai_result['gemini_result']['parsed_response']
+                            elif 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
+                                # GEMINI raw_response인 경우 파싱
+                                parsed_data = _parse_gemini_response(ai_result['gemini_result']['raw_response'])
+                            elif 'parsed_response' in ai_result:
+                                # 기존 파싱된 응답
+                                parsed_data = ai_result['parsed_response']
+                            elif 'response' in ai_result:
+                                # GPT API 응답인 경우 파싱
+                                parsed_data = _parse_gpt_response(ai_result['response'])
                             
                             # 파싱된 데이터를 analysis_result에 명시적으로 포함
                             if parsed_data:
@@ -2017,17 +2135,17 @@ with tab2:
         if 'ai_result' in result and result['ai_result']['success']:
             ai_result = result['ai_result']
             
-            # Gemini 응답인 경우 gemini_result에서 parsed_response 추출
+            # GEMINI 응답인 경우 gemini_result에서 parsed_response 추출
             if 'gemini_result' in ai_result:
-                # Gemini 응답도 GPT와 동일한 형식으로 파싱
+                # GEMINI 응답인 경우 GEMINI 전용 파싱 사용
                 if 'raw_response' in ai_result['gemini_result']:
-                    parsed = _parse_gpt_response(ai_result['gemini_result']['raw_response'])
+                    parsed = _parse_gemini_response(ai_result['gemini_result']['raw_response'])
                 else:
                     parsed = ai_result['gemini_result']['parsed_response']
             elif 'parsed_response' in ai_result:
                 parsed = ai_result['parsed_response']
             elif 'response' in ai_result:
-                # GPT API 응답인 경우 파싱
+                # GPT API 응답인 경우 GPT 전용 파싱 사용
                 parsed = _parse_gpt_response(ai_result['response'])
             else:
                 st.error("❌ AI 응답 데이터가 올바르지 않습니다.")
