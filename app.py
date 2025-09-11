@@ -686,32 +686,24 @@ def show_ai_analysis_modal(selected_row):
 
 감사합니다."""
                         
-                        # 이메일 초안을 깔끔한 박스 형태로 표시
+                        # 이메일 초안을 사진과 동일한 스타일로 표시
                         st.markdown("**이메일 내용**")
                         st.markdown(
                             f"""
                             <div style="
-                                background-color: #ffffff;
-                                border: 1px solid #e0e0e0;
+                                background-color: #f5f5f5;
+                                border: 1px solid #ddd;
                                 border-radius: 8px;
                                 padding: 16px;
                                 margin: 8px 0;
-                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                            ">
-                            <div style="
-                                background-color: #f8f9fa;
-                                border: 1px solid #e9ecef;
-                                border-radius: 4px;
-                                padding: 12px;
                                 font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
                                 font-size: 14px;
-                                line-height: 1.5;
+                                line-height: 1.6;
                                 color: #333333;
                                 white-space: pre-wrap;
                                 min-height: 200px;
                             ">
                             {email_content}
-                            </div>
                             </div>
                             """,
                             unsafe_allow_html=True
@@ -860,27 +852,19 @@ def show_ai_analysis_modal(selected_row):
                 st.markdown(
                     f"""
                     <div style="
-                        background-color: #ffffff;
-                        border: 1px solid #e0e0e0;
+                        background-color: #f5f5f5;
+                        border: 1px solid #ddd;
                         border-radius: 8px;
                         padding: 16px;
                         margin: 8px 0;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                    ">
-                    <div style="
-                        background-color: #f8f9fa;
-                        border: 1px solid #e9ecef;
-                        border-radius: 4px;
-                        padding: 12px;
                         font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
                         font-size: 14px;
-                        line-height: 1.5;
+                        line-height: 1.6;
                         color: #333333;
                         white-space: pre-wrap;
                         min-height: 200px;
                     ">
                     {formatted_basic_email}
-                    </div>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -2551,32 +2535,24 @@ with tab2:
 감사합니다."""
                     
                 if email_content:
-                    # 이메일 초안을 깔끔한 박스 형태로 표시
+                    # 이메일 초안을 사진과 동일한 스타일로 표시
                     st.markdown("**이메일 내용**")
                     st.markdown(
                         f"""
                         <div style="
-                            background-color: #ffffff;
-                            border: 1px solid #e0e0e0;
+                            background-color: #f5f5f5;
+                            border: 1px solid #ddd;
                             border-radius: 8px;
                             padding: 16px;
                             margin: 8px 0;
-                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                        ">
-                        <div style="
-                            background-color: #f8f9fa;
-                            border: 1px solid #e9ecef;
-                            border-radius: 4px;
-                            padding: 12px;
                             font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
                             font-size: 14px;
-                            line-height: 1.5;
+                            line-height: 1.6;
                             color: #333333;
                             white-space: pre-wrap;
                             min-height: 200px;
                         ">
                         {email_content}
-                        </div>
                         </div>
                         """,
                         unsafe_allow_html=True
