@@ -688,7 +688,8 @@ def show_ai_analysis_modal(selected_row):
                         
                         # 이메일 초안을 Streamlit 기본 스타일로 표시
                         st.markdown("**이메일 내용**")
-                        st.text_area("", value=email_content, height=350, disabled=True)
+                        email_content = (analysis_data.get('email_draft') or '').replace('\n', '\n\n')
+                        st.text_area("이메일 내용", email_content, height=350)
                         
 
                     
