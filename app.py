@@ -2205,10 +2205,28 @@ with tab2:
                 email_content = None
                 
                 # 1. 파싱된 email_draft 사용 (우선순위 1) - DB에 저장된 정확한 이메일 초안
-                email_draft = result.get('email_draft', '')
+                email_draft = ''
+                
+                # parsed 객체에서 email_draft 추출
+                if 'parsed' in locals() and parsed and isinstance(parsed, dict):
+                    email_draft = parsed.get('email_draft', '')
+                    print(f"🔍 parsed 객체에서 email_draft 확인: {len(email_draft)}자")
+                
+                # result에서 직접 email_draft 추출 (백업)
+                if not email_draft and 'email_draft' in result:
+                    email_draft = result.get('email_draft', '')
+                    print(f"🔍 result에서 email_draft 확인: {len(email_draft)}자")
+                
+                # parsed_response에서 email_draft 추출 (백업)
+                if not email_draft and 'parsed_response' in result:
+                    parsed_response = result['parsed_response']
+                    if isinstance(parsed_response, dict):
+                        email_draft = parsed_response.get('email_draft', '')
+                        print(f"🔍 parsed_response에서 email_draft 확인: {len(email_draft)}자")
+                
                 if email_draft and len(email_draft.strip()) > 20:
                     email_content = email_draft
-                    print(f"✅ DB email_draft 사용: {len(email_content)}자")
+                    print(f"✅ AI 분석 결과 탭 - email_draft 사용: {len(email_content)}자")
                 
                 # 2. original_ai_response에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
                 if not email_content and result.get('original_ai_response'):
