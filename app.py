@@ -688,7 +688,7 @@ def show_ai_analysis_modal(selected_row):
                         
                         # 이메일 초안을 Streamlit 기본 스타일로 표시
                         st.markdown("**이메일 내용**")
-                        st.text_area("", value=email_content, height=200, disabled=True)
+                        st.text_area("", value=email_content, height=350, disabled=True)
                         
 
                     
@@ -830,7 +830,7 @@ def show_ai_analysis_modal(selected_row):
                     # 이메일 내용에 줄바꿈 처리 적용
                     formatted_basic_email = format_email_content(basic_email)
                 st.markdown("**이메일 내용**")
-                st.text_area("", value=formatted_basic_email, height=200, disabled=True)
+                st.text_area("", value=formatted_basic_email, height=350, disabled=True)
                 
                 
                 st.info("페이지를 새로고침하거나 다시 시도해주세요.")
@@ -2499,7 +2499,7 @@ with tab2:
                 if email_content:
                     # 이메일 초안을 Streamlit 기본 스타일로 표시
                     st.markdown("**이메일 내용**")
-                    st.text_area("", value=email_content, height=200, disabled=True)
+                    st.text_area("", value=email_content, height=350, disabled=True)
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
         
