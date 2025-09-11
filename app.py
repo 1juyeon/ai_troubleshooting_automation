@@ -686,9 +686,14 @@ def show_ai_analysis_modal(selected_row):
 
 감사합니다."""
                         
+                        # HTML 태그 제거
+                        import re
+                        clean_email_content = re.sub(r'<[^>]+>', '', email_content)
+                        clean_email_content = clean_email_content.strip()
+                        
                         # 이메일 초안을 Streamlit 기본 스타일로 표시
                         st.markdown("**이메일 내용**")
-                        st.text_area("", value=email_content, height=350, disabled=True)
+                        st.text_area("", value=clean_email_content, height=350, disabled=True)
                         
 
                     
@@ -829,8 +834,13 @@ def show_ai_analysis_modal(selected_row):
                     
                     # 이메일 내용에 줄바꿈 처리 적용
                     formatted_basic_email = format_email_content(basic_email)
+                # HTML 태그 제거
+                import re
+                clean_basic_email = re.sub(r'<[^>]+>', '', formatted_basic_email)
+                clean_basic_email = clean_basic_email.strip()
+                
                 st.markdown("**이메일 내용**")
-                st.text_area("", value=formatted_basic_email, height=350, disabled=True)
+                st.text_area("", value=clean_basic_email, height=350, disabled=True)
                 
                 
                 st.info("페이지를 새로고침하거나 다시 시도해주세요.")
@@ -2497,9 +2507,14 @@ with tab2:
 감사합니다."""
                     
                 if email_content:
+                    # HTML 태그 제거
+                    import re
+                    clean_email_content = re.sub(r'<[^>]+>', '', email_content)
+                    clean_email_content = clean_email_content.strip()
+                    
                     # 이메일 초안을 Streamlit 기본 스타일로 표시
                     st.markdown("**이메일 내용**")
-                    st.text_area("", value=email_content, height=350, disabled=True)
+                    st.text_area("", value=clean_email_content, height=350, disabled=True)
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
         
