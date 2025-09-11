@@ -434,21 +434,21 @@ def show_ai_analysis(selected_row):
             analysis_data = st.session_state.analysis_result
             
             # 이력관리와 동일한 방식으로 이메일 추출
-            # 1. original_ai_response에서 이메일 초안 추출 (우선순위 1) - 이력 관리와 동일
-            if analysis_data.get('original_ai_response'):
+            # 1. 파싱된 email_draft 사용 (우선순위 1) - DB에 저장된 정확한 이메일 초안
+            email_draft = analysis_data.get('email_draft', '')
+            if email_draft and len(email_draft.strip()) > 20:
+                email_content = email_draft
+                print(f"✅ AI 분석 결과 탭 - email_draft 사용: {len(email_content)}자")
+            
+            # 2. original_ai_response에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
+            if not email_content and analysis_data.get('original_ai_response'):
                 email_content = extract_email_from_original_response(analysis_data['original_ai_response'])
                 print(f"🔍 AI 분석 결과 탭 - original_ai_response에서 이메일 추출: {len(email_content) if email_content else 0}자")
             
-            # 2. full_analysis_result에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
+            # 3. full_analysis_result에서 이메일 초안 추출 (우선순위 3) - 이력 관리와 동일
             if not email_content and analysis_data.get('full_analysis_result'):
                 email_content = extract_email_from_analysis_result(analysis_data['full_analysis_result'])
                 print(f"🔍 AI 분석 결과 탭 - full_analysis_result에서 이메일 추출: {len(email_content) if email_content else 0}자")
-            
-            # 3. 파싱된 email_draft 사용 (우선순위 3) - 이력 관리와 동일
-            email_draft = analysis_data.get('email_draft', '')
-            if not email_content and email_draft and len(email_draft.strip()) > 20:
-                email_content = email_draft
-                print(f"🔍 AI 분석 결과 탭 - email_draft에서 이메일 추출: {len(email_content) if email_content else 0}자")
             
             # 4. ai_result에서 직접 추출 (이력관리와 동일한 추가 로직)
             if not email_content and analysis_data.get('ai_result'):
