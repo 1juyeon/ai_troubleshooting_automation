@@ -1433,11 +1433,13 @@ def _parse_gemini_response(response_text: str) -> dict:
         parsed['summary'] = parsed['summary'].replace('요약:', '').strip()
         
         # 이메일 초안을 GEMINI 전용 함수로 다시 추출하여 정확성 보장
-        if parsed['email_draft']:
-            # 원본 응답에서 이메일 초안을 다시 추출
-            extracted_email = extract_email_from_gemini_response(response_text)
-            if extracted_email:
-                parsed['email_draft'] = extracted_email
+        # 항상 원본 응답에서 이메일 초안을 다시 추출 (기존 파싱 결과 무시)
+        extracted_email = extract_email_from_gemini_response(response_text)
+        if extracted_email:
+            parsed['email_draft'] = extracted_email
+            print(f"✅ GEMINI 파싱 - 이메일 초안 재추출 성공: {len(extracted_email)}자")
+        else:
+            print("⚠️ GEMINI 파싱 - 이메일 초안 재추출 실패, 기존 파싱 결과 사용")
         
         # 디버깅을 위한 로그 추가
         print(f"GEMINI 파싱 결과 - 요약: {parsed['summary'][:50]}...")
@@ -2332,16 +2334,32 @@ with tab2:
                     st.markdown(
                         f"""
                         <div style="
-                            background-color: #f5f5f5;   /* 연한 회색 배경 */
-                            color: #000000;             /* 글씨는 진한 검정 */
-                            white-space: pre-wrap;      
-                            font-family: monospace;     
-                            border: 1px solid #ddd;     
-                            padding: 12px;              
-                            border-radius: 6px;         
-                            height: 500px;              /* 고정 크기 */
-                            overflow-y: scroll;         /* 스크롤 가능 */
+                            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                            color: #212529;
+                            white-space: pre-wrap;
+                            font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+                            font-size: 14px;
+                            line-height: 1.6;
+                            border: 2px solid #dee2e6;
+                            border-radius: 12px;
+                            padding: 20px;
+                            margin: 10px 0;
+                            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                            height: 500px;
+                            overflow-y: auto;
+                            position: relative;
                         ">
+                        <div style="
+                            background: #007bff;
+                            color: white;
+                            padding: 8px 12px;
+                            margin: -20px -20px 15px -20px;
+                            border-radius: 10px 10px 0 0;
+                            font-weight: 600;
+                            font-size: 13px;
+                        ">
+                        📧 이메일 초안
+                        </div>
                         {email_content}
                         </div>
                         """,
