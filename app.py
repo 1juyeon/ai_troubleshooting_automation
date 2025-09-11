@@ -1639,9 +1639,7 @@ tab_names = ["📝 고객 문의 입력", "🤖 AI 분석 결과", "📊 이력 
 # 탭 생성
 tab1, tab2, tab3, tab4 = st.tabs(tab_names)
 
-# 분석 완료 알림 (전역적으로 표시)
-# if st.session_state.analysis_result and st.session_state.analysis_completed:
-#    st.success("✅ AI 분석이 완료되었습니다! AI 분석 결과 페이지로 이동해 상세한 결과를 확인하세요.")
+# 분석 완료 알림 (전역적으로 표시) - 삭제됨
 
 # 탭 1: 고객 문의 입력
 with tab1:
@@ -2006,9 +2004,6 @@ with tab2:
         
         
         # 문제 유형 분류와 시나리오 매칭 섹션 삭제
-        
-        # AI 응답 결과
-        st.markdown("### 🤖 AI 응답")
         
         if 'ai_result' in result and result['ai_result']['success']:
             ai_result = result['ai_result']
@@ -2515,7 +2510,7 @@ with tab3:
                     
                     # 0) 모달을 위쪽에서 먼저 그리기(있다면)
                     if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
-                        with st.expander("🔍 AI 분석 상세 결과", expanded=True):
+                        with st.expander("🔍 상세 결과", expanded=True):
                             show_ai_analysis_modal(st.session_state.selected_row_for_detail)
                             # 모달 닫기 버튼
                             def close_modal_new():
@@ -2693,7 +2688,7 @@ with tab3:
         
         # 0) 모달을 위쪽에서 먼저 그리기(있다면)
         if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
-            with st.expander("🔍 AI 분석 상세 결과", expanded=True):
+            with st.expander("🔍 상세 결과", expanded=True):
                 show_ai_analysis_modal(st.session_state.selected_row_for_detail)
                 # 모달 닫기 버튼
                 def close_modal_prev():
