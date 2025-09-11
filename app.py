@@ -2296,12 +2296,11 @@ with tab2:
                 
                 if email_content:
                     # 이메일 초안을 Streamlit 기본 스타일로 표시
-                    st.markdown("**이메일 내용**")
-                    st.text_area("", value=email_content, height=350)
+                    email_content = (parsed.get('email_draft') or '').replace('\n', '\n\n')
+                    st.text_area("이메일 내용", value=email_content, height=350)
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
-            
-            
+                    
             # SMS 발송 섹션 추가
             st.markdown("---")
             st.markdown("### 📱 SMS 발송")
