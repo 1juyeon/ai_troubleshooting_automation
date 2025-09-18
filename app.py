@@ -3123,22 +3123,27 @@ with tab5:
     st.markdown("## 🔧 Vector DB 관리")
     
     # Vector DB 상태 확인
-    if 'classifier' in components and components['classifier'].vector_classifier:
-        st.success("✅ Vector DB가 활성화되어 있습니다.")
+    if 'classifier' in components:
+        classifier = components['classifier']
+        # ChromaVectorClassifier인지 확인
+        is_chroma_classifier = hasattr(classifier, 'collection') and hasattr(classifier, 'embedding_model')
         
-        # 디버깅 정보 표시
-        with st.expander("🔍 디버깅 정보"):
-            try:
-                vector_classifier = components['classifier'].vector_classifier
-                if vector_classifier is not None:
-                    st.write(f"**Collection 존재**: {hasattr(vector_classifier, 'collection') and vector_classifier.collection is not None}")
-                    st.write(f"**Embedding Model 존재**: {hasattr(vector_classifier, 'embedding_model') and vector_classifier.embedding_model is not None}")
-                    st.write(f"**Client 존재**: {hasattr(vector_classifier, 'client') and vector_classifier.client is not None}")
-                else:
-                    st.write("**Vector Classifier**: None (초기화되지 않음)")
-            except Exception as e:
-                st.write(f"**Vector Classifier 오류**: {e}")
-                st.write("**Vector Classifier**: 초기화 실패")
+        if is_chroma_classifier:
+            st.success("✅ ChromaDB Vector DB가 활성화되어 있습니다.")
+            
+            # 디버깅 정보 표시
+            with st.expander("🔍 디버깅 정보"):
+                try:
+                    vector_classifier = classifier
+                    if vector_classifier is not None:
+                        st.write(f"**Collection 존재**: {hasattr(vector_classifier, 'collection') and vector_classifier.collection is not None}")
+                        st.write(f"**Embedding Model 존재**: {hasattr(vector_classifier, 'embedding_model') and vector_classifier.embedding_model is not None}")
+                        st.write(f"**Client 존재**: {hasattr(vector_classifier, 'client') and vector_classifier.client is not None}")
+                    else:
+                        st.write("**Vector Classifier**: None (초기화되지 않음)")
+                except Exception as e:
+                    st.write(f"**Vector Classifier 오류**: {e}")
+                    st.write("**Vector Classifier**: 초기화 실패")
             
             # 클라이언트 타입 확인
             try:
@@ -3418,9 +3423,9 @@ pip install -r requirements.txt
     with col1:
         if st.button("🔄 샘플 데이터 재생성", help="기존 데이터를 모두 삭제하고 샘플 데이터를 다시 생성합니다."):
             try:
-                if 'classifier' in components and components['classifier'] and components['classifier'].vector_classifier:
+                if 'classifier' in components and components['classifier'] and hasattr(components['classifier'], 'clear_database'):
                     # Vector DB 초기화
-                    success = components['classifier'].vector_classifier.clear_database()
+                    success = components['classifier'].clear_database()
                     if success:
                         st.success("✅ 샘플 데이터가 재생성되었습니다!")
                         st.rerun()
@@ -3435,8 +3440,8 @@ pip install -r requirements.txt
     with col2:
         if st.button("🗑️ 전체 데이터 삭제", help="모든 Vector DB 데이터를 삭제합니다."):
             try:
-                if 'classifier' in components and components['classifier'] and components['classifier'].vector_classifier:
-                    success = components['classifier'].vector_classifier.clear_database()
+                if 'classifier' in components and components['classifier'] and hasattr(components['classifier'], 'clear_database'):
+                    success = components['classifier'].clear_database()
                     if success:
                         st.success("✅ 모든 데이터가 삭제되었습니다!")
                         st.rerun()
