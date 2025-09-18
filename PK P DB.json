@@ -1,0 +1,140 @@
+{
+  "현재 비밀번호가 맞지 않습니다": [
+    {
+      "condition_1": "고객이 PK P에 저장된 비밀번호로 CCTV 웹 접속 가능한가?",
+      "condition_2": "접속 방식이 HTTPS 또는 HTTP인지 확인되었는가?",
+      "solution": "비밀번호 방식 확인 후 설정창 접근. 필요시 현장 확인",
+      "onsite_needed": "Y"
+    },
+    {
+      "condition_1": "고객이 PK P에 저장된 비밀번호로 CCTV 웹 접속 불가능한가?",
+      "condition_2": "고객이 CCTV 비밀번호를 알고 있는가?",
+      "solution": "알고 있는 CCTV 비밀번호를 PK P에 반영하도록 안내",
+      "onsite_needed": "N"
+    },
+    {
+      "condition_1": "고객이 PK P에 저장된 비밀번호로 CCTV 웹 접속 불가능한가?",
+      "condition_2": "고객이 CCTV 비밀번호를 모르는가?",
+      "solution": "사용자가 임의 변경했을 가능성. 카메라 초기화 안내",
+      "onsite_needed": "N"
+    }
+  ],
+  "VMS와의 통신에 실패했습니다": [
+    {
+      "condition_1": "SVMS Manager 접속 비밀번호와 Privkeepr P에 등록된 SVMS 비밀번호가 일치하지 않는가?",
+      "condition_2": "비밀번호가 일치하지 않는 경우인가?",
+      "solution": "PKP 웹 설정 > NVR/VMS 항목에서 등록된 VMS 패스워드 확인 및 일치 처리",
+      "onsite_needed": "N"
+    },
+    {
+      "condition_1": "SVMS와 PK P의 비밀번호가 일치하지 않는가?",
+      "condition_2": "비밀번호가 일치하는 경우인가?",
+      "solution": "현장방문 필요",
+      "onsite_needed": "Y"
+    }
+  ],
+  "Ping 테스트에 실패했습니다": [
+    {
+      "condition_1": "핑 테스트를 진행하였는가?",
+      "condition_2": "핑이 나가는가?",
+      "solution": "현장방문 필요",
+      "onsite_needed": "Y"
+    },
+    {
+      "condition_1": "핑 테스트를 진행하였는가?",
+      "condition_2": "핑이 나가지 않는가?",
+      "solution": "카메라 네트워크 확인 필요",
+      "onsite_needed": "N"
+    }
+  ],
+  "Onvif 응답이 없습니다": [
+    {
+      "condition_1": "Onvif 프로토콜을 확인하였는가?",
+      "condition_2": "프로토콜이 맞지 않는가?",
+      "solution": "프로토콜(HTTP/HTTPS) 일치 확인 및 재설정",
+      "onsite_needed": "N"
+    },
+    {
+      "condition_1": "Onvif 프로토콜을 확인하였는가?",
+      "condition_2": "프로토콜이 맞는가?",
+      "solution": "현장방문 필요",
+      "onsite_needed": "Y"
+    }
+  ],
+  "로그인 차단 상태입니다": [
+    {
+      "condition_1": "Privkeeper P에 저장된 카메라 비밀번호로 카메라 웹 접속을 시도했는가?",
+      "condition_2": "카메라 웹 접속이 가능한가?",
+      "solution": "로그인 차단은 일시적 현상일 수 있으므로 5분 뒤 재시도 안내. 재시도 후에도 문제가 지속되면 현장 방문 필요",
+      "onsite_needed": "Y"
+    },
+    {
+      "condition_1": "Privkeeper P에 저장된 카메라 비밀번호로 카메라 웹 접속을 시도했는가?",
+      "condition_2": "카메라 웹 접속이 불가능한가?",
+      "solution": "고객에게 카메라 웹에서 별도로 패스워드 변경 여부 확인. 변경한 기록이 있다면 해당 비밀번호를 Privkeeper P에 반영하도록 안내",
+      "onsite_needed": "N"
+    },
+    {
+      "condition_1": "고객이 카메라 웹에서 별도로 패스워드 변경 기록이 있는가?",
+      "condition_2": "비밀번호 변경 기록이 있으나 기억하지 못하는가?",
+      "solution": "비밀번호 초기화 진행을 안내 (현장 방문 불필요)",
+      "onsite_needed": "N"
+    },
+    {
+      "condition_1": "고객이 카메라 웹에서 별도로 패스워드 변경 기록이 없는가?",
+      "condition_2": "카메라 웹 접속도 불가능한 상태인가?",
+      "solution": "원인 파악을 위해 현장 방문 필요",
+      "onsite_needed": "Y"
+    }
+  ],
+  "비밀번호 변경에 실패했습니다": [
+    {
+      "condition_1": "비밀번호 변경 케이스가 다양한가?",
+      "condition_2": "케이스 판단이 어려운가?",
+      "solution": "현장 방문 필요",
+      "onsite_needed": "Y"
+    }
+  ],
+  "PK P 계정 로그인 안됨": [
+    {
+      "condition_1": "최근 30일간 접속 이력이 있는가?",
+      "condition_2": "30일 이상 미접속인가?",
+      "solution": "관리자 권한으로 접속하여 계정 잠김 해제",
+      "onsite_needed": "N"
+    },
+    {
+      "condition_1": "고객이 비밀번호를 기억하는가?",
+      "condition_2": "기억하지 못하는가?",
+      "solution": "패스워드 초기화 매뉴얼 전달",
+      "onsite_needed": "N"
+    },
+    {
+      "condition_1": "5회 이상 로그인 실패한 상태인가?",
+      "condition_2": "빠르게 연속 실패했는가?",
+      "solution": "일시적 잠김이므로 5분 대기 후 재시도 안내",
+      "onsite_needed": "N"
+    }
+  ],
+  "PK P 웹 접속 안됨": [
+    {
+      "condition_1": "윈도우 서비스에서 Apache Tomcat 8.5 Tomcat8 톰캣 작동 여부를 확인하였는가?",
+      "condition_2": "톰캣이 꺼져 있는가?",
+      "solution": "톰캣 서비스 시작",
+      "onsite_needed": "N"
+    },
+    {
+      "condition_1": "윈도우 서비스에서 톰캣 작동 여부를 확인하였는가?",
+      "condition_2": "톰캣이 켜져 있는가?",
+      "solution": "현장 출동 요청",
+      "onsite_needed": "Y"
+    }
+  ],
+  "기타": [
+    {
+      "condition_1": "문제 유형이 기존 시나리오에 없는 경우인가?",
+      "condition_2": "조건 분기 정보가 충분하지 않은가?",
+      "solution": "고객의 문의 내용이 기존 대응 시나리오에 포함되지 않거나 상황이 불분명하므로, 현장 확인이 필요합니다.",
+      "onsite_needed": "Y"
+    }
+  ]
+}

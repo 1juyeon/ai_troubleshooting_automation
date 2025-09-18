@@ -1,0 +1,68 @@
+[
+  {
+    "id": 1,
+    "user_id": "f032f27e",
+    "user_name": "test",
+    "user_role": "test",
+    "timestamp": "2024-01-01T00:00:00",
+    "customer_name": "test",
+    "customer_contact": "test",
+    "customer_manager": "test",
+    "inquiry_content": "test",
+    "issue_type": "test",
+    "classification_method": "test",
+    "confidence": "high",
+    "response_type": "test",
+    "summary": "test",
+    "action_flow": "test",
+    "email_draft": "test",
+    "system_version": "test",
+    "browser_info": "test",
+    "os_info": "test",
+    "error_code": "test",
+    "priority": "test",
+    "contract_type": "test",
+    "full_analysis_result": {
+      "issue_type": "test",
+      "classification": {
+        "method": "test",
+        "confidence": "high"
+      },
+      "gemini_result": {
+        "parsed_response": {
+          "response_type": "test",
+          "summary": "test",
+          "action_flow": "test",
+          "email_draft": "test"
+        }
+      }
+    }
+  },
+  {
+    "id": 2,
+    "user_id": "f032f27e",
+    "user_name": "test",
+    "user_role": "test",
+    "timestamp": "2025-08-12T10:42:36.854949+09:00",
+    "customer_name": "",
+    "customer_contact": "",
+    "customer_manager": "",
+    "inquiry_content": "",
+    "issue_type": "test",
+    "classification_method": "",
+    "confidence": "",
+    "response_type": "",
+    "summary": "",
+    "action_flow": "",
+    "email_draft": "",
+    "system_version": "",
+    "browser_info": "",
+    "os_info": "",
+    "error_code": "",
+    "priority": "",
+    "contract_type": "",
+    "full_analysis_result": {
+      "issue_type": "test"
+    }
+  }
+]

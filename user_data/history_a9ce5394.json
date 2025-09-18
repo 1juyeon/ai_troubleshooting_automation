@@ -1,0 +1,77 @@
+[
+  {
+    "id": 1,
+    "user_id": "a9ce5394",
+    "user_name": "테스트_사용자",
+    "user_role": "테스트_역할",
+    "timestamp": "2025-08-11 11:19:09",
+    "customer_name": "테스트_고객사",
+    "customer_contact": "010-1234-5678",
+    "customer_manager": "테스트_담당자",
+    "inquiry_content": "테스트 문의 내용입니다.",
+    "issue_type": "테스트_문제",
+    "classification_method": "테스트_분류",
+    "confidence": "높음",
+    "response_type": "테스트_응답",
+    "summary": "테스트 요약",
+    "action_flow": "테스트 액션",
+    "email_draft": "테스트 이메일",
+    "system_version": "v1.0.0",
+    "browser_info": "Chrome 120.0",
+    "os_info": "Windows 10",
+    "error_code": "TEST001",
+    "priority": "높음",
+    "contract_type": "표준",
+    "full_analysis_result": {
+      "issue_type": "테스트_문제",
+      "classification": {
+        "method": "테스트_분류",
+        "confidence": "높음"
+      },
+      "gemini_result": {
+        "parsed_response": {
+          "response_type": "테스트_응답",
+          "summary": "테스트 요약",
+          "action_flow": "테스트 액션",
+          "email_draft": "테스트 이메일"
+        }
+      }
+    }
+  },
+  {
+    "id": 2,
+    "user_id": "a9ce5394",
+    "user_name": "테스트_사용자",
+    "user_role": "테스트_역할",
+    "timestamp": "2025-08-11 11:35:52",
+    "customer_name": "테스트_고객사",
+    "customer_contact": "",
+    "customer_manager": "",
+    "inquiry_content": "테스트 문의 내용",
+    "issue_type": "테스트_문제",
+    "classification_method": "테스트_분류",
+    "confidence": "높음",
+    "response_type": "테스트_응답",
+    "summary": "",
+    "action_flow": "",
+    "email_draft": "",
+    "system_version": "",
+    "browser_info": "",
+    "os_info": "",
+    "error_code": "",
+    "priority": "",
+    "contract_type": "",
+    "full_analysis_result": {
+      "issue_type": "테스트_문제",
+      "classification": {
+        "method": "테스트_분류",
+        "confidence": "높음"
+      },
+      "gemini_result": {
+        "parsed_response": {
+          "response_type": "테스트_응답"
+        }
+      }
+    }
+  }
+]

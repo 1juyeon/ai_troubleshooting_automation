@@ -1,0 +1,41 @@
+[
+  {
+    "id": 1,
+    "user_id": "6dd6c86e",
+    "user_name": "test2",
+    "user_role": "test",
+    "timestamp": "2024-01-01T00:00:00",
+    "customer_name": "test2",
+    "customer_contact": "test",
+    "customer_manager": "test",
+    "inquiry_content": "test2",
+    "issue_type": "test2",
+    "classification_method": "test",
+    "confidence": "high",
+    "response_type": "test",
+    "summary": "test",
+    "action_flow": "test",
+    "email_draft": "test",
+    "system_version": "test",
+    "browser_info": "test",
+    "os_info": "test",
+    "error_code": "test",
+    "priority": "test",
+    "contract_type": "test",
+    "full_analysis_result": {
+      "issue_type": "test2",
+      "classification": {
+        "method": "test",
+        "confidence": "high"
+      },
+      "gemini_result": {
+        "parsed_response": {
+          "response_type": "test",
+          "summary": "test",
+          "action_flow": "test",
+          "email_draft": "test"
+        }
+      }
+    }
+  }
+]

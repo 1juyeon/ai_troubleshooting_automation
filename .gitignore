@@ -1,0 +1,57 @@
+# 환경변수 파일
+.env
+.env.local
+.env.production
+.env.staging
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ChromaDB 데이터
+chroma_issue_classification/
+*.db
+*.sqlite
+
+# 로그 파일
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# API 키가 포함된 파일
+config_local.py
+secrets.py
+
+# Excel 임시 파일
+~$*.xlsx
+~$*.xls
+*.tmp
