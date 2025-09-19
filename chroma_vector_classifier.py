@@ -203,19 +203,41 @@ class ChromaVectorClassifier:
             self.index = None
     
     def _load_sample_data(self):
-        """샘플 데이터 로드"""
+        """샘플 데이터 로드 (Streamlit Cloud 호환)"""
         try:
-            json_path = os.path.join(os.path.dirname(__file__), "vector_data", "sample_issues.json")
-            if os.path.exists(json_path):
-                with open(json_path, 'r', encoding='utf-8') as f:
+            # Streamlit resource를 통한 파일 읽기 시도
+            try:
+                import streamlit as st
+                # Streamlit Cloud에서 파일 읽기
+                with open("vector_data/sample_issues.json", 'r', encoding='utf-8') as f:
                     data = json.load(f)
+                    print("✅ Streamlit resource로 샘플 데이터 로드 성공")
                     return data.get("sample_issues", {})
-            else:
-                # 기본 데이터
-                return {
-                    "현재 비밀번호가 맞지 않습니다": [
-                        "CCTV 웹 접속 시 비밀번호 인증 실패",
-                        "저장된 비밀번호로 로그인이 안됩니다",
+            except:
+                pass
+            
+            # 여러 경로 시도 (로컬 환경 호환)
+            possible_paths = [
+                os.path.join(os.path.dirname(__file__), "vector_data", "sample_issues.json"),
+                os.path.join("vector_data", "sample_issues.json"),
+                "vector_data/sample_issues.json",
+                os.path.join(os.getcwd(), "vector_data", "sample_issues.json")
+            ]
+            
+            for json_path in possible_paths:
+                if os.path.exists(json_path):
+                    print(f"✅ 샘플 데이터 파일 발견: {json_path}")
+                    with open(json_path, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        return data.get("sample_issues", {})
+            
+            print("⚠️ 샘플 데이터 파일을 찾을 수 없음, 기본 데이터 사용")
+            print("📊 기본 데이터로 54개 샘플 문서 생성")
+            # 기본 데이터
+            return {
+                "현재 비밀번호가 맞지 않습니다": [
+                    "CCTV 웹 접속 시 비밀번호 인증 실패",
+                    "저장된 비밀번호로 로그인이 안됩니다",
                         "비밀번호를 정확히 입력했는데도 인증 오류가 발생합니다",
                         "CCTV 웹 로그인 시 접속 실패",
                         "패스워드가 맞지 않아 로그인할 수 없습니다",
@@ -494,16 +516,23 @@ class ChromaVectorClassifier:
                     'issue_type_counts': issue_type_counts,
                     'index_size': self.index.ntotal,
                     'method': 'faiss_vector',
-                    'embedding_model': 'all-MiniLM-L6-v2' if self.embedding_model else 'None'
+                    'embedding_model': 'all-MiniLM-L6-v2' if self.embedding_model else 'None',
+                    'collection_name': 'FAISS Vector DB'
                 }
             else:
+                # 키워드 기반 분류기 통계
+                sample_data = self._load_sample_data()
+                total_samples = sum(len(samples) for samples in sample_data.values())
+                issue_type_counts = {issue_type: len(samples) for issue_type, samples in sample_data.items()}
+                
                 return {
-                    'total_documents': 0,
-                    'issue_types': self.issue_types,
-                    'issue_type_counts': {},
+                    'total_documents': total_samples,
+                    'issue_types': list(issue_type_counts.keys()),
+                    'issue_type_counts': issue_type_counts,
                     'index_size': 0,
                     'method': 'keyword_only',
-                    'embedding_model': 'None'
+                    'embedding_model': 'None',
+                    'collection_name': 'N/A'
                 }
             
         except Exception as e:
