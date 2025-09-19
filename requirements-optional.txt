@@ -2,3 +2,4 @@
 # Streamlit Cloud에서 문제가 있을 경우 이 파일의 패키지들은 설치하지 않아도 됩니다.
 chromadb>=0.4.0
 sentence-transformers>=2.2.0
+openpyxl>=3.1.0
