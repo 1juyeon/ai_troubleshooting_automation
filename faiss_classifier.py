@@ -112,15 +112,12 @@ class FaissVectorClassifier:
             metadata_path = os.path.join(self.persist_directory, "metadata.json")
             
             if os.path.exists(index_path) and os.path.exists(metadata_path):
-                print("🔄 저장된 FAISS 인덱스 로드 중...")
                 self.index = faiss.read_index(index_path)
                 with open(metadata_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     self.documents = data['documents']
                     self.metadatas = data['metadatas']
-                print(f"✅ FAISS 인덱스 로드 완료: {len(self.documents)}개 문서")
             else:
-                print("🔄 새로운 FAISS 인덱스 생성 중...")
                 self._create_index()
                 
         except Exception as e:
@@ -151,7 +148,6 @@ class FaissVectorClassifier:
                     })
             
             # 임베딩 생성
-            print("🔄 임베딩 생성 중...")
             embeddings = self.embedding_model.encode(documents)
             embeddings = embeddings.astype('float32')
             
@@ -175,7 +171,6 @@ class FaissVectorClassifier:
                     'metadatas': self.metadatas
                 }, f, ensure_ascii=False, indent=2)
             
-            print(f"✅ FAISS 인덱스 생성 완료: {len(documents)}개 문서")
             
         except Exception as e:
             print(f"❌ FAISS 인덱스 생성 실패: {e}")
@@ -190,7 +185,6 @@ class FaissVectorClassifier:
                 # Streamlit Cloud에서 파일 읽기
                 with open("vector_data/sample_issues.json", 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    print("✅ Streamlit resource로 샘플 데이터 로드 성공")
                     return data.get("sample_issues", {})
             except:
                 pass
@@ -205,13 +199,11 @@ class FaissVectorClassifier:
             
             for json_path in possible_paths:
                 if os.path.exists(json_path):
-                    print(f"✅ 샘플 데이터 파일 발견: {json_path}")
                     with open(json_path, 'r', encoding='utf-8') as f:
                         data = json.load(f)
                         return data.get("sample_issues", {})
             
             print("⚠️ 샘플 데이터 파일을 찾을 수 없음, 기본 데이터 사용")
-            print("📊 기본 데이터로 54개 샘플 문서 생성")
             # 기본 데이터 (sample_issues.json과 동일)
             return {
                 "현재 비밀번호가 맞지 않습니다": [
@@ -351,11 +343,9 @@ class FaissVectorClassifier:
     def classify_issue(self, customer_input: str, top_k: int = 3) -> Dict[str, Any]:
         """벡터 기반 문제 유형 분류 (FAISS + 키워드 폴백)"""
         try:
-            print(f"🔍 분류 시도: {customer_input}")
             
             # FAISS 벡터 분류 시도
             if self.index is not None and self.embedding_model is not None:
-                print("🔄 FAISS 벡터 분류 중...")
                 
                 # 쿼리 임베딩 생성
                 query_embedding = self.embedding_model.encode([customer_input]).astype('float32')
@@ -391,7 +381,6 @@ class FaissVectorClassifier:
                     else:
                         confidence = 'low'
                     
-                    print(f"✅ FAISS 분류 결과: {best_issue_type} (점수: {best_score:.3f}, 신뢰도: {confidence})")
                     
                     return {
                         'issue_type': best_issue_type,
@@ -402,12 +391,10 @@ class FaissVectorClassifier:
                     }
             
             # FAISS 실패 시 키워드 기반 분류로 폴백
-            print("⚠️ FAISS 사용 불가, 키워드 기반 분류로 폴백")
             return self._classify_by_keywords(customer_input)
             
         except Exception as e:
             print(f"❌ 분류 실패: {e}")
-            print("⚠️ 키워드 기반 분류로 폴백")
             return self._classify_by_keywords(customer_input)
     
     def get_statistics(self) -> Dict[str, Any]:
@@ -458,8 +445,6 @@ class FaissVectorClassifier:
 
 # 테스트 코드
 if __name__ == "__main__":
-    print("=== FAISS 벡터 분류기 테스트 ===")
-    
     classifier = FaissVectorClassifier()
     
     test_cases = [
@@ -470,13 +455,9 @@ if __name__ == "__main__":
     ]
     
     for test_input in test_cases:
-        print(f"\n--- 테스트: {test_input} ---")
         result = classifier.classify_issue(test_input)
-        print(f"결과: {result['issue_type']} ({result['method']}, {result['confidence']})")
+        print(f"테스트: {test_input} -> {result['issue_type']} ({result['method']}, {result['confidence']})")
     
     # 통계
     stats = classifier.get_statistics()
-    print(f"\n=== 통계 ===")
-    print(f"총 문서 수: {stats['total_documents']}")
-    print(f"분류 방법: {stats['method']}")
-    print(f"인덱스 크기: {stats['index_size']}")
+    print(f"총 문서 수: {stats['total_documents']}, 방법: {stats['method']}, 인덱스: {stats['index_size']}")

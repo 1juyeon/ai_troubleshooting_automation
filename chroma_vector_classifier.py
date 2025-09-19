@@ -133,15 +133,12 @@ class ChromaVectorClassifier:
             metadata_path = os.path.join(self.persist_directory, "metadata.json")
             
             if os.path.exists(index_path) and os.path.exists(metadata_path):
-                print("🔄 저장된 FAISS 인덱스 로드 중...")
                 self.index = faiss.read_index(index_path)
                 with open(metadata_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     self.documents = data['documents']
                     self.metadatas = data['metadatas']
-                print(f"✅ FAISS 인덱스 로드 완료: {len(self.documents)}개 문서")
             else:
-                print("🔄 새로운 FAISS 인덱스 생성 중...")
                 self._create_index()
                 
         except Exception as e:
@@ -172,7 +169,6 @@ class ChromaVectorClassifier:
                     })
             
             # 임베딩 생성
-            print("🔄 임베딩 생성 중...")
             embeddings = self.embedding_model.encode(documents)
             embeddings = embeddings.astype('float32')
             
@@ -196,7 +192,6 @@ class ChromaVectorClassifier:
                     'metadatas': self.metadatas
                 }, f, ensure_ascii=False, indent=2)
             
-            print(f"✅ FAISS 인덱스 생성 완료: {len(documents)}개 문서")
             
         except Exception as e:
             print(f"❌ FAISS 인덱스 생성 실패: {e}")
@@ -211,7 +206,6 @@ class ChromaVectorClassifier:
                 # Streamlit Cloud에서 파일 읽기
                 with open("vector_data/sample_issues.json", 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    print("✅ Streamlit resource로 샘플 데이터 로드 성공")
                     return data.get("sample_issues", {})
             except:
                 pass
@@ -226,13 +220,11 @@ class ChromaVectorClassifier:
             
             for json_path in possible_paths:
                 if os.path.exists(json_path):
-                    print(f"✅ 샘플 데이터 파일 발견: {json_path}")
                     with open(json_path, 'r', encoding='utf-8') as f:
                         data = json.load(f)
                         return data.get("sample_issues", {})
             
             print("⚠️ 샘플 데이터 파일을 찾을 수 없음, 기본 데이터 사용")
-            print("📊 기본 데이터로 54개 샘플 문서 생성")
             # 기본 데이터
             return {
                 "현재 비밀번호가 맞지 않습니다": [
@@ -315,7 +307,6 @@ class ChromaVectorClassifier:
     def _classify_by_keywords(self, customer_input: str) -> Dict[str, Any]:
         """키워드 기반 문제 유형 분류 (ChromaDB 실패 시 사용)"""
         try:
-            print(f"🔍 키워드 기반 분류 시도: {customer_input}")
             
             # 입력 텍스트 정규화
             normalized_input = customer_input.lower().strip()
@@ -353,8 +344,6 @@ class ChromaVectorClassifier:
                 else:
                     confidence_level = 'low'
                 
-                print(f"✅ 키워드 분류 결과: {best_issue_type} (점수: {best_score}, 신뢰도: {confidence_level})")
-                print(f"🔑 매칭된 키워드: {matched_keywords}")
                 
                 return {
                     'issue_type': best_issue_type,
@@ -365,7 +354,6 @@ class ChromaVectorClassifier:
                     'all_scores': {k: v['score'] for k, v in issue_scores.items()}
                 }
             else:
-                print("❌ 매칭되는 키워드가 없음, 기타로 분류")
                 return {
                     'issue_type': '기타',
                     'method': 'keyword_based',
@@ -387,22 +375,15 @@ class ChromaVectorClassifier:
     def classify_issue(self, customer_input: str, top_k: int = 3) -> Dict[str, Any]:
         """FAISS 벡터 기반 문제 유형 분류 (키워드 기반 폴백 포함)"""
         try:
-            print(f"🔍 분류 시도: {customer_input}")
-            print(f"📊 FAISS 인덱스 상태: {self.index is not None}")
-            print(f"🧠 임베딩 모델 상태: {self.embedding_model is not None}")
             
             # FAISS 벡터 분류 시도
             if self.index is not None and self.embedding_model is not None:
-                print("🔄 FAISS 벡터 분류 중...")
                 
                 # 쿼리 임베딩 생성
                 query_embedding = self.embedding_model.encode([customer_input]).astype('float32')
-                print(f"✅ 임베딩 생성 완료: {len(query_embedding[0])}차원")
                 
                 # FAISS 검색
-                print("🔍 FAISS 검색 중...")
                 scores, indices = self.index.search(query_embedding, top_k)
-                print(f"✅ FAISS 검색 완료: {len(indices[0])}개 결과")
                 
                 if len(indices[0]) > 0:
                     # 결과 분석
@@ -432,7 +413,6 @@ class ChromaVectorClassifier:
                     else:
                         confidence = 'low'
                     
-                    print(f"✅ FAISS 분류 결과: {best_issue_type} (점수: {best_score:.3f}, 신뢰도: {confidence})")
                     
                     return {
                         'issue_type': best_issue_type,
@@ -451,19 +431,16 @@ class ChromaVectorClassifier:
                     }
             
             # FAISS 실패 시 키워드 기반 분류로 폴백
-            print("⚠️ FAISS 사용 불가, 키워드 기반 분류로 폴백")
             return self._classify_by_keywords(customer_input)
             
         except Exception as e:
             print(f"❌ 분류 실패: {e}")
-            print("⚠️ 키워드 기반 분류로 폴백")
             return self._classify_by_keywords(customer_input)
     
     def add_training_data(self, customer_input: str, issue_type: str, metadata: Dict[str, Any] = None):
         """새로운 학습 데이터 추가 (FAISS)"""
         try:
             if not self.index or not self.embedding_model:
-                print("⚠️ FAISS 인덱스 또는 임베딩 모델 없음, 학습 데이터 추가 불가")
                 return False
             
             # 메타데이터 구성
@@ -493,7 +470,6 @@ class ChromaVectorClassifier:
                     'metadatas': self.metadatas
                 }, f, ensure_ascii=False, indent=2)
             
-            print(f"✅ 학습 데이터 추가 완료: {issue_type}")
             return True
             
         except Exception as e:
@@ -585,34 +561,14 @@ if __name__ == "__main__":
         "PK P 계정이 30일 미접속으로 잠겼습니다."
     ]
     
-    print("\n=== 벡터 기반 문제 유형 분류 테스트 ===")
+    # 테스트 실행
     for i, test_input in enumerate(test_cases, 1):
-        print(f"\n--- 테스트 케이스 {i} ---")
-        print(f"입력: {test_input}")
-        
         result = classifier.classify_issue(test_input)
-        print(f"분류 결과: {result['issue_type']}")
-        print(f"신뢰도: {result['confidence']}")
-        similarity_score = result.get('similarity_score', 'N/A')
-        if isinstance(similarity_score, (int, float)):
-            print(f"유사도 점수: {similarity_score:.3f}")
-        else:
-            print(f"유사도 점수: {similarity_score}")
-        
-        if 'top_matches' in result:
-            print("상위 매칭 결과:")
-            for match in result['top_matches'][:2]:
-                similarity = match.get('similarity', 'N/A')
-                if isinstance(similarity, (int, float)):
-                    print(f"  - {match['issue_type']}: {similarity:.3f}")
-                else:
-                    print(f"  - {match['issue_type']}: {similarity}")
+        print(f"테스트 {i}: {test_input} -> {result['issue_type']} ({result['confidence']})")
     
     # 통계 출력
-    print("\n=== 벡터 DB 통계 ===")
     stats = classifier.get_statistics()
     print(f"총 문서 수: {stats['total_documents']}")
-    print(f"문제 유형: {stats['issue_types']}")
     if 'issue_type_counts' in stats:
         print("문제 유형별 문서 수:")
         for issue_type, count in stats['issue_type_counts'].items():
