@@ -978,7 +978,7 @@ def show_ai_analysis_modal(selected_row):
                     # 이메일 내용에 줄바꿈 처리 적용
                     formatted_basic_email = format_email_content(basic_email)
                 st.markdown("**이메일 내용**")
-                st.text_area("", value=formatted_basic_email, height=350, disabled=True, key="basic_email_display")
+                st.text_area("이메일 내용", value=formatted_basic_email, height=350, disabled=True, key="basic_email_display", label_visibility="collapsed")
                 
                 
                 st.info("페이지를 새로고침하거나 다시 시도해주세요.")
@@ -2411,7 +2411,7 @@ with tab2:
                 if email_content:
                     # 이력 관리와 동일한 방식으로 이메일 초안 표시
                     st.markdown("**이메일 내용**")
-                    st.text_area("", value=email_content, height=350, key="email_content_analysis")
+                    st.text_area("이메일 내용", value=email_content, height=350, key="email_content_analysis", label_visibility="collapsed")
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
                     
@@ -2603,7 +2603,7 @@ with tab2:
                 if email_content:
                     # 이메일 초안을 Streamlit 기본 스타일로 표시
                     st.markdown("**이메일 내용**")
-                    st.text_area("", value=email_content, height=350, key="email_content_history")
+                    st.text_area("이메일 내용", value=email_content, height=350, key="email_content_history", label_visibility="collapsed")
                 else:
                     st.warning("⚠️ 이메일 초안 정보가 없습니다.")
         
@@ -3125,16 +3125,31 @@ with tab5:
     # Vector DB 상태 확인
     if 'classifier' in components:
         classifier = components['classifier']
-        # ChromaVectorClassifier인지 확인
+        
+        # ChromaVectorClassifier인지 IssueClassifier인지 확인
         is_chroma_classifier = hasattr(classifier, 'collection') and hasattr(classifier, 'embedding_model')
+        is_issue_classifier = hasattr(classifier, 'vector_classifier')
         
         if is_chroma_classifier:
             st.success("✅ ChromaDB Vector DB가 활성화되어 있습니다.")
+        elif is_issue_classifier and classifier.vector_classifier is not None:
+            st.success("✅ Vector DB가 활성화되어 있습니다 (IssueClassifier 내부).")
+        else:
+            st.warning("⚠️ Vector DB가 활성화되지 않았습니다.")
+            st.info("ChromaDB 또는 Vector Classifier가 초기화되지 않았습니다.")
             
-            # 디버깅 정보 표시
+        # 디버깅 정보 표시
+        if is_chroma_classifier or (is_issue_classifier and classifier.vector_classifier is not None):
             with st.expander("🔍 디버깅 정보"):
                 try:
-                    vector_classifier = classifier
+                    # ChromaVectorClassifier 또는 IssueClassifier의 vector_classifier 가져오기
+                    if is_chroma_classifier:
+                        vector_classifier = classifier
+                        st.write("**분류기 타입**: ChromaVectorClassifier (직접)")
+                    else:
+                        vector_classifier = classifier.vector_classifier
+                        st.write("**분류기 타입**: IssueClassifier 내부의 ChromaVectorClassifier")
+                    
                     if vector_classifier is not None:
                         st.write(f"**Collection 존재**: {hasattr(vector_classifier, 'collection') and vector_classifier.collection is not None}")
                         st.write(f"**Embedding Model 존재**: {hasattr(vector_classifier, 'embedding_model') and vector_classifier.embedding_model is not None}")
@@ -3147,8 +3162,16 @@ with tab5:
             
             # 클라이언트 타입 확인
             try:
-                if vector_classifier and hasattr(vector_classifier, 'client') and vector_classifier.client:
-                    client_type = type(vector_classifier.client).__name__
+                # vector_classifier 변수가 위에서 정의되었으므로 재사용
+                if is_chroma_classifier:
+                    current_classifier = classifier
+                elif is_issue_classifier and classifier.vector_classifier is not None:
+                    current_classifier = classifier.vector_classifier
+                else:
+                    current_classifier = None
+                    
+                if current_classifier and hasattr(current_classifier, 'client') and current_classifier.client:
+                    client_type = type(current_classifier.client).__name__
                     st.write(f"**Client 타입**: {client_type}")
                 else:
                     st.write("**Client 타입**: 없음")
@@ -3179,8 +3202,16 @@ with tab5:
                 st.error(f"❌ sentence-transformers 오류: {str(e)[:100]}...")
             
             try:
-                if vector_classifier and hasattr(vector_classifier, 'collection') and vector_classifier.collection:
-                    count = vector_classifier.collection.count()
+                # 올바른 vector_classifier 가져오기
+                if is_chroma_classifier:
+                    current_classifier = classifier
+                elif is_issue_classifier and classifier.vector_classifier is not None:
+                    current_classifier = classifier.vector_classifier
+                else:
+                    current_classifier = None
+                    
+                if current_classifier and hasattr(current_classifier, 'collection') and current_classifier.collection:
+                    count = current_classifier.collection.count()
                     st.write(f"**Collection Count**: {count}")
                 else:
                     st.write("**Collection Count**: 없음")
@@ -3318,21 +3349,33 @@ pip install -r requirements.txt
     if st.button("📈 통계 조회", type="primary"):
         try:
             if 'classifier' in components and components['classifier']:
-                stats = components['classifier'].get_vector_statistics()
+                classifier = components['classifier']
                 
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("총 문서 수", stats.get('total_documents', 0))
-                with col2:
-                    st.metric("임베딩 모델", stats.get('embedding_model', 'N/A'))
-                with col3:
-                    st.metric("컬렉션명", stats.get('collection_name', 'N/A'))
+                # ChromaVectorClassifier인지 IssueClassifier인지 확인
+                if hasattr(classifier, 'get_statistics'):
+                    # ChromaVectorClassifier의 경우
+                    stats = classifier.get_statistics()
+                elif hasattr(classifier, 'get_vector_statistics'):
+                    # IssueClassifier의 경우
+                    stats = classifier.get_vector_statistics()
+                else:
+                    st.error("통계 조회 메서드를 찾을 수 없습니다.")
+                    stats = None
                 
-                if 'issue_type_counts' in stats:
-                    st.markdown("#### 📋 문제 유형별 문서 수")
-                    issue_counts = stats['issue_type_counts']
-                    for issue_type, count in issue_counts.items():
-                        st.write(f"- **{issue_type}**: {count}개")
+                if stats is not None:
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("총 문서 수", stats.get('total_documents', 0))
+                    with col2:
+                        st.metric("임베딩 모델", stats.get('embedding_model', 'N/A'))
+                    with col3:
+                        st.metric("컬렉션명", stats.get('collection_name', 'N/A'))
+                
+                    if 'issue_type_counts' in stats:
+                        st.markdown("#### 📋 문제 유형별 문서 수")
+                        issue_counts = stats['issue_type_counts']
+                        for issue_type, count in issue_counts.items():
+                            st.write(f"- **{issue_type}**: {count}개")
                 
                 st.json(stats)
             else:
@@ -3393,11 +3436,19 @@ pip install -r requirements.txt
                         }
                         
                         # Vector DB에 추가
-                        success = components['classifier'].add_training_data(
-                            new_input, 
-                            new_issue_type, 
-                            metadata
-                        )
+                        classifier = components['classifier']
+                        
+                        # ChromaVectorClassifier인지 IssueClassifier인지 확인
+                        if hasattr(classifier, 'add_training_data'):
+                            # ChromaVectorClassifier 또는 IssueClassifier 둘 다 이 메서드를 가짐
+                            success = classifier.add_training_data(
+                                new_input, 
+                                new_issue_type, 
+                                metadata
+                            )
+                        else:
+                            st.error("add_training_data 메서드를 찾을 수 없습니다.")
+                            success = False
                         
                         if success:
                             st.success(f"✅ 학습 데이터가 추가되었습니다! (문제 유형: {new_issue_type})")
@@ -3423,9 +3474,19 @@ pip install -r requirements.txt
     with col1:
         if st.button("🔄 샘플 데이터 재생성", help="기존 데이터를 모두 삭제하고 샘플 데이터를 다시 생성합니다."):
             try:
-                if 'classifier' in components and components['classifier'] and hasattr(components['classifier'], 'clear_database'):
-                    # Vector DB 초기화
-                    success = components['classifier'].clear_database()
+                if 'classifier' in components and components['classifier']:
+                    classifier = components['classifier']
+                    
+                    # clear_database 메서드 확인
+                    if hasattr(classifier, 'clear_database'):
+                        # Vector DB 초기화
+                        success = classifier.clear_database()
+                    elif hasattr(classifier, 'vector_classifier') and classifier.vector_classifier and hasattr(classifier.vector_classifier, 'clear_database'):
+                        # IssueClassifier 내부의 vector_classifier 사용
+                        success = classifier.vector_classifier.clear_database()
+                    else:
+                        st.error("clear_database 메서드를 찾을 수 없습니다.")
+                        success = False
                     if success:
                         st.success("✅ 샘플 데이터가 재생성되었습니다!")
                         st.rerun()
@@ -3440,8 +3501,18 @@ pip install -r requirements.txt
     with col2:
         if st.button("🗑️ 전체 데이터 삭제", help="모든 Vector DB 데이터를 삭제합니다."):
             try:
-                if 'classifier' in components and components['classifier'] and hasattr(components['classifier'], 'clear_database'):
-                    success = components['classifier'].clear_database()
+                if 'classifier' in components and components['classifier']:
+                    classifier = components['classifier']
+                    
+                    # clear_database 메서드 확인
+                    if hasattr(classifier, 'clear_database'):
+                        success = classifier.clear_database()
+                    elif hasattr(classifier, 'vector_classifier') and classifier.vector_classifier and hasattr(classifier.vector_classifier, 'clear_database'):
+                        # IssueClassifier 내부의 vector_classifier 사용
+                        success = classifier.vector_classifier.clear_database()
+                    else:
+                        st.error("clear_database 메서드를 찾을 수 없습니다.")
+                        success = False
                     if success:
                         st.success("✅ 모든 데이터가 삭제되었습니다!")
                         st.rerun()
