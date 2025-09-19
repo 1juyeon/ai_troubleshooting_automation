@@ -1,5 +1,8 @@
 # 선택적 의존성 (벡터 분류 기능용)
 # Streamlit Cloud에서 문제가 있을 경우 이 파일의 패키지들은 설치하지 않아도 됩니다.
-chromadb>=0.4.0
+# ChromaDB SQLite3 호환성 문제로 인해 버전 다운그레이드
+chromadb==0.3.29
 sentence-transformers>=2.2.0
 openpyxl>=3.1.0
+# SQLite3 호환성 문제 해결 (Windows 환경)
+# pysqlite3>=0.5.0  # Windows에서 컴파일 문제로 주석 처리
