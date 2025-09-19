@@ -361,20 +361,16 @@ def init_mongodb_connection():
             # 피드백 컬렉션 초기화
             try:
                 mongo_handler._initialize_feedback_collection()
-                print("✅ 피드백 컬렉션 초기화 완료")
             except Exception as e:
-                print(f"⚠️ 피드백 컬렉션 초기화 실패: {e}")
+                pass
             
-            print("✅ MongoDB 연결 성공")
             return True
         else:
             st.session_state.mongodb_connected = False
-            print(f"❌ MongoDB 연결 실패: {connection_test.get('message')}")
             return False
             
     except Exception as e:
         st.session_state.mongodb_connected = False
-        print(f"❌ MongoDB 초기화 실패: {e}")
         return False
 
 # 안전한 타임스탬프 생성 함수
@@ -383,7 +379,6 @@ def get_safe_timestamp():
     try:
         return datetime.now(pytz.timezone('Asia/Seoul')).isoformat()
     except Exception as e:
-        print(f"⚠️ 한국 시간대 설정 실패, UTC 사용: {e}")
         return datetime.now().isoformat()
 
 def show_feedback_buttons(analysis_id):
@@ -404,21 +399,16 @@ def show_feedback_buttons(analysis_id):
     user_name = st.session_state.get('contact_name', 'Unknown')
     user_role = st.session_state.get('role', 'Unknown')
     
-    # 디버깅 정보 출력
-    print(f"🔍 피드백 버튼 표시 - Analysis ID: {analysis_id}, Type: {type(analysis_id)}")
-    print(f"🔍 사용자 정보 - Name: {user_name}, Role: {user_role}")
     
     # 좋아요 버튼을 중앙에 배치
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
         if st.button("👍 좋아요", key=f"like_{analysis_id}", use_container_width=True, type="primary"):
-            print(f"👍 좋아요 버튼 클릭됨 - Analysis ID: {analysis_id}")
             try:
                 feedback_result = components['multi_user_db'].save_feedback(
                     analysis_id, "like", user_name, user_role
                 )
-                print(f"📊 피드백 저장 결과: {feedback_result}")
                 
                 if feedback_result['success']:
                     # 성공 메시지를 더 눈에 띄게 표시
@@ -433,10 +423,8 @@ def show_feedback_buttons(analysis_id):
                     st.rerun()
                 else:
                     st.error(f"피드백 저장 실패: {feedback_result.get('error', '알 수 없는 오류')}")
-                    print(f"❌ 피드백 저장 실패 상세: {feedback_result}")
             except Exception as e:
                 st.error(f"피드백 처리 중 오류 발생: {str(e)}")
-                print(f"❌ 피드백 처리 오류: {e}")
     
     # 추가 안내 메시지
     st.markdown("""
@@ -475,7 +463,6 @@ def enhance_ai_prompt_with_feedback(base_prompt: str, issue_type: str) -> str:
         return base_prompt
         
     except Exception as e:
-        print(f"피드백 기반 프롬프트 개선 실패: {e}")
         return base_prompt
 
 def apply_feedback_learning(ai_result: dict, issue_type: str) -> dict:
@@ -512,7 +499,6 @@ def apply_feedback_learning(ai_result: dict, issue_type: str) -> dict:
         return ai_result
         
     except Exception as e:
-        print(f"피드백 학습 적용 실패: {e}")
         return ai_result
 
 def show_ai_analysis(selected_row):
@@ -576,30 +562,24 @@ def show_ai_analysis(selected_row):
             email_draft = analysis_data.get('email_draft', '')
             if email_draft and len(email_draft.strip()) > 20:
                 email_content = email_draft
-                print(f"✅ AI 분석 결과 탭 - email_draft 사용: {len(email_content)}자")
             
             # 2. original_ai_response에서 이메일 초안 추출 (우선순위 2) - 이력 관리와 동일
             if not email_content and analysis_data.get('original_ai_response'):
                 email_content = extract_email_from_original_response(analysis_data['original_ai_response'])
-                print(f"🔍 AI 분석 결과 탭 - original_ai_response에서 이메일 추출: {len(email_content) if email_content else 0}자")
             
             # 3. full_analysis_result에서 이메일 초안 추출 (우선순위 3) - 이력 관리와 동일
             if not email_content and analysis_data.get('full_analysis_result'):
                 email_content = extract_email_from_analysis_result(analysis_data['full_analysis_result'])
-                print(f"🔍 AI 분석 결과 탭 - full_analysis_result에서 이메일 추출: {len(email_content) if email_content else 0}자")
             
             # 4. ai_result에서 직접 추출 (이력관리와 동일한 추가 로직)
             if not email_content and analysis_data.get('ai_result'):
                 ai_result = analysis_data['ai_result']
                 if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
                     email_content = extract_email_from_original_response(ai_result['gemini_result']['raw_response'])
-                    print(f"🔍 AI 분석 결과 탭 - gemini raw_response에서 이메일 추출: {len(email_content) if email_content else 0}자")
                 elif 'response' in ai_result:
                     email_content = extract_email_from_original_response(ai_result['response'])
-                    print(f"🔍 AI 분석 결과 탭 - ai_result response에서 이메일 추출: {len(email_content) if email_content else 0}자")
                 elif 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
                     email_content = extract_email_from_original_response(ai_result['gpt_result']['raw_response'])
-                    print(f"🔍 AI 분석 결과 탭 - gpt raw_response에서 이메일 추출: {len(email_content) if email_content else 0}자")
         
         # 5. 기본 이메일 템플릿 (최후 수단) - 이력 관리와 동일
         if not email_content:
@@ -791,17 +771,14 @@ def show_ai_analysis_modal(selected_row):
                         email_draft = analysis_data.get('email_draft', '')
                         if email_draft and len(email_draft.strip()) > 20:
                             email_content = email_draft
-                            print(f"✅ 이력 관리 모달 - DB email_draft 사용: {len(email_content)}자")
                         
                         # 2. original_ai_response에서 이메일 초안 추출 (우선순위 2)
                         if not email_content and analysis_data.get('original_ai_response'):
                             email_content = extract_email_from_original_response(analysis_data['original_ai_response'])
-                            print(f"✅ 이력 관리 모달 - original_ai_response에서 추출: {len(email_content)}자")
                         
                         # 3. full_analysis_result에서 이메일 초안 추출 (우선순위 3)
                         if not email_content and analysis_data.get('full_analysis_result'):
                             email_content = extract_email_from_analysis_result(analysis_data['full_analysis_result'])
-                            print(f"✅ 이력 관리 모달 - full_analysis_result에서 추출: {len(email_content)}자")
                         
                         # 4. 기본 이메일 템플릿 (최후 수단)
                         if not email_content:
@@ -953,7 +930,6 @@ def show_ai_analysis_modal(selected_row):
                 if email_draft and len(email_draft.strip()) > 20:
                     # DB에 저장된 이메일 초안 사용
                     formatted_basic_email = email_draft
-                    print(f"✅ 이력 관리 기본 응답 - DB email_draft 사용: {len(formatted_basic_email)}자")
                 else:
                     # 기본 이메일 템플릿 사용
                     basic_email = f"""제목: {selected_row.get('문의유형', '문의')} 답변
@@ -1203,8 +1179,6 @@ def extract_email_from_gpt_response(original_response: str) -> str:
     try:
         import re
         
-        print(f"🔍 GPT 이메일 추출 시작 - 원본 응답 길이: {len(original_response)}자")
-        print(f"🔍 원본 응답 미리보기: {original_response[:300]}...")
         
         # GPT 응답 패턴 1: "- 이메일 초안:" 다음에 ```로 감싸진 내용
         gpt_pattern1 = r'- 이메일\s*초안[:\s]*\n```\n(.*?)\n```'
@@ -1212,8 +1186,6 @@ def extract_email_from_gpt_response(original_response: str) -> str:
         if match:
             email_content = match.group(1).strip()
             if len(email_content) > 50:
-                print(f"✅ GPT 이메일 추출 성공 (패턴 1): {len(email_content)}자")
-                print(f"📧 추출된 이메일 미리보기: {email_content[:200]}...")
                 return email_content
         
         # GPT 응답 패턴 2: "- 이메일 초안:" 다음에 이메일 내용 (``` 없이, 더 포괄적)
@@ -1222,8 +1194,6 @@ def extract_email_from_gpt_response(original_response: str) -> str:
         if match:
             email_content = match.group(1).strip()
             if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
-                print(f"✅ GPT 이메일 추출 성공 (패턴 2): {len(email_content)}자")
-                print(f"📧 추출된 이메일 미리보기: {email_content[:200]}...")
                 return email_content
         
         # GPT 응답 패턴 3: "- 이메일 초안:" 다음에 이메일 내용 (더 유연한 종료 조건)
@@ -1232,8 +1202,6 @@ def extract_email_from_gpt_response(original_response: str) -> str:
         if match:
             email_content = match.group(1).strip()
             if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
-                print(f"✅ GPT 이메일 추출 성공 (패턴 3): {len(email_content)}자")
-                print(f"📧 추출된 이메일 미리보기: {email_content[:200]}...")
                 return email_content
         
         # GPT 응답 패턴 4: "- 이메일 초안:" 다음에 이메일 내용 (가장 포괄적)
@@ -1242,11 +1210,8 @@ def extract_email_from_gpt_response(original_response: str) -> str:
         if match:
             email_content = match.group(1).strip()
             if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
-                print(f"✅ GPT 이메일 추출 성공 (패턴 4): {len(email_content)}자")
-                print(f"📧 추출된 이메일 미리보기: {email_content[:200]}...")
                 return email_content
         
-        print("⚠️ GPT 이메일 초안을 추출할 수 없습니다.")
         return ""
         
     except Exception as e:
@@ -1261,7 +1226,6 @@ def extract_email_from_gemini_response(original_response: str) -> str:
     try:
         import re
         
-        print(f"🔍 GEMINI 이메일 추출 시작 - 원본 응답 길이: {len(original_response)}자")
         
         # GEMINI 응답 패턴: "이메일 초안:" 다음에 이메일 내용
         gemini_pattern = r'이메일\s*초안[:\s]*\n\n(.*?)(?=\n\n|\n- |\n\[|\n※|\Z)'
@@ -1269,7 +1233,6 @@ def extract_email_from_gemini_response(original_response: str) -> str:
         if match:
             email_content = match.group(1).strip()
             if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
-                print(f"✅ GEMINI 이메일 추출 성공: {len(email_content)}자")
                 return email_content
         
         # GEMINI 응답 패턴 2: "이메일 초안:" 다음에 이메일 내용 (빈 줄 없이)
@@ -1278,10 +1241,8 @@ def extract_email_from_gemini_response(original_response: str) -> str:
         if match:
             email_content = match.group(1).strip()
             if len(email_content) > 50 and ('감사합니다' in email_content or '안녕하세요' in email_content):
-                print(f"✅ GEMINI 이메일 추출 성공 (패턴 2): {len(email_content)}자")
                 return email_content
         
-        print("⚠️ GEMINI 이메일 초안을 추출할 수 없습니다.")
         return ""
         
     except Exception as e:
@@ -1296,17 +1257,12 @@ def extract_email_from_original_response(original_response: str) -> str:
     try:
         import re
         
-        print(f"🔍 이메일 추출 시작 - 원본 응답 길이: {len(original_response)}자")
-        
         # GPT 응답인지 GEMINI 응답인지 감지
         if '- 이메일 초안:' in original_response:
-            print("🔍 GPT 응답으로 감지됨")
             return extract_email_from_gpt_response(original_response)
         elif '이메일 초안:' in original_response:
-            print("🔍 GEMINI 응답으로 감지됨")
             return extract_email_from_gemini_response(original_response)
         else:
-            print("⚠️ GPT/GEMINI 응답 형식을 감지할 수 없습니다.")
             return ""
         
     except Exception as e:
@@ -1322,32 +1278,26 @@ def extract_email_from_analysis_result(analysis_result: dict) -> str:
             
             # GEMINI 결과에서 추출
             if 'gemini_result' in ai_result and 'raw_response' in ai_result['gemini_result']:
-                print("🔍 GEMINI 분석 결과에서 이메일 추출")
                 return extract_email_from_gemini_response(ai_result['gemini_result']['raw_response'])
             
             # GPT 결과에서 추출 (openai_handler는 'response' 키 사용)
             if 'response' in ai_result:
-                print("🔍 GPT 분석 결과에서 이메일 추출")
                 return extract_email_from_gpt_response(ai_result['response'])
             
             # 기존 gpt_result 형태도 지원
             if 'gpt_result' in ai_result and 'raw_response' in ai_result['gpt_result']:
-                print("🔍 GPT 분석 결과에서 이메일 추출 (gpt_result)")
                 return extract_email_from_gpt_response(ai_result['gpt_result']['raw_response'])
         
         # 직접 gemini_result나 gpt_result가 있는 경우
         if 'gemini_result' in analysis_result and 'raw_response' in analysis_result['gemini_result']:
-            print("🔍 GEMINI 직접 결과에서 이메일 추출")
             return extract_email_from_gemini_response(analysis_result['gemini_result']['raw_response'])
         
         # GPT 응답이 직접 있는 경우 (openai_handler는 'response' 키 사용)
         if 'response' in analysis_result:
-            print("🔍 GPT 직접 결과에서 이메일 추출")
             return extract_email_from_gpt_response(analysis_result['response'])
         
         # 기존 gpt_result 형태도 지원
         if 'gpt_result' in analysis_result and 'raw_response' in analysis_result['gpt_result']:
-            print("🔍 GPT 직접 결과에서 이메일 추출 (gpt_result)")
             return extract_email_from_gpt_response(analysis_result['gpt_result']['raw_response'])
         
         return ""
@@ -1732,7 +1682,6 @@ def init_components():
         # FAISS 벡터 분류기 사용 (Windows 호환성 개선)
         classifier = None
         try:
-            print("🔄 FAISS 벡터 분류기 초기화 시도...")
             from chroma_vector_classifier import ChromaVectorClassifier
             
             # 타임아웃 설정으로 무한 대기 방지
@@ -3204,45 +3153,6 @@ with tab5:
             except Exception as e:
                 st.write(f"**Client 타입 확인 오류**: {e}")
             
-            # 의존성 상태 확인
-            st.markdown("#### 📦 의존성 상태")
-            try:
-                import chromadb
-                # ChromaDB 버전 확인
-                version = chromadb.__version__
-                st.success(f"✅ chromadb 패키지 설치됨 (버전: {version})")
-            except ImportError:
-                st.error("❌ chromadb 패키지 미설치")
-            except RuntimeError as e:
-                st.error(f"❌ chromadb 런타임 오류: {str(e)[:100]}...")
-                st.warning("⚠️ ChromaDB가 Streamlit Cloud에서 제대로 작동하지 않을 수 있습니다.")
-            except Exception as e:
-                st.error(f"❌ chromadb 오류: {str(e)[:100]}...")
-            
-            try:
-                from sentence_transformers import SentenceTransformer
-                st.success("✅ sentence-transformers 패키지 설치됨")
-            except ImportError:
-                st.error("❌ sentence-transformers 패키지 미설치")
-            except Exception as e:
-                st.error(f"❌ sentence-transformers 오류: {str(e)[:100]}...")
-            
-            try:
-                # 올바른 vector_classifier 가져오기
-                if is_chroma_classifier:
-                    current_classifier = classifier
-                elif is_issue_classifier and classifier.vector_classifier is not None:
-                    current_classifier = classifier.vector_classifier
-                else:
-                    current_classifier = None
-                    
-                if current_classifier and hasattr(current_classifier, 'collection') and current_classifier.collection:
-                    count = current_classifier.collection.count()
-                    st.write(f"**Collection Count**: {count}")
-                else:
-                    st.write("**Collection Count**: 없음")
-            except Exception as e:
-                st.write(f"**Collection Count 오류**: {e}")
             
             # 초기화 로그 표시
             st.markdown("#### 📋 초기화 로그")

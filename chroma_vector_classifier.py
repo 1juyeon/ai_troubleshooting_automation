@@ -9,34 +9,29 @@ import re
 try:
     import faiss
     FAISS_AVAILABLE = True
-    print("✅ FAISS 사용 가능")
+    pass
 except ImportError as e:
-    print(f"⚠️ FAISS 설치 필요: pip install faiss-cpu")
     FAISS_AVAILABLE = False
     faiss = None
 except Exception as e:
-    print(f"⚠️ FAISS 임포트 오류 (무시됨): {e}")
     FAISS_AVAILABLE = False
     faiss = None
 
 # Streamlit Cloud 환경 확인
 import os
 if os.getenv('STREAMLIT_CLOUD'):
-    print("🌐 Streamlit Cloud 환경 감지")
     if not FAISS_AVAILABLE:
-        print("⚠️ Streamlit Cloud에서 FAISS 사용 불가, 키워드 기반 분류로 폴백")
+        pass
 
 # sentence-transformers 임포트
 try:
     from sentence_transformers import SentenceTransformer
     SENTENCE_TRANSFORMERS_AVAILABLE = True
-    print("✅ sentence-transformers 사용 가능")
+    pass
 except ImportError as e:
-    print(f"⚠️ sentence-transformers 설치 필요: pip install sentence-transformers")
     SENTENCE_TRANSFORMERS_AVAILABLE = False
     SentenceTransformer = None
 except Exception as e:
-    print(f"⚠️ sentence-transformers 임포트 오류 (무시됨): {e}")
     SENTENCE_TRANSFORMERS_AVAILABLE = False
     SentenceTransformer = None
 
@@ -100,8 +95,6 @@ class ChromaVectorClassifier:
         
         # 의존성 확인
         if not FAISS_AVAILABLE:
-            print("❌ FAISS가 없어 벡터 분류기를 초기화할 수 없습니다.")
-            print("⚠️ 키워드 기반 분류만 사용됩니다.")
             return
         
         # 임베딩 모델 초기화
@@ -116,23 +109,18 @@ class ChromaVectorClassifier:
             if SENTENCE_TRANSFORMERS_AVAILABLE:
                 # 경량 모델 사용 (Windows에서 더 안정적)
                 self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-                print("✅ sentence-transformers 모델 로드 성공")
                 
                 # 임베딩 함수 테스트
                 test_embedding = self.embedding_model.encode(["테스트 문장"])
-                print(f"✅ 임베딩 함수 테스트 성공: {len(test_embedding[0])}차원")
             else:
-                print("⚠️ sentence-transformers 없음, 키워드 기반 분류만 사용")
                 self.embedding_model = None
         except Exception as e:
-            print(f"❌ 임베딩 모델 초기화 실패: {e}")
             self.embedding_model = None
     
     def _load_or_create_index(self):
         """FAISS 인덱스 로드 또는 생성"""
         try:
             if not FAISS_AVAILABLE or not self.embedding_model:
-                print("⚠️ FAISS 또는 임베딩 모델 없음, 키워드 기반 분류만 사용")
                 return
             
             # 저장된 인덱스 로드 시도
@@ -149,7 +137,6 @@ class ChromaVectorClassifier:
                 self._create_index()
                 
         except Exception as e:
-            print(f"❌ FAISS 인덱스 로드/생성 실패: {e}")
             self.index = None
     
     def _create_index(self):
@@ -159,7 +146,6 @@ class ChromaVectorClassifier:
             sample_data = self._load_sample_data()
             
             if not sample_data:
-                print("❌ 샘플 데이터 없음")
                 return
             
             # 문서와 메타데이터 준비
@@ -201,7 +187,6 @@ class ChromaVectorClassifier:
             
             
         except Exception as e:
-            print(f"❌ FAISS 인덱스 생성 실패: {e}")
             self.index = None
     
     def _load_sample_data(self):
@@ -231,7 +216,6 @@ class ChromaVectorClassifier:
                         data = json.load(f)
                         return data.get("sample_issues", {})
             
-            print("⚠️ 샘플 데이터 파일을 찾을 수 없음, 기본 데이터 사용")
             # 기본 데이터
             return {
                 "현재 비밀번호가 맞지 않습니다": [
@@ -308,7 +292,6 @@ class ChromaVectorClassifier:
                     ]
                 }
         except Exception as e:
-            print(f"❌ 샘플 데이터 로드 실패: {e}")
             return {}
     
     def _classify_by_keywords(self, customer_input: str) -> Dict[str, Any]:
@@ -371,7 +354,6 @@ class ChromaVectorClassifier:
                 }
                 
         except Exception as e:
-            print(f"❌ 키워드 분류 실패: {e}")
             return {
                 'issue_type': '기타',
                 'method': 'keyword_based',
@@ -441,7 +423,6 @@ class ChromaVectorClassifier:
             return self._classify_by_keywords(customer_input)
             
         except Exception as e:
-            print(f"❌ 분류 실패: {e}")
             return self._classify_by_keywords(customer_input)
     
     def add_training_data(self, customer_input: str, issue_type: str, metadata: Dict[str, Any] = None):
@@ -480,7 +461,6 @@ class ChromaVectorClassifier:
             return True
             
         except Exception as e:
-            print(f"❌ 학습 데이터 추가 실패: {e}")
             return False
     
     def get_statistics(self) -> Dict[str, Any]:
@@ -519,7 +499,6 @@ class ChromaVectorClassifier:
                 }
             
         except Exception as e:
-            print(f"❌ 통계 조회 실패: {e}")
             return {
                 'total_documents': 0,
                 'issue_types': self.issue_types,
@@ -548,10 +527,8 @@ class ChromaVectorClassifier:
             
             # 새 인덱스 생성
             self._load_or_create_index()
-            print("✅ FAISS 벡터 DB 초기화 완료")
             return True
         except Exception as e:
-            print(f"❌ FAISS 벡터 DB 초기화 실패: {e}")
             return False
 
 # 테스트 코드

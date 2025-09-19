@@ -8,15 +8,11 @@ from typing import Dict, Any, List
 try:
     from chroma_vector_classifier import ChromaVectorClassifier
     VECTOR_CLASSIFIER_AVAILABLE = True
-    print("✅ 벡터 분류기 모듈 임포트 성공")
+    pass
 except ImportError as e:
-    print(f"⚠️ 벡터 분류기 모듈 임포트 실패: {e}")
-    print("   키워드 + Gemini 분류만 사용합니다.")
     VECTOR_CLASSIFIER_AVAILABLE = False
     ChromaVectorClassifier = None
 except Exception as e:
-    print(f"❌ 벡터 분류기 모듈 임포트 오류: {e}")
-    print("   키워드 + Gemini 분류만 사용합니다.")
     VECTOR_CLASSIFIER_AVAILABLE = False
     ChromaVectorClassifier = None
 
@@ -89,12 +85,9 @@ class IssueClassifier:
             if api_key:
                 genai.configure(api_key=api_key)
                 self.model = genai.GenerativeModel('gemini-1.5-pro')
-                print("✅ Gemini API 초기화 성공 (gemini-1.5-pro)")
             else:
                 self.model = None
-                print("⚠️ Gemini API 키가 없어 모델을 초기화할 수 없습니다.")
         except Exception as e:
-            print(f"❌ Gemini API 초기화 실패: {e}")
             self.model = None
         
         # 벡터 분류기 초기화 (안전하게)
@@ -102,13 +95,10 @@ class IssueClassifier:
         if VECTOR_CLASSIFIER_AVAILABLE and ChromaVectorClassifier is not None:
             try:
                 self.vector_classifier = ChromaVectorClassifier()
-                print("✅ 벡터 분류기 초기화 성공")
             except Exception as e:
-                print(f"❌ 벡터 분류기 초기화 실패: {e}")
-                print("   키워드 + Gemini 분류만 사용합니다.")
                 self.vector_classifier = None
         else:
-            print("⚠️ 벡터 분류기 모듈을 사용할 수 없습니다. 키워드 + Gemini 분류만 사용합니다.")
+            pass
     
     def classify_issue(self, customer_input: str) -> Dict[str, Any]:
         """문제 유형 분류 (하이브리드: 벡터 + 키워드 + Gemini)"""

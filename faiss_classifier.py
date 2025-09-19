@@ -10,25 +10,22 @@ from typing import List, Dict, Any, Optional
 try:
     import faiss
     FAISS_AVAILABLE = True
-    print("✅ FAISS 사용 가능")
+    pass
 except ImportError as e:
-    print(f"❌ FAISS 설치 필요: pip install faiss-cpu")
     FAISS_AVAILABLE = False
 
 # Streamlit Cloud 환경 확인
 import os
 if os.getenv('STREAMLIT_CLOUD'):
-    print("🌐 Streamlit Cloud 환경 감지")
     if not FAISS_AVAILABLE:
-        print("⚠️ Streamlit Cloud에서 FAISS 사용 불가, 키워드 기반 분류로 폴백")
+        pass
 
 # sentence-transformers 임포트
 try:
     from sentence_transformers import SentenceTransformer
     SENTENCE_TRANSFORMERS_AVAILABLE = True
-    print("✅ sentence-transformers 사용 가능")
+    pass
 except ImportError as e:
-    print(f"❌ sentence-transformers 설치 필요: pip install sentence-transformers")
     SENTENCE_TRANSFORMERS_AVAILABLE = False
 
 class FaissVectorClassifier:
@@ -99,19 +96,15 @@ class FaissVectorClassifier:
             if SENTENCE_TRANSFORMERS_AVAILABLE:
                 # 경량 모델 사용 (Windows에서 더 안정적)
                 self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-                print("✅ sentence-transformers 모델 로드 성공")
             else:
-                print("⚠️ sentence-transformers 없음, 키워드 기반 분류만 사용")
                 self.embedding_model = None
         except Exception as e:
-            print(f"❌ 임베딩 모델 초기화 실패: {e}")
             self.embedding_model = None
     
     def _load_or_create_index(self):
         """FAISS 인덱스 로드 또는 생성"""
         try:
             if not FAISS_AVAILABLE or not self.embedding_model:
-                print("⚠️ FAISS 또는 임베딩 모델 없음, 키워드 기반 분류만 사용")
                 return
             
             # 저장된 인덱스 로드 시도
@@ -128,7 +121,6 @@ class FaissVectorClassifier:
                 self._create_index()
                 
         except Exception as e:
-            print(f"❌ FAISS 인덱스 로드/생성 실패: {e}")
             self.index = None
     
     def _create_index(self):
@@ -138,7 +130,6 @@ class FaissVectorClassifier:
             sample_data = self._load_sample_data()
             
             if not sample_data:
-                print("❌ 샘플 데이터 없음")
                 return
             
             # 문서와 메타데이터 준비
@@ -180,7 +171,6 @@ class FaissVectorClassifier:
             
             
         except Exception as e:
-            print(f"❌ FAISS 인덱스 생성 실패: {e}")
             self.index = None
     
     def _load_sample_data(self):
@@ -210,7 +200,6 @@ class FaissVectorClassifier:
                         data = json.load(f)
                         return data.get("sample_issues", {})
             
-            print("⚠️ 샘플 데이터 파일을 찾을 수 없음, 기본 데이터 사용")
             # 기본 데이터 (sample_issues.json과 동일)
             return {
                 "현재 비밀번호가 맞지 않습니다": [
@@ -287,7 +276,6 @@ class FaissVectorClassifier:
                     ]
                 }
         except Exception as e:
-            print(f"❌ 샘플 데이터 로드 실패: {e}")
             return {}
     
     def _classify_by_keywords(self, customer_input: str) -> Dict[str, Any]:
@@ -401,7 +389,6 @@ class FaissVectorClassifier:
             return self._classify_by_keywords(customer_input)
             
         except Exception as e:
-            print(f"❌ 분류 실패: {e}")
             return self._classify_by_keywords(customer_input)
     
     def get_statistics(self) -> Dict[str, Any]:
@@ -439,7 +426,6 @@ class FaissVectorClassifier:
                     'collection_name': 'N/A'
                 }
         except Exception as e:
-            print(f"❌ 통계 조회 실패: {e}")
             return {
                 'total_documents': 0,
                 'issue_types': self.issue_types,

@@ -98,7 +98,7 @@ class SOLAPIHandler:
                  phone_number: str, 
                  message: str, 
                  recipient_name: str = "",
-                 sender_name: str = "PrivKeeper") -> Dict[str, Any]:
+                 sender_name: str = "CoreTrust") -> Dict[str, Any]:
         """SMS 발송"""
         if not self.api_key or not self.api_secret:
             return {
@@ -108,17 +108,6 @@ class SOLAPIHandler:
             }
         
         try:
-            # 디버깅 정보 추가
-            debug_info = {
-                "api_key": f"{self.api_key[:8]}...{self.api_key[-8:]}",
-                "api_secret": f"{self.api_secret[:8]}...{self.api_secret[-8:]}",
-                "sender": self.sender,
-                "to": phone_number,
-                "message_length": len(message)
-            }
-            
-            # 발신자 번호 디버깅 (임시 주석)
-            # st.write(f"🔍 디버깅: 발신자 번호 = {self.sender}")
             
             # 메시지 내용 구성
             if recipient_name:
@@ -127,17 +116,16 @@ class SOLAPIHandler:
                 full_message = f"[{sender_name}]\n{message}"
             
             # 여러 SOLAPI API 형식 시도
-            return self._try_multiple_sms_apis(phone_number, full_message, debug_info)
+            return self._try_multiple_sms_apis(phone_number, full_message)
                 
         except Exception as e:
             return {
                 "success": False,
                 "error": f"예상치 못한 오류: {str(e)}",
-                "message": "잠시 후 다시 시도해주세요.",
-                "debug_info": debug_info
+                "message": "잠시 후 다시 시도해주세요."
             }
     
-    def _try_multiple_sms_apis(self, phone_number: str, message: str, debug_info: Dict) -> Dict[str, Any]:
+    def _try_multiple_sms_apis(self, phone_number: str, message: str) -> Dict[str, Any]:
         """SOLAPI v4 공식 엔드포인트만 시도 (성공 확인됨)"""
         
         # SOLAPI v4 공식 엔드포인트만 사용 (성공 확인됨)
@@ -159,21 +147,16 @@ class SOLAPIHandler:
         
         # 첫 번째 API 형식만 시도 (이미 성공 확인됨)
         try:
-            result = self._try_single_api_format(api_formats[0], debug_info)
+            result = self._try_single_api_format(api_formats[0])
             return result
         except Exception as e:
             return {
                 "success": False,
                 "error": f"SOLAPI v4 API 호출 실패: {str(e)}",
-                "message": "SOLAPI 고객센터에 문의해주세요.",
-                "debug_info": debug_info,
-                "request_info": {
-                    "api_format": api_formats[0]["name"],
-                    "error": str(e)
-                }
+                "message": "SOLAPI 고객센터에 문의해주세요."
             }
     
-    def _try_single_api_format(self, api_format: Dict, debug_info: Dict) -> Dict[str, Any]:
+    def _try_single_api_format(self, api_format: Dict) -> Dict[str, Any]:
         """단일 API 형식으로 SMS 발송 시도"""
         try:
             path = api_format["path"]
@@ -182,19 +165,9 @@ class SOLAPIHandler:
             data = api_format["data"].copy()
             if "messages" in data and len(data["messages"]) > 0:
                 data["messages"][0]["from"] = self.sender
-                # st.write(f"🔍 디버깅: API 요청 발신자 번호 = {data['messages'][0]['from']}")
             
             # HMAC-SHA256 인증 헤더 생성
             headers = self._get_auth_headers("POST", path)
-            
-            # 디버깅: 요청 정보 로깅
-            request_info = {
-                "api_format": api_format["name"],
-                "url": url,
-                "method": "POST",
-                "headers": {k: v if k != "Authorization" else f"{v[:20]}..." for k, v in headers.items()},
-                "data": data
-            }
             
             # API 호출 - HMAC-SHA256 인증 사용
             response = requests.post(url, headers=headers, json=data, timeout=30)
@@ -223,18 +196,14 @@ class SOLAPIHandler:
                         "success": True,
                         "message": f"SMS가 성공적으로 발송되었습니다. ({api_format['name']})",
                         "message_id": message_id,
-                        "recipient": debug_info["to"],
-                        "timestamp": datetime.now().isoformat(),
-                        "debug_info": debug_info,
-                        "request_info": request_info
+                        "recipient": data["messages"][0]["to"],
+                        "timestamp": datetime.now().isoformat()
                     }
                 else:
                     return {
                         "success": False,
                         "error": f"SMS 발송 실패: {result.get('errorMessage', '알 수 없는 오류')}",
-                        "status": "FAILED",
-                        "debug_info": debug_info,
-                        "request_info": request_info
+                        "status": "FAILED"
                     }
             elif response.status_code == 401:
                 # 권한 부족 오류
@@ -249,9 +218,7 @@ class SOLAPIHandler:
                     "error": f"SMS 발송 권한 부족 ({api_format['name']}): {error_msg}",
                     "message": "SOLAPI 대시보드에서 SMS 발송 권한을 확인해주세요.",
                     "status_code": 401,
-                    "response": response.text,
-                    "debug_info": debug_info,
-                    "request_info": request_info
+                    "response": response.text
                 }
             else:
                 error_msg = f"HTTP {response.status_code}"
@@ -264,17 +231,14 @@ class SOLAPIHandler:
                 return {
                     "success": False,
                     "error": f"API 호출 실패 ({api_format['name']}): {error_msg}",
-                    "response": response.text,
-                    "debug_info": debug_info,
-                    "request_info": request_info
+                    "response": response.text
                 }
                 
         except Exception as e:
             return {
                 "success": False,
                 "error": f"예상치 못한 오류 ({api_format['name']}): {str(e)}",
-                "message": "잠시 후 다시 시도해주세요.",
-                "debug_info": debug_info
+                "message": "잠시 후 다시 시도해주세요."
             }
     
 
