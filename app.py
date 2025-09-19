@@ -1729,27 +1729,27 @@ def init_components():
             print("✅ Gemini API 키를 사이드바에서 로드했습니다.")
         
         # 컴포넌트 초기화 (API 키 로드 후)
-        # ChromaDB 벡터 분류기 사용 (개선된 초기화)
+        # FAISS 벡터 분류기 사용 (Windows 호환성 개선)
         classifier = None
         try:
-            print("🔄 ChromaDB 벡터 분류기 초기화 시도...")
+            print("🔄 FAISS 벡터 분류기 초기화 시도...")
             from chroma_vector_classifier import ChromaVectorClassifier
             
             # 타임아웃 설정으로 무한 대기 방지
             import threading
             import time
             
-            def init_chromadb():
+            def init_faiss():
                 nonlocal classifier
                 try:
                     classifier = ChromaVectorClassifier()
-                    print("✅ ChromaDB 벡터 분류기 초기화 성공")
+                    print("✅ FAISS 벡터 분류기 초기화 성공")
                 except Exception as e:
-                    print(f"❌ ChromaDB 벡터 분류기 초기화 실패: {e}")
+                    print(f"❌ FAISS 벡터 분류기 초기화 실패: {e}")
                     classifier = None
             
             # 별도 스레드에서 초기화 시도
-            init_thread = threading.Thread(target=init_chromadb)
+            init_thread = threading.Thread(target=init_faiss)
             init_thread.daemon = True
             init_thread.start()
             
@@ -1757,10 +1757,10 @@ def init_components():
             init_thread.join(timeout=10)
             
             if classifier is None:
-                raise Exception("ChromaDB 초기화 타임아웃 또는 실패")
+                raise Exception("FAISS 초기화 타임아웃 또는 실패")
                 
         except Exception as e:
-            print(f"⚠️ ChromaDB 벡터 분류기 초기화 실패, 기본 분류기 사용: {e}")
+            print(f"⚠️ FAISS 벡터 분류기 초기화 실패, 기본 분류기 사용: {e}")
             classifier = IssueClassifier(api_key=api_key)
         
         scenario_db = ScenarioDB()
@@ -3153,33 +3153,33 @@ with tab5:
         classifier = components['classifier']
         
         # ChromaVectorClassifier인지 IssueClassifier인지 확인
-        is_chroma_classifier = hasattr(classifier, 'collection') and hasattr(classifier, 'embedding_model')
+        is_faiss_classifier = hasattr(classifier, 'index') and hasattr(classifier, 'embedding_model')
         is_issue_classifier = hasattr(classifier, 'vector_classifier')
         
-        if is_chroma_classifier:
-            st.success("✅ ChromaDB Vector DB가 활성화되어 있습니다.")
+        if is_faiss_classifier:
+            st.success("✅ FAISS Vector DB가 활성화되어 있습니다.")
         elif is_issue_classifier and classifier.vector_classifier is not None:
             st.success("✅ Vector DB가 활성화되어 있습니다 (IssueClassifier 내부).")
         else:
             st.warning("⚠️ Vector DB가 활성화되지 않았습니다.")
-            st.info("ChromaDB 또는 Vector Classifier가 초기화되지 않았습니다.")
+            st.info("FAISS 또는 Vector Classifier가 초기화되지 않았습니다.")
             
         # 디버깅 정보 표시
-        if is_chroma_classifier or (is_issue_classifier and classifier.vector_classifier is not None):
+        if is_faiss_classifier or (is_issue_classifier and classifier.vector_classifier is not None):
             with st.expander("🔍 디버깅 정보"):
                 try:
                     # ChromaVectorClassifier 또는 IssueClassifier의 vector_classifier 가져오기
-                    if is_chroma_classifier:
+                    if is_faiss_classifier:
                         vector_classifier = classifier
-                        st.write("**분류기 타입**: ChromaVectorClassifier (직접)")
+                        st.write("**분류기 타입**: ChromaVectorClassifier (FAISS 기반)")
                     else:
                         vector_classifier = classifier.vector_classifier
                         st.write("**분류기 타입**: IssueClassifier 내부의 ChromaVectorClassifier")
                     
                     if vector_classifier is not None:
-                        st.write(f"**Collection 존재**: {hasattr(vector_classifier, 'collection') and vector_classifier.collection is not None}")
+                        st.write(f"**FAISS Index 존재**: {hasattr(vector_classifier, 'index') and vector_classifier.index is not None}")
                         st.write(f"**Embedding Model 존재**: {hasattr(vector_classifier, 'embedding_model') and vector_classifier.embedding_model is not None}")
-                        st.write(f"**Client 존재**: {hasattr(vector_classifier, 'client') and vector_classifier.client is not None}")
+                        st.write(f"**Documents 수**: {len(vector_classifier.documents) if hasattr(vector_classifier, 'documents') else 'N/A'}")
                     else:
                         st.write("**Vector Classifier**: None (초기화되지 않음)")
                 except Exception as e:
@@ -3189,7 +3189,7 @@ with tab5:
             # 클라이언트 타입 확인
             try:
                 # vector_classifier 변수가 위에서 정의되었으므로 재사용
-                if is_chroma_classifier:
+                if is_faiss_classifier:
                     current_classifier = classifier
                 elif is_issue_classifier and classifier.vector_classifier is not None:
                     current_classifier = classifier.vector_classifier

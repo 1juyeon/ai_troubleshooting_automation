@@ -1,23 +1,19 @@
-import os
-import json
-import pandas as pd
-from typing import List, Dict, Any, Optional
-import numpy as np
-import re
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-# FAISS 안전하게 임포트
+import numpy as np
+import json
+import os
+from typing import List, Dict, Any, Optional
+
+# FAISS 임포트 (Windows에서 더 안정적)
 try:
     import faiss
     FAISS_AVAILABLE = True
     print("✅ FAISS 사용 가능")
 except ImportError as e:
-    print(f"⚠️ FAISS 설치 필요: pip install faiss-cpu")
+    print(f"❌ FAISS 설치 필요: pip install faiss-cpu")
     FAISS_AVAILABLE = False
-    faiss = None
-except Exception as e:
-    print(f"⚠️ FAISS 임포트 오류 (무시됨): {e}")
-    FAISS_AVAILABLE = False
-    faiss = None
 
 # sentence-transformers 임포트
 try:
@@ -25,17 +21,12 @@ try:
     SENTENCE_TRANSFORMERS_AVAILABLE = True
     print("✅ sentence-transformers 사용 가능")
 except ImportError as e:
-    print(f"⚠️ sentence-transformers 설치 필요: pip install sentence-transformers")
+    print(f"❌ sentence-transformers 설치 필요: pip install sentence-transformers")
     SENTENCE_TRANSFORMERS_AVAILABLE = False
-    SentenceTransformer = None
-except Exception as e:
-    print(f"⚠️ sentence-transformers 임포트 오류 (무시됨): {e}")
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
-    SentenceTransformer = None
 
-class ChromaVectorClassifier:
+class FaissVectorClassifier:
     def __init__(self, persist_directory: str = "faiss_issue_classification"):
-        """FAISS 기반 벡터 분류기 초기화 (키워드 기반 폴백 포함)"""
+        """FAISS 기반 벡터 분류기 초기화"""
         self.persist_directory = persist_directory
         self.issue_types = [
             "현재 비밀번호가 맞지 않습니다",
@@ -49,7 +40,7 @@ class ChromaVectorClassifier:
             "기타"
         ]
         
-        # 키워드 매핑 정의 (ChromaDB 실패 시 사용)
+        # 키워드 매핑 (폴백용)
         self.keyword_mapping = {
             "현재 비밀번호가 맞지 않습니다": [
                 "비밀번호", "패스워드", "password", "인증", "로그인", "접속", "웹", "cctv",
@@ -85,22 +76,14 @@ class ChromaVectorClassifier:
             ]
         }
         
-        # FAISS 인덱스와 메타데이터 초기화
+        # FAISS 인덱스와 메타데이터
         self.index = None
         self.documents = []
         self.metadatas = []
         self.embedding_model = None
         
-        # 의존성 확인
-        if not FAISS_AVAILABLE:
-            print("❌ FAISS가 없어 벡터 분류기를 초기화할 수 없습니다.")
-            print("⚠️ 키워드 기반 분류만 사용됩니다.")
-            return
-        
-        # 임베딩 모델 초기화
+        # 초기화
         self._initialize_embedding_model()
-        
-        # FAISS 인덱스 로드 또는 생성
         self._load_or_create_index()
     
     def _initialize_embedding_model(self):
@@ -110,10 +93,6 @@ class ChromaVectorClassifier:
                 # 경량 모델 사용 (Windows에서 더 안정적)
                 self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
                 print("✅ sentence-transformers 모델 로드 성공")
-                
-                # 임베딩 함수 테스트
-                test_embedding = self.embedding_model.encode(["테스트 문장"])
-                print(f"✅ 임베딩 함수 테스트 성공: {len(test_embedding[0])}차원")
             else:
                 print("⚠️ sentence-transformers 없음, 키워드 기반 분류만 사용")
                 self.embedding_model = None
@@ -216,74 +195,47 @@ class ChromaVectorClassifier:
                     "현재 비밀번호가 맞지 않습니다": [
                         "CCTV 웹 접속 시 비밀번호 인증 실패",
                         "저장된 비밀번호로 로그인이 안됩니다",
-                        "비밀번호를 정확히 입력했는데도 인증 오류가 발생합니다",
-                        "CCTV 웹 로그인 시 접속 실패",
-                        "패스워드가 맞지 않아 로그인할 수 없습니다",
-                        "웹 접속 시 인증 실패가 계속 발생합니다"
+                        "비밀번호를 정확히 입력했는데도 인증 오류가 발생합니다"
                     ],
                     "VMS와의 통신에 실패했습니다": [
                         "VMS 서버와의 연결이 안됩니다",
                         "VMS 패스워드가 맞지 않습니다",
-                        "SVMS 통신 오류가 발생합니다",
-                        "NVR과 VMS 간 통신 실패",
-                        "VMS 설정에서 연결 오류가 발생합니다",
-                        "VMS 서버 연결이 끊어졌습니다"
+                        "SVMS 통신 오류가 발생합니다"
                     ],
                     "Ping 테스트에 실패했습니다": [
                         "네트워크 연결이 안됩니다",
                         "Ping 테스트에서 응답이 없습니다",
-                        "네트워크 통신이 불안정합니다",
-                        "연결 상태를 확인할 수 없습니다",
-                        "네트워크 점검에서 실패가 발생합니다",
-                        "통신 테스트에 실패했습니다"
+                        "네트워크 통신이 불안정합니다"
                     ],
                     "Onvif 응답이 없습니다": [
                         "Onvif 프로토콜 응답이 없습니다",
                         "카메라와 Onvif 통신이 안됩니다",
-                        "Onvif 설정에서 연결 오류가 발생합니다",
-                        "HTTP/HTTPS 프로토콜 응답이 없습니다",
-                        "카메라 통신 프로토콜 오류",
-                        "Onvif 서비스가 응답하지 않습니다"
+                        "Onvif 설정에서 연결 오류가 발생합니다"
                     ],
                     "로그인 차단 상태입니다": [
                         "CCTV 로그인이 차단되었습니다",
                         "비밀번호 변경 후 로그인 차단 상태입니다",
-                        "계정이 차단되어 로그인할 수 없습니다",
-                        "CCTV 차단 상태로 접속이 안됩니다",
-                        "로그인 시도가 차단되었습니다",
-                        "비밀번호 변경으로 인한 차단 상태입니다"
+                        "계정이 차단되어 로그인할 수 없습니다"
                     ],
                     "비밀번호 변경에 실패했습니다": [
                         "비밀번호 변경이 안됩니다",
                         "패스워드 수정에 실패했습니다",
-                        "비밀번호 업데이트 오류가 발생합니다",
-                        "비밀번호 변경 시 오류가 발생합니다",
-                        "패스워드 변경 프로세스가 실패했습니다",
-                        "비밀번호 수정이 제대로 되지 않습니다"
+                        "비밀번호 업데이트 오류가 발생합니다"
                     ],
                     "PK P 계정 로그인 안됨": [
                         "PK P 계정으로 로그인이 안됩니다",
                         "30일 미접속으로 계정이 잠겼습니다",
-                        "PK P 계정이 잠겨있습니다",
-                        "계정 로그인에 실패합니다",
-                        "PK P 계정 인증이 안됩니다",
-                        "계정 접속이 차단되었습니다"
+                        "PK P 계정이 잠겨있습니다"
                     ],
                     "PK P 웹 접속 안됨": [
                         "PK P 웹사이트에 접속이 안됩니다",
                         "톰캣 서비스가 중단되었습니다",
-                        "PK P 웹 서비스가 응답하지 않습니다",
-                        "웹 접속 시 연결 오류가 발생합니다",
-                        "PK P 웹 페이지가 로드되지 않습니다",
-                        "웹 서비스 접속에 실패합니다"
+                        "PK P 웹 서비스가 응답하지 않습니다"
                     ],
                     "기타": [
                         "알 수 없는 오류가 발생했습니다",
                         "기타 문제가 발생했습니다",
-                        "예상치 못한 오류가 발생했습니다",
-                        "문제를 파악할 수 없습니다",
-                        "기타 기술적 문제가 발생했습니다",
-                        "분류되지 않는 문제입니다"
+                        "예상치 못한 오류가 발생했습니다"
                     ]
                 }
         except Exception as e:
@@ -291,14 +243,9 @@ class ChromaVectorClassifier:
             return {}
     
     def _classify_by_keywords(self, customer_input: str) -> Dict[str, Any]:
-        """키워드 기반 문제 유형 분류 (ChromaDB 실패 시 사용)"""
+        """키워드 기반 분류 (폴백)"""
         try:
-            print(f"🔍 키워드 기반 분류 시도: {customer_input}")
-            
-            # 입력 텍스트 정규화
             normalized_input = customer_input.lower().strip()
-            
-            # 각 문제 유형별로 키워드 매칭 점수 계산
             issue_scores = {}
             
             for issue_type, keywords in self.keyword_mapping.items():
@@ -317,7 +264,6 @@ class ChromaVectorClassifier:
                         'confidence': min(score / len(keywords), 1.0)
                     }
             
-            # 가장 높은 점수를 받은 문제 유형 선택
             if issue_scores:
                 best_issue = max(issue_scores.items(), key=lambda x: x[1]['score'])
                 best_issue_type = best_issue[0]
@@ -325,14 +271,7 @@ class ChromaVectorClassifier:
                 best_confidence = best_issue[1]['confidence']
                 matched_keywords = best_issue[1]['matched_keywords']
                 
-                # 신뢰도 결정
-                if best_confidence >= 0.3:  # 30% 이상 키워드 매칭
-                    confidence_level = 'high' if best_confidence >= 0.5 else 'medium'
-                else:
-                    confidence_level = 'low'
-                
-                print(f"✅ 키워드 분류 결과: {best_issue_type} (점수: {best_score}, 신뢰도: {confidence_level})")
-                print(f"🔑 매칭된 키워드: {matched_keywords}")
+                confidence_level = 'high' if best_confidence >= 0.5 else 'medium' if best_confidence >= 0.3 else 'low'
                 
                 return {
                     'issue_type': best_issue_type,
@@ -343,7 +282,6 @@ class ChromaVectorClassifier:
                     'all_scores': {k: v['score'] for k, v in issue_scores.items()}
                 }
             else:
-                print("❌ 매칭되는 키워드가 없음, 기타로 분류")
                 return {
                     'issue_type': '기타',
                     'method': 'keyword_based',
@@ -354,7 +292,6 @@ class ChromaVectorClassifier:
                 }
                 
         except Exception as e:
-            print(f"❌ 키워드 분류 실패: {e}")
             return {
                 'issue_type': '기타',
                 'method': 'keyword_based',
@@ -363,11 +300,9 @@ class ChromaVectorClassifier:
             }
     
     def classify_issue(self, customer_input: str, top_k: int = 3) -> Dict[str, Any]:
-        """FAISS 벡터 기반 문제 유형 분류 (키워드 기반 폴백 포함)"""
+        """벡터 기반 문제 유형 분류 (FAISS + 키워드 폴백)"""
         try:
             print(f"🔍 분류 시도: {customer_input}")
-            print(f"📊 FAISS 인덱스 상태: {self.index is not None}")
-            print(f"🧠 임베딩 모델 상태: {self.embedding_model is not None}")
             
             # FAISS 벡터 분류 시도
             if self.index is not None and self.embedding_model is not None:
@@ -375,12 +310,9 @@ class ChromaVectorClassifier:
                 
                 # 쿼리 임베딩 생성
                 query_embedding = self.embedding_model.encode([customer_input]).astype('float32')
-                print(f"✅ 임베딩 생성 완료: {len(query_embedding[0])}차원")
                 
                 # FAISS 검색
-                print("🔍 FAISS 검색 중...")
                 scores, indices = self.index.search(query_embedding, top_k)
-                print(f"✅ FAISS 검색 완료: {len(indices[0])}개 결과")
                 
                 if len(indices[0]) > 0:
                     # 결과 분석
@@ -417,15 +349,7 @@ class ChromaVectorClassifier:
                         'method': 'faiss_vector',
                         'confidence': confidence,
                         'similarity_score': best_score,
-                        'all_scores': {k: max(v) for k, v in issue_scores.items()},
-                        'top_matches': [
-                            {
-                                'document': self.documents[indices[0][i]],
-                                'issue_type': self.metadatas[indices[0][i]]['issue_type'],
-                                'similarity': float(scores[0][i])
-                            }
-                            for i in range(len(indices[0]))
-                        ]
+                        'all_scores': {k: max(v) for k, v in issue_scores.items()}
                     }
             
             # FAISS 실패 시 키워드 기반 분류로 폴백
@@ -437,154 +361,44 @@ class ChromaVectorClassifier:
             print("⚠️ 키워드 기반 분류로 폴백")
             return self._classify_by_keywords(customer_input)
     
-    def add_training_data(self, customer_input: str, issue_type: str, metadata: Dict[str, Any] = None):
-        """새로운 학습 데이터 추가 (FAISS)"""
-        try:
-            if not self.index or not self.embedding_model:
-                print("⚠️ FAISS 인덱스 또는 임베딩 모델 없음, 학습 데이터 추가 불가")
-                return False
-            
-            # 메타데이터 구성
-            if metadata is None:
-                metadata = {}
-            metadata.update({
-                'issue_type': issue_type,
-                'is_sample': False,
-                'added_timestamp': str(pd.Timestamp.now())
-            })
-            
-            # 임베딩 생성
-            embedding = self.embedding_model.encode([customer_input]).astype('float32')
-            
-            # FAISS 인덱스에 추가
-            self.index.add(embedding)
-            
-            # 메타데이터 업데이트
-            self.documents.append(customer_input)
-            self.metadatas.append(metadata)
-            
-            # 인덱스 저장
-            faiss.write_index(self.index, os.path.join(self.persist_directory, "faiss_index.bin"))
-            with open(os.path.join(self.persist_directory, "metadata.json"), 'w', encoding='utf-8') as f:
-                json.dump({
-                    'documents': self.documents,
-                    'metadatas': self.metadatas
-                }, f, ensure_ascii=False, indent=2)
-            
-            print(f"✅ 학습 데이터 추가 완료: {issue_type}")
-            return True
-            
-        except Exception as e:
-            print(f"❌ 학습 데이터 추가 실패: {e}")
-            return False
-    
     def get_statistics(self) -> Dict[str, Any]:
-        """FAISS 벡터 DB 통계"""
-        try:
-            if self.index is not None:
-                # 문제 유형별 통계
-                issue_type_counts = {}
-                for metadata in self.metadatas:
-                    issue_type = metadata.get('issue_type', '기타')
-                    issue_type_counts[issue_type] = issue_type_counts.get(issue_type, 0) + 1
-                
-                return {
-                    'total_documents': len(self.documents),
-                    'issue_types': list(issue_type_counts.keys()),
-                    'issue_type_counts': issue_type_counts,
-                    'index_size': self.index.ntotal,
-                    'method': 'faiss_vector',
-                    'embedding_model': 'all-MiniLM-L6-v2' if self.embedding_model else 'None'
-                }
-            else:
-                return {
-                    'total_documents': 0,
-                    'issue_types': self.issue_types,
-                    'issue_type_counts': {},
-                    'index_size': 0,
-                    'method': 'keyword_only',
-                    'embedding_model': 'None'
-                }
-            
-        except Exception as e:
-            print(f"❌ 통계 조회 실패: {e}")
+        """분류기 통계"""
+        if self.index is not None:
+            return {
+                'total_documents': len(self.documents),
+                'issue_types': self.issue_types,
+                'method': 'faiss_vector',
+                'index_size': self.index.ntotal if self.index else 0
+            }
+        else:
             return {
                 'total_documents': 0,
                 'issue_types': self.issue_types,
-                'issue_type_counts': {},
-                'index_size': 0,
-                'method': 'error',
-                'error': str(e)
+                'method': 'keyword_only',
+                'index_size': 0
             }
-    
-    def clear_database(self):
-        """FAISS 벡터 DB 초기화"""
-        try:
-            # 저장된 파일들 삭제
-            index_path = os.path.join(self.persist_directory, "faiss_index.bin")
-            metadata_path = os.path.join(self.persist_directory, "metadata.json")
-            
-            if os.path.exists(index_path):
-                os.remove(index_path)
-            if os.path.exists(metadata_path):
-                os.remove(metadata_path)
-            
-            # 메모리 초기화
-            self.index = None
-            self.documents = []
-            self.metadatas = []
-            
-            # 새 인덱스 생성
-            self._load_or_create_index()
-            print("✅ FAISS 벡터 DB 초기화 완료")
-            return True
-        except Exception as e:
-            print(f"❌ FAISS 벡터 DB 초기화 실패: {e}")
-            return False
 
 # 테스트 코드
 if __name__ == "__main__":
-    # 벡터 분류기 초기화
-    classifier = ChromaVectorClassifier()
+    print("=== FAISS 벡터 분류기 테스트 ===")
     
-    # 테스트 케이스들
+    classifier = FaissVectorClassifier()
+    
     test_cases = [
-        "PK P에 저장된 비밀번호로 CCTV 웹 접속이 안됩니다. 비밀번호는 정확히 입력했는데도 인증 실패가 발생합니다.",
-        "VMS와의 통신에 실패했습니다. VMS 패스워드가 맞지 않는 것 같습니다.",
-        "Ping 테스트에 실패했습니다. 네트워크 연결이 안되는 것 같습니다.",
-        "Onvif 프로토콜로 카메라와 통신이 안됩니다.",
-        "PK P 계정이 30일 미접속으로 잠겼습니다."
+        "비밀번호가 맞지 않습니다",
+        "VMS 통신 실패",
+        "Ping 테스트 실패",
+        "웹 접속 안됨"
     ]
     
-    print("\n=== 벡터 기반 문제 유형 분류 테스트 ===")
-    for i, test_input in enumerate(test_cases, 1):
-        print(f"\n--- 테스트 케이스 {i} ---")
-        print(f"입력: {test_input}")
-        
+    for test_input in test_cases:
+        print(f"\n--- 테스트: {test_input} ---")
         result = classifier.classify_issue(test_input)
-        print(f"분류 결과: {result['issue_type']}")
-        print(f"신뢰도: {result['confidence']}")
-        similarity_score = result.get('similarity_score', 'N/A')
-        if isinstance(similarity_score, (int, float)):
-            print(f"유사도 점수: {similarity_score:.3f}")
-        else:
-            print(f"유사도 점수: {similarity_score}")
-        
-        if 'top_matches' in result:
-            print("상위 매칭 결과:")
-            for match in result['top_matches'][:2]:
-                similarity = match.get('similarity', 'N/A')
-                if isinstance(similarity, (int, float)):
-                    print(f"  - {match['issue_type']}: {similarity:.3f}")
-                else:
-                    print(f"  - {match['issue_type']}: {similarity}")
+        print(f"결과: {result['issue_type']} ({result['method']}, {result['confidence']})")
     
-    # 통계 출력
-    print("\n=== 벡터 DB 통계 ===")
+    # 통계
     stats = classifier.get_statistics()
+    print(f"\n=== 통계 ===")
     print(f"총 문서 수: {stats['total_documents']}")
-    print(f"문제 유형: {stats['issue_types']}")
-    if 'issue_type_counts' in stats:
-        print("문제 유형별 문서 수:")
-        for issue_type, count in stats['issue_type_counts'].items():
-            print(f"  - {issue_type}: {count}개")
+    print(f"분류 방법: {stats['method']}")
+    print(f"인덱스 크기: {stats['index_size']}")
