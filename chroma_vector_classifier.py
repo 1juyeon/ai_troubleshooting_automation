@@ -58,43 +58,50 @@ class ChromaVectorClassifier:
             self.collection = None
             return
         
-        # Chroma 클라이언트 초기화 (클라우드 호환성 개선)
+        # Chroma 클라이언트 초기화 (최신 설정)
         try:
-            from chroma_cloud_config import get_chromadb_config, create_chromadb_client
+            import os
             
-            # 환경에 맞는 설정 가져오기
-            config = get_chromadb_config()
+            # 환경 변수 설정
+            os.environ.update({
+                "CHROMA_DISABLE_TELEMETRY": "1"
+            })
             
-            # 클라이언트 생성
-            self.client = create_chromadb_client(config)
+            # Streamlit Cloud 환경 감지
+            is_streamlit_cloud = os.getenv("STREAMLIT_CLOUD", "").lower() == "true"
             
-            if self.client is None:
-                raise Exception("클라이언트 생성 실패")
+            if is_streamlit_cloud:
+                # 클라우드 환경에서는 메모리 기반 클라이언트 사용
+                self.client = chromadb.Client()
+                print("✅ 클라우드용 ChromaDB 클라이언트 생성")
+            else:
+                # 로컬 환경에서는 영구 저장 클라이언트 사용
+                if not os.path.exists(persist_directory):
+                    os.makedirs(persist_directory, exist_ok=True)
+                
+                self.client = chromadb.PersistentClient(path=persist_directory)
+                print("✅ 로컬용 ChromaDB 클라이언트 생성")
                 
         except Exception as e:
             print(f"❌ Chroma 클라이언트 초기화 실패: {e}")
-            # 폴백: 기본 설정으로 재시도
+            # 최종 폴백: 기본 클라이언트
             try:
-                import os
-                os.environ.update({
-                    "CHROMA_DISABLE_ONNXRUNTIME": "1",
-                    "CHROMA_DISABLE_IMPORT_ONNXRUNTIME": "1",
-                    "CHROMA_DISABLE_TELEMETRY": "1",
-                })
-                
                 self.client = chromadb.Client()
-                print("✅ ChromaDB 기본 클라이언트 폴백 성공")
-            except Exception as fallback_e:
-                print(f"❌ ChromaDB 폴백도 실패: {fallback_e}")
+                print("✅ ChromaDB 기본 클라이언트 최종 폴백 성공")
+            except Exception as final_e:
+                print(f"❌ ChromaDB 최종 폴백도 실패: {final_e}")
                 self.client = None
         
-        # 임베딩 모델 초기화 (ChromaDB 기본 임베딩 함수 사용)
+        # 임베딩 모델 초기화 (ChromaDB 기본 임베딩 사용)
         try:
             from chromadb.utils import embedding_functions
+            
+            # ChromaDB 기본 임베딩 함수 사용
             self.embedding_model = embedding_functions.DefaultEmbeddingFunction()
             print("✅ ChromaDB 기본 임베딩 함수 사용")
+                
         except Exception as e:
-            print(f"❌ ChromaDB 기본 임베딩 함수 초기화 실패: {e}")
+            print(f"❌ ChromaDB 임베딩 함수 초기화 실패: {e}")
             # 임베딩 함수 없이도 ChromaDB 사용 가능
             self.embedding_model = None
             print("⚠️ 임베딩 함수 없이 ChromaDB 사용")
@@ -108,24 +115,22 @@ class ChromaVectorClassifier:
             self._add_sample_data()
     
     def _initialize_collection(self):
-        """컬렉션 초기화 (ChromaDB 기본 임베딩 함수 사용)"""
+        """컬렉션 초기화 (임베딩 함수 충돌 해결)"""
         try:
             if self.client:
-                if self.embedding_model:
-                    # ChromaDB 기본 임베딩 함수 사용
-                    self.collection = self.client.get_or_create_collection(
-                        name="issue_classification",
-                        metadata={"description": "문제 유형 분류를 위한 벡터 데이터베이스"},
-                        embedding_function=self.embedding_model
-                    )
-                    print("✅ Chroma 컬렉션 초기화 성공 (기본 임베딩 함수)")
-                else:
-                    # 임베딩 모델이 없는 경우 기본 설정 사용
-                    self.collection = self.client.get_or_create_collection(
-                        name="issue_classification",
-                        metadata={"description": "문제 유형 분류를 위한 벡터 데이터베이스"}
-                    )
-                    print("✅ Chroma 컬렉션 초기화 성공 (기본 설정)")
+                # 기존 컬렉션 강제 삭제 (임베딩 함수 충돌 해결)
+                try:
+                    self.client.delete_collection("issue_classification")
+                    print("✅ 기존 컬렉션 삭제 완료 (임베딩 함수 충돌 해결)")
+                except:
+                    print("ℹ️ 삭제할 컬렉션이 없습니다")
+                
+                # 새 컬렉션 생성 (임베딩 함수 없이)
+                self.collection = self.client.create_collection(
+                    name="issue_classification",
+                    metadata={"description": "문제 유형 분류를 위한 벡터 데이터베이스"}
+                )
+                print("✅ Chroma 컬렉션 초기화 성공 (임베딩 함수 없이)")
             else:
                 print("❌ Chroma 클라이언트가 없어 컬렉션을 초기화할 수 없습니다.")
         except Exception as e:
@@ -133,81 +138,96 @@ class ChromaVectorClassifier:
             self.collection = None
     
     def _add_sample_data(self):
-        """문제 유형별 샘플 데이터 추가"""
-        sample_data = {
-            "현재 비밀번호가 맞지 않습니다": [
-                "CCTV 웹 접속 시 비밀번호 인증 실패",
-                "저장된 비밀번호로 로그인이 안됩니다",
-                "비밀번호를 정확히 입력했는데도 인증 오류가 발생합니다",
-                "CCTV 웹 로그인 시 접속 실패",
-                "패스워드가 맞지 않아 로그인할 수 없습니다",
-                "웹 접속 시 인증 실패가 계속 발생합니다"
-            ],
-            "VMS와의 통신에 실패했습니다": [
-                "VMS 서버와의 연결이 안됩니다",
-                "VMS 패스워드가 맞지 않습니다",
-                "SVMS 통신 오류가 발생합니다",
-                "NVR과 VMS 간 통신 실패",
-                "VMS 설정에서 연결 오류가 발생합니다",
-                "VMS 서버 연결이 끊어졌습니다"
-            ],
-            "Ping 테스트에 실패했습니다": [
-                "네트워크 연결이 안됩니다",
-                "Ping 테스트에서 응답이 없습니다",
-                "네트워크 통신이 불안정합니다",
-                "연결 상태를 확인할 수 없습니다",
-                "네트워크 점검에서 실패가 발생합니다",
-                "통신 테스트에 실패했습니다"
-            ],
-            "Onvif 응답이 없습니다": [
-                "Onvif 프로토콜 응답이 없습니다",
-                "카메라와 Onvif 통신이 안됩니다",
-                "Onvif 설정에서 연결 오류가 발생합니다",
-                "HTTP/HTTPS 프로토콜 응답이 없습니다",
-                "카메라 통신 프로토콜 오류",
-                "Onvif 서비스가 응답하지 않습니다"
-            ],
-            "로그인 차단 상태입니다": [
-                "CCTV 로그인이 차단되었습니다",
-                "비밀번호 변경 후 로그인 차단 상태입니다",
-                "계정이 차단되어 로그인할 수 없습니다",
-                "CCTV 차단 상태로 접속이 안됩니다",
-                "로그인 시도가 차단되었습니다",
-                "비밀번호 변경으로 인한 차단 상태입니다"
-            ],
-            "비밀번호 변경에 실패했습니다": [
-                "비밀번호 변경이 안됩니다",
-                "패스워드 수정에 실패했습니다",
-                "비밀번호 업데이트 오류가 발생합니다",
-                "비밀번호 변경 시 오류가 발생합니다",
-                "패스워드 변경 프로세스가 실패했습니다",
-                "비밀번호 수정이 제대로 되지 않습니다"
-            ],
-            "PK P 계정 로그인 안됨": [
-                "PK P 계정으로 로그인이 안됩니다",
-                "30일 미접속으로 계정이 잠겼습니다",
-                "PK P 계정이 잠겨있습니다",
-                "계정 로그인에 실패합니다",
-                "PK P 계정 인증이 안됩니다",
-                "계정 접속이 차단되었습니다"
-            ],
-            "PK P 웹 접속 안됨": [
-                "PK P 웹사이트에 접속이 안됩니다",
-                "톰캣 서비스가 중단되었습니다",
-                "PK P 웹 서비스가 응답하지 않습니다",
-                "웹 접속 시 연결 오류가 발생합니다",
-                "PK P 웹 페이지가 로드되지 않습니다",
-                "웹 서비스 접속에 실패합니다"
-            ],
-            "기타": [
-                "알 수 없는 오류가 발생했습니다",
-                "기타 문제가 발생했습니다",
-                "예상치 못한 오류가 발생했습니다",
-                "문제를 파악할 수 없습니다",
-                "기타 기술적 문제가 발생했습니다",
-                "분류되지 않는 문제입니다"
-            ]
-        }
+        """문제 유형별 샘플 데이터 추가 (JSON 파일에서 로드)"""
+        try:
+            # JSON 파일에서 샘플 데이터 로드
+            json_path = os.path.join(os.path.dirname(__file__), "vector_data", "sample_issues.json")
+            if os.path.exists(json_path):
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    sample_data = data.get("sample_issues", {})
+                    print(f"✅ JSON 파일에서 샘플 데이터 로드: {len(sample_data)}개 유형")
+            else:
+                # JSON 파일이 없으면 기본 데이터 사용
+                sample_data = {
+                    "현재 비밀번호가 맞지 않습니다": [
+                        "CCTV 웹 접속 시 비밀번호 인증 실패",
+                        "저장된 비밀번호로 로그인이 안됩니다",
+                        "비밀번호를 정확히 입력했는데도 인증 오류가 발생합니다",
+                        "CCTV 웹 로그인 시 접속 실패",
+                        "패스워드가 맞지 않아 로그인할 수 없습니다",
+                        "웹 접속 시 인증 실패가 계속 발생합니다"
+                    ],
+                    "VMS와의 통신에 실패했습니다": [
+                        "VMS 서버와의 연결이 안됩니다",
+                        "VMS 패스워드가 맞지 않습니다",
+                        "SVMS 통신 오류가 발생합니다",
+                        "NVR과 VMS 간 통신 실패",
+                        "VMS 설정에서 연결 오류가 발생합니다",
+                        "VMS 서버 연결이 끊어졌습니다"
+                    ],
+                    "Ping 테스트에 실패했습니다": [
+                        "네트워크 연결이 안됩니다",
+                        "Ping 테스트에서 응답이 없습니다",
+                        "네트워크 통신이 불안정합니다",
+                        "연결 상태를 확인할 수 없습니다",
+                        "네트워크 점검에서 실패가 발생합니다",
+                        "통신 테스트에 실패했습니다"
+                    ],
+                    "Onvif 응답이 없습니다": [
+                        "Onvif 프로토콜 응답이 없습니다",
+                        "카메라와 Onvif 통신이 안됩니다",
+                        "Onvif 설정에서 연결 오류가 발생합니다",
+                        "HTTP/HTTPS 프로토콜 응답이 없습니다",
+                        "카메라 통신 프로토콜 오류",
+                        "Onvif 서비스가 응답하지 않습니다"
+                    ],
+                    "로그인 차단 상태입니다": [
+                        "CCTV 로그인이 차단되었습니다",
+                        "비밀번호 변경 후 로그인 차단 상태입니다",
+                        "계정이 차단되어 로그인할 수 없습니다",
+                        "CCTV 차단 상태로 접속이 안됩니다",
+                        "로그인 시도가 차단되었습니다",
+                        "비밀번호 변경으로 인한 차단 상태입니다"
+                    ],
+                    "비밀번호 변경에 실패했습니다": [
+                        "비밀번호 변경이 안됩니다",
+                        "패스워드 수정에 실패했습니다",
+                        "비밀번호 업데이트 오류가 발생합니다",
+                        "비밀번호 변경 시 오류가 발생합니다",
+                        "패스워드 변경 프로세스가 실패했습니다",
+                        "비밀번호 수정이 제대로 되지 않습니다"
+                    ],
+                    "PK P 계정 로그인 안됨": [
+                        "PK P 계정으로 로그인이 안됩니다",
+                        "30일 미접속으로 계정이 잠겼습니다",
+                        "PK P 계정이 잠겨있습니다",
+                        "계정 로그인에 실패합니다",
+                        "PK P 계정 인증이 안됩니다",
+                        "계정 접속이 차단되었습니다"
+                    ],
+                    "PK P 웹 접속 안됨": [
+                        "PK P 웹사이트에 접속이 안됩니다",
+                        "톰캣 서비스가 중단되었습니다",
+                        "PK P 웹 서비스가 응답하지 않습니다",
+                        "웹 접속 시 연결 오류가 발생합니다",
+                        "PK P 웹 페이지가 로드되지 않습니다",
+                        "웹 서비스 접속에 실패합니다"
+                    ],
+                    "기타": [
+                        "알 수 없는 오류가 발생했습니다",
+                        "기타 문제가 발생했습니다",
+                        "예상치 못한 오류가 발생했습니다",
+                        "문제를 파악할 수 없습니다",
+                        "기타 기술적 문제가 발생했습니다",
+                        "분류되지 않는 문제입니다"
+                    ]
+                }
+                print("⚠️ JSON 파일이 없어 기본 데이터 사용")
+        
+        except Exception as e:
+            print(f"❌ 샘플 데이터 로드 실패: {e}")
+            return False
         
         try:
             if self.collection and self.embedding_model:
@@ -225,16 +245,21 @@ class ChromaVectorClassifier:
                         })
                         ids.append(f"{issue_type}_{i}")
                 
-                # 벡터 임베딩 생성
-                embeddings = self.embedding_model.encode(documents).tolist()
-                
-                # Chroma에 추가
-                self.collection.add(
-                    documents=documents,
-                    metadatas=metadatas,
-                    ids=ids,
-                    embeddings=embeddings
-                )
+                # Chroma에 추가 (임베딩은 자동 생성)
+                if self.embedding_model:
+                    # 임베딩 함수가 있으면 자동으로 임베딩 생성
+                    self.collection.add(
+                        documents=documents,
+                        metadatas=metadatas,
+                        ids=ids
+                    )
+                else:
+                    # 임베딩 함수가 없으면 기본 임베딩 사용
+                    self.collection.add(
+                        documents=documents,
+                        metadatas=metadatas,
+                        ids=ids
+                    )
                 
                 print(f"✅ 샘플 데이터 추가 완료: {len(documents)}개 문서")
                 return True
