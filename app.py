@@ -1702,11 +1702,14 @@ def init_components():
             init_thread.daemon = True
             init_thread.start()
             
-            # 최대 10초 대기
-            init_thread.join(timeout=10)
+            # 최대 30초 대기 (Streamlit Cloud에서 모델 다운로드 시간 고려)
+            init_thread.join(timeout=30)
             
             if classifier is None:
-                raise Exception("FAISS 초기화 타임아웃 또는 실패")
+                print("⚠️ FAISS 초기화 실패 - 키워드 기반 분류로 폴백")
+                # 키워드 기반 분류기로 폴백
+                from simple_classifier import SimpleClassifier
+                classifier = SimpleClassifier()
                 
         except Exception as e:
             print(f"⚠️ FAISS 벡터 분류기 초기화 실패, 기본 분류기 사용: {e}")
@@ -3154,20 +3157,6 @@ with tab5:
                 st.write(f"**Client 타입 확인 오류**: {e}")
             
             
-            # 초기화 로그 표시
-            st.markdown("#### 📋 초기화 로그")
-            st.info("""
-            **초기화 과정:**
-            1. Chroma 클라이언트 초기화 시도
-            2. 임베딩 모델 초기화 시도  
-            3. 컬렉션 초기화 시도
-            4. 샘플 데이터 추가 시도
-            
-            **문제 발생 시:**
-            - SQLite3 오류: InMemory 클라이언트로 자동 대체
-            - 임베딩 모델 오류: sentence-transformers 패키지 확인
-            - 컬렉션 오류: Chroma 클라이언트 상태 확인
-            """)
     else:
         st.error("❌ Vector DB가 초기화되지 않았습니다.")
         
@@ -3460,27 +3449,13 @@ pip install -r requirements.txt
                 st.error(f"❌ 삭제 중 오류: {e}")
                 st.write(f"오류 상세: {str(e)}")
     
-    st.markdown("---")
     
-    # Vector DB 정보
-    st.markdown("### ℹ️ Vector DB 정보")
-    st.info("""
-    **Vector DB 특징:**
-    - **임베딩 모델**: ko-sroberta-multitask (한국어 특화)
-    - **벡터 차원**: 768차원
-    - **저장 방식**: Chroma DB
-    - **자동 샘플 데이터**: 54개 (9개 문제 유형 × 6개 샘플)
     
-    **주의사항:**
-    - Streamlit Cloud에서는 리부팅 시 데이터가 초기화됩니다
-    - 중요한 데이터는 별도로 백업하세요
-    - 새 데이터 추가 시 정확한 문제 유형을 선택하세요
-    """)
 
 # 푸터
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; font-size: 0.8em;">
-©2024 PrivKeeper P 장애 대응 자동화 시스템
+©2025 PrivKeeper P 장애 대응 자동화 시스템
 </div>
 """, unsafe_allow_html=True)

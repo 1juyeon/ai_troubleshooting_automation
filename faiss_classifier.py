@@ -93,12 +93,21 @@ class FaissVectorClassifier:
     def _initialize_embedding_model(self):
         """임베딩 모델 초기화"""
         try:
+            # Streamlit Cloud 환경에서는 임베딩 모델 사용 안함
+            if os.getenv('STREAMLIT_CLOUD'):
+                self.embedding_model = None
+                print("⚠️ Streamlit Cloud 환경 - 임베딩 모델 비활성화")
+                return
+                
             if SENTENCE_TRANSFORMERS_AVAILABLE:
-                # 경량 모델 사용 (Windows에서 더 안정적)
+                # 로컬에서는 기존 모델 사용
                 self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+                print("✅ 로컬 환경 - 임베딩 모델 초기화 성공")
             else:
                 self.embedding_model = None
+                print("⚠️ sentence-transformers 사용 불가 - 키워드 기반 분류 사용")
         except Exception as e:
+            print(f"❌ 임베딩 모델 초기화 실패: {e}")
             self.embedding_model = None
     
     def _load_or_create_index(self):
