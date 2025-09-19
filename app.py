@@ -386,19 +386,11 @@ def show_feedback_buttons(analysis_id):
     st.markdown("---")
     
     # 사용자 친화적인 안내 메시지
-    st.markdown("""
-    <div style="background-color: #f0f8ff; padding: 15px; border-radius: 10px; border-left: 4px solid #4CAF50; margin: 10px 0;">
-        <h4 style="margin: 0 0 10px 0; color: #2E7D32;">💡 이 응답이 도움이 되었다면</h4>
-        <p style="margin: 0; color: #424242; font-size: 14px;">
-            좋아요 버튼을 눌러주세요! 여러분의 피드백은 AI가 더 정확하고 유용한 응답을 제공하는 데 큰 도움이 됩니다.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.info("💡 이 응답이 도움이 되었다면 좋아요 버튼을 눌러주세요! 여러분의 피드백은 AI가 더 정확하고 유용한 응답을 제공하는 데 큰 도움이 됩니다.")
     
     # 사용자 정보 가져오기
     user_name = st.session_state.get('contact_name', 'Unknown')
     user_role = st.session_state.get('role', 'Unknown')
-    
     
     # 좋아요 버튼을 중앙에 배치
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -411,15 +403,8 @@ def show_feedback_buttons(analysis_id):
                 )
                 
                 if feedback_result['success']:
-                    # 성공 메시지를 더 눈에 띄게 표시
-                    st.markdown("""
-                    <div style="background-color: #e8f5e8; padding: 15px; border-radius: 10px; border-left: 4px solid #4CAF50; margin: 10px 0;">
-                        <h4 style="margin: 0 0 10px 0; color: #2E7D32;">✅ 피드백이 성공적으로 반영되었습니다!</h4>
-                        <p style="margin: 0; color: #424242; font-size: 14px;">
-                            감사합니다! 여러분의 피드백을 바탕으로 AI가 더 나은 응답을 제공할 수 있도록 학습하겠습니다.
-                        </p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    # 성공 메시지 표시
+                    st.success("✅ 피드백이 성공적으로 반영되었습니다! 감사합니다! 여러분의 피드백을 바탕으로 AI가 더 나은 응답을 제공할 수 있도록 학습하겠습니다.")
                     st.rerun()
                 else:
                     st.error(f"피드백 저장 실패: {feedback_result.get('error', '알 수 없는 오류')}")
@@ -427,11 +412,7 @@ def show_feedback_buttons(analysis_id):
                 st.error(f"피드백 처리 중 오류 발생: {str(e)}")
     
     # 추가 안내 메시지
-    st.markdown("""
-    <div style="text-align: center; margin: 10px 0; color: #666; font-size: 12px;">
-        💡 피드백은 익명으로 수집되며, AI 모델 개선 목적으로만 사용됩니다.
-    </div>
-    """, unsafe_allow_html=True)
+    st.caption("💡 피드백은 익명으로 수집되며, AI 모델 개선 목적으로만 사용됩니다.")
 
 def enhance_ai_prompt_with_feedback(base_prompt: str, issue_type: str) -> str:
     """좋아요를 받은 응답을 참고하여 프롬프트 개선"""
@@ -808,87 +789,6 @@ def show_ai_analysis_modal(selected_row):
                         
 
                     
-                    
-
-                    
-                    # SMS 발송 섹션 추가
-                    st.markdown("---")
-                    st.markdown("### 📱 SMS 발송")
-                    
-                    col_sms1, col_sms2 = st.columns(2)
-                    
-                    with col_sms1:
-                        recipient_name = st.text_input(
-                            "수신자 이름",
-                            placeholder="수신자 이름을 입력하세요",
-                            key=f"sms_recipient_name_{selected_row.get('번호', 'unknown')}"
-                        )
-                        recipient_phone = st.text_input(
-                            "수신자 전화번호",
-                            placeholder="01012345678",
-                            key=f"sms_recipient_phone_{selected_row.get('번호', 'unknown')}"
-                        )
-                        sender_phone = st.text_input(
-                            "발신자 번호",
-                            value=st.session_state.get('sender_phone', '01012345678'),
-                            placeholder="01012345678",
-                            help="SMS 발송 시 표시될 발신자 번호입니다",
-                            key=f"sms_sender_phone_{selected_row.get('번호', 'unknown')}"
-                        )
-                    
-                    with col_sms2:
-                        # DB에 저장된 email_draft가 있는지 먼저 확인 (이메일 초안과 동일)
-                        email_draft = selected_row.get('email_draft', '')
-                        if email_draft and len(email_draft.strip()) > 20:
-                            # DB에 저장된 이메일 초안을 SMS 메시지로 사용
-                            default_sms_message = email_draft
-                        else:
-                            # 기본 SMS 템플릿 사용
-                            default_sms_message = f"[{selected_row.get('문의유형', 'AI')}] {summary[:100] if summary else '분석 완료'}..."
-                        
-                        sms_message = st.text_area(
-                            "SMS 메시지",
-                            value=default_sms_message,
-                            height=150,
-                            key=f"sms_message_{selected_row.get('번호', 'unknown')}"
-                        )
-                        
-                        # SMS 발송 버튼
-                        if st.button("📱 SMS 발송", use_container_width=True, type="primary", key=f"sms_send_{selected_row.get('번호', 'unknown')}"):
-                            if recipient_name and recipient_phone and sms_message:
-                                # SOLAPI 핸들러로 SMS 발송
-                                try:
-                                    # 세션 상태에서 API 키 가져오기
-                                    api_key = st.session_state.get('solapi_api_key', '')
-                                    api_secret = st.session_state.get('solapi_api_secret', '')
-                                    # 사용자가 입력한 발신자 번호 사용
-                                    sender_phone = sender_phone
-                                    
-                                    if api_key and api_secret:
-                                        # SOLAPI 핸들러 생성
-                                        sms_handler = SOLAPIHandler(api_key, api_secret)
-                                        sms_handler.set_sender(sender_phone)
-                                        
-                                        # SMS 발송
-                                        sms_result = sms_handler.send_sms(
-                                            phone_number=recipient_phone,
-                                            message=sms_message,
-                                            recipient_name=recipient_name
-                                        )
-                                        
-                                        if sms_result["success"]:
-                                            st.success(f"✅ SMS가 성공적으로 발송되었습니다!")
-                                            st.info(f"수신자: {recipient_name} ({recipient_phone})")
-                                            st.info(f"메시지 ID: {sms_result.get('message_id', 'N/A')}")
-                                        else:
-                                            st.error(f"❌ SMS 발송 실패: {sms_result.get('error', '알 수 없는 오류')}")
-                                    else:
-                                        st.error("❌ SOLAPI API 키가 설정되지 않았습니다.")
-                                        st.info("Streamlit Secrets에서 SOLAPI API 키를 설정해주세요.")
-                                except Exception as e:
-                                    st.error(f"❌ SMS 발송 중 오류: {e}")
-                            else:
-                                st.warning("⚠️ 수신자 정보와 메시지를 모두 입력해주세요.")
                 else:
                     # 데이터가 비어있는 경우
                     st.warning("⚠️ 분석 데이터가 비어있습니다.")
@@ -3044,57 +2944,45 @@ with tab4:
     st.markdown("## 📚 사용 가이드")
     
     st.markdown("### 🎯 시스템 개요")
-    st.markdown("PrivKeeper P 장애 대응 자동화 시스템은 다중 AI 모델 기반 고객 문의 자동 분석 및 응답 도구입니다.")
+    st.markdown("**PrivKeeper P 장애 대응 자동화 시스템**은 AI를 활용한 고객 문의 자동 분석 및 응답 도구입니다.")
+    st.markdown("- 고객 문의를 입력하면 AI가 자동으로 문제 유형을 분류하고 분석합니다")
+    st.markdown("- 과거 유사한 사례를 검색하여 참고 정보를 제공합니다")
+    st.markdown("- 고객 응답 이메일 초안을 자동으로 생성합니다")
 
     st.markdown("### 📋 사용 방법")
 
     st.markdown("**1단계: 고객 문의 입력**")
-    st.markdown("- 고객사 정보와 문의 내용을 상세히 입력")
-    st.markdown("- 시스템이 자동으로 문제 유형을 분류합니다")
+    st.markdown("- 고객사명, 담당자, 문의 내용을 입력하세요")
+    st.markdown("- 우선순위를 선택하세요 (긴급/높음/보통/낮음)")
 
     st.markdown("**2단계: AI 분석**")
-    st.markdown("- 선택한 AI 모델이 자동으로 증상 분석, 원인 추정, 조치 방향 제시")
-    st.markdown("- 유사 사례 검색을 통한 참고 정보 제공")
-    st.markdown("- 고객 응답 이메일 초안 자동 생성")
+    st.markdown("- 사이드바에서 AI 모델을 선택하세요")
+    st.markdown("- 'AI 분석 요청' 버튼을 클릭하세요")
+    st.markdown("- AI가 자동으로 문제를 분석하고 해결 방안을 제시합니다")
 
-    st.markdown("**3단계: 검토 및 발송**")
-    st.markdown("- 엔지니어가 AI 분석 결과 검토")
-    st.markdown("- 필요시 수정 후 고객에게 응답")
-    st.markdown("- SMS 발송으로 빠른 알림 전달 가능")
+    st.markdown("**3단계: 결과 확인 및 발송**")
+    st.markdown("- 'AI 분석 결과' 탭에서 상세 결과를 확인하세요")
+    st.markdown("- 이메일 초안을 복사하여 고객에게 발송하세요")
+    st.markdown("- 필요시 SMS로 빠른 알림을 보낼 수 있습니다")
 
     st.markdown("### 🔧 기술 스택")
-
-    st.markdown("- **AI 모델:** Gemini 1.5 Pro/Flash, Gemini 2.0 Flash, GPT-4o, GPT-4 Turbo, GPT-3.5 Turbo")
-    st.markdown("- **벡터 검색:** scikit-learn 기반 텍스트 유사도")
-    st.markdown("- **웹 프레임워크:** Streamlit")
-    st.markdown("- **데이터베이스:** JSON 파일 + MongoDB Atlas (선택사항)")
-    st.markdown("- **데이터 처리:** Pandas, NumPy")
-    st.markdown("- **SMS 발송:** SOLAPI")
+    st.markdown("- **AI 모델**: Gemini 1.5/2.0, GPT 3.5/4")
+    st.markdown("- **웹 프레임워크**: Streamlit")
+    st.markdown("- **데이터베이스**: JSON, MongoDB Atlas")
+    st.markdown("- **벡터 검색**: ChromaDB, FAISS, scikit-learn")
+    st.markdown("- **사용자 인증**: Google OAuth 2.0")
+    st.markdown("- **SMS 발송**: SOLAPI")
+    st.markdown("- **데이터 처리**: Pandas, NumPy")
+    st.markdown("- **벡터 임베딩**: sentence-transformers")
 
     st.markdown("### ⚠️ 주의사항")
-
-    st.markdown("- AI 분석 결과는 참고용이며, 최종 검토 후 발송")
-    st.markdown("- 민감한 정보는 입력하지 않도록 주의")
-    st.markdown("- 긴급한 경우 즉시 담당 엔지니어에게 연락")
+    st.markdown("- AI 분석 결과는 참고용이며, 최종 검토 후 발송하세요")
+    st.markdown("- 민감한 정보는 입력하지 않도록 주의하세요")
+    st.markdown("- 긴급한 경우 즉시 담당 엔지니어에게 연락하세요")
 
     st.markdown("### 📞 지원 연락처")
-
-    st.markdown("- 기술지원: 02-678-1234 이메일: support@privkeeper.com")
-    st.markdown("- 긴급상황: 010-3456-7890")
-    
-    st.markdown("### 📱 SMS 기능")
-    
-    st.markdown("- **SOLAPI 연동**: 안정적인 SMS 발송 서비스")
-    st.markdown("- **자동 메시지 생성**: AI 분석 결과 기반 SMS 내용 자동 생성")
-    st.markdown("- **즉시 발송**: 분석 완료 후 바로 SMS 발송 가능")
-    st.markdown("- **이력 관리**: SMS 발송 내역 추적 및 관리")
-    
-    st.markdown("**SMS 발송 방법:**")
-    st.markdown("1. Streamlit Secrets에서 SOLAPI API 키 설정")
-    st.markdown("2. AI 분석 결과 또는 이력 상세보기에서 SMS 발송")
-    st.markdown("3. 수신자 정보 입력 후 발송")
-    
-    st.markdown("**자세한 설정 방법:** `SOLAPI_설정_가이드.md` 파일 참조")
+    st.markdown("- **기술지원**: 02-678-1234 | 이메일: support@privkeeper.com")
+    st.markdown("- **긴급상황**: 010-3456-7890")
 
 # 탭 5: Vector DB 관리
 with tab5:
@@ -3115,46 +3003,6 @@ with tab5:
         else:
             st.warning("⚠️ Vector DB가 활성화되지 않았습니다.")
             st.info("FAISS 또는 Vector Classifier가 초기화되지 않았습니다.")
-            
-        # 디버깅 정보 표시
-        if is_faiss_classifier or (is_issue_classifier and classifier.vector_classifier is not None):
-            with st.expander("🔍 디버깅 정보"):
-                try:
-                    # ChromaVectorClassifier 또는 IssueClassifier의 vector_classifier 가져오기
-                    if is_faiss_classifier:
-                        vector_classifier = classifier
-                        st.write("**분류기 타입**: ChromaVectorClassifier (FAISS 기반)")
-                    else:
-                        vector_classifier = classifier.vector_classifier
-                        st.write("**분류기 타입**: IssueClassifier 내부의 ChromaVectorClassifier")
-                    
-                    if vector_classifier is not None:
-                        st.write(f"**FAISS Index 존재**: {hasattr(vector_classifier, 'index') and vector_classifier.index is not None}")
-                        st.write(f"**Embedding Model 존재**: {hasattr(vector_classifier, 'embedding_model') and vector_classifier.embedding_model is not None}")
-                        st.write(f"**Documents 수**: {len(vector_classifier.documents) if hasattr(vector_classifier, 'documents') else 'N/A'}")
-                    else:
-                        st.write("**Vector Classifier**: None (초기화되지 않음)")
-                except Exception as e:
-                    st.write(f"**Vector Classifier 오류**: {e}")
-                    st.write("**Vector Classifier**: 초기화 실패")
-            
-            # 클라이언트 타입 확인
-            try:
-                # vector_classifier 변수가 위에서 정의되었으므로 재사용
-                if is_faiss_classifier:
-                    current_classifier = classifier
-                elif is_issue_classifier and classifier.vector_classifier is not None:
-                    current_classifier = classifier.vector_classifier
-                else:
-                    current_classifier = None
-                    
-                if current_classifier and hasattr(current_classifier, 'client') and current_classifier.client:
-                    client_type = type(current_classifier.client).__name__
-                    st.write(f"**Client 타입**: {client_type}")
-                else:
-                    st.write("**Client 타입**: 없음")
-            except Exception as e:
-                st.write(f"**Client 타입 확인 오류**: {e}")
             
             
     else:
@@ -3394,60 +3242,32 @@ pip install -r requirements.txt
     # Vector DB 관리
     st.markdown("### ⚙️ Vector DB 관리")
     
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("🔄 샘플 데이터 재생성", help="기존 데이터를 모두 삭제하고 샘플 데이터를 다시 생성합니다."):
-            try:
-                if 'classifier' in components and components['classifier']:
-                    classifier = components['classifier']
-                    
-                    # clear_database 메서드 확인
-                    if hasattr(classifier, 'clear_database'):
-                        # Vector DB 초기화
-                        success = classifier.clear_database()
-                    elif hasattr(classifier, 'vector_classifier') and classifier.vector_classifier and hasattr(classifier.vector_classifier, 'clear_database'):
-                        # IssueClassifier 내부의 vector_classifier 사용
-                        success = classifier.vector_classifier.clear_database()
-                    else:
-                        st.error("clear_database 메서드를 찾을 수 없습니다.")
-                        success = False
-                    if success:
-                        st.success("✅ 샘플 데이터가 재생성되었습니다!")
-                        st.rerun()
-                    else:
-                        st.error("❌ 샘플 데이터 재생성에 실패했습니다.")
+    if st.button("🔄 샘플 데이터 재생성", help="기존 데이터를 모두 삭제하고 샘플 데이터를 다시 생성합니다."):
+        try:
+            if 'classifier' in components and components['classifier']:
+                classifier = components['classifier']
+                
+                # clear_database 메서드 확인
+                if hasattr(classifier, 'clear_database'):
+                    # Vector DB 초기화
+                    success = classifier.clear_database()
+                elif hasattr(classifier, 'vector_classifier') and classifier.vector_classifier and hasattr(classifier.vector_classifier, 'clear_database'):
+                    # IssueClassifier 내부의 vector_classifier 사용
+                    success = classifier.vector_classifier.clear_database()
                 else:
-                    st.error("❌ Vector DB가 초기화되지 않았습니다.")
-            except Exception as e:
-                st.error(f"❌ 재생성 중 오류: {e}")
-                st.write(f"오류 상세: {str(e)}")
-    
-    with col2:
-        if st.button("🗑️ 전체 데이터 삭제", help="모든 Vector DB 데이터를 삭제합니다."):
-            try:
-                if 'classifier' in components and components['classifier']:
-                    classifier = components['classifier']
-                    
-                    # clear_database 메서드 확인
-                    if hasattr(classifier, 'clear_database'):
-                        success = classifier.clear_database()
-                    elif hasattr(classifier, 'vector_classifier') and classifier.vector_classifier and hasattr(classifier.vector_classifier, 'clear_database'):
-                        # IssueClassifier 내부의 vector_classifier 사용
-                        success = classifier.vector_classifier.clear_database()
-                    else:
-                        st.error("clear_database 메서드를 찾을 수 없습니다.")
-                        success = False
-                    if success:
-                        st.success("✅ 모든 데이터가 삭제되었습니다!")
-                        st.rerun()
-                    else:
-                        st.error("❌ 데이터 삭제에 실패했습니다.")
+                    st.error("clear_database 메서드를 찾을 수 없습니다.")
+                    success = False
+                if success:
+                    st.success("✅ 샘플 데이터가 재생성되었습니다!")
+                    st.rerun()
                 else:
-                    st.error("❌ Vector DB가 초기화되지 않았습니다.")
-            except Exception as e:
-                st.error(f"❌ 삭제 중 오류: {e}")
-                st.write(f"오류 상세: {str(e)}")
+                    st.error("❌ 샘플 데이터 재생성에 실패했습니다.")
+            else:
+                st.error("❌ Vector DB가 초기화되지 않았습니다.")
+        except Exception as e:
+            st.error(f"❌ 재생성 중 오류: {e}")
+            st.write(f"오류 상세: {str(e)}")
+    
     
     
     

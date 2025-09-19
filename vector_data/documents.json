@@ -1,17 +1,17 @@
 [
   {
-    "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 인증 실패 오류가 발생하여 변경이 되지 않습니다.",
+    "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 PrivKeeper P에 등록된 비밀번호가 맞지 않아아 변경이 되지 않습니다.",
     "issue_type": "현재 비밀번호가 맞지 않습니다",
-    "summary": "비밀번호 변경 시 인증 실패 문제",
-    "action_flow": "1. 현재 비밀번호 확인 2. 대소문자 구분 확인 3. 특수문자 포함 여부 확인",
+    "summary": "비밀번호 변경 시 비밀번호가 맞지 않아 실패하는 문제",
+    "action_flow": "1. PrivKeeper P에 등록된 비밀번호로 실제 카메라 웹에 로그인 가능한지 확인 2.VMS에 등록된 비밀번호와 PrivKeeper P에 등록된 비밀버호가 일치하는지 확인",
     "customer_name": "ABC 주식회사",
     "timestamp": "2024-01-15T10:30:00"
   },
   {
-    "customer_input": "VMS와의 통신이 실패하여 카메라 영상을 볼 수 없습니다.",
+    "customer_input": "VMS와의 통신이 실패하여 카메라 패스워드 변경에 실패했습니다.",
     "issue_type": "VMS와의 통신에 실패했습니다",
-    "summary": "VMS 통신 실패로 인한 영상 확인 불가",
-    "action_flow": "1. 네트워크 연결 상태 확인 2. VMS 서버 상태 확인 3. 방화벽 설정 확인",
+    "summary": "VMS 통신 실패로 인한 패스워드 변경 실패",
+    "action_flow": "1. PrivKeeperP NVR/VMS 설정에 등록된 비밀번호가 실제 VMS 비밀번호와 일치하는지 확인 2. 네트워크 연결 상태 확인",
     "customer_name": "XYZ 기업",
     "timestamp": "2024-01-16T14:20:00"
   },
@@ -24,10 +24,10 @@
     "timestamp": "2024-01-17T09:15:00"
   },
   {
-    "customer_input": "Onvif 응답이 없어서 카메라 설정이 안 됩니다.",
+    "customer_input": "Onvif 응답이 없어서 카메라 비밀번호 변경에 실패합니다.",
     "issue_type": "Onvif 응답이 없습니다",
     "summary": "Onvif 프로토콜 응답 없음",
-    "action_flow": "1. 카메라 Onvif 설정 확인 2. 포트 설정 확인 3. 인증 정보 확인",
+    "action_flow": "1. 카메라 프로토콜(http/https)이 실제 카메라 웹 접속시 사용하는 프로토콜과 일치하는지 확인 2. 카메라 제조사 및 모델명 확인",
     "customer_name": "GHI 테크",
     "timestamp": "2024-01-18T16:45:00"
   },
@@ -35,20 +35,20 @@
     "customer_input": "CCTV 로그인이 차단되어 접속이 안 됩니다.",
     "issue_type": "로그인 차단 상태입니다(CCTV)",
     "summary": "CCTV 로그인 차단으로 인한 접속 불가",
-    "action_flow": "1. 계정 잠금 상태 확인 2. 관리자에게 계정 잠금 해제 요청 3. 비밀번호 재설정",
+    "action_flow": "1. 5~30분 후 계정 잠금 상태 재확인 2. 실제 카메라 비밀번호와 일치하는지 확인 3. 비밀번호 재설정",
     "customer_name": "JKL 보안",
     "timestamp": "2024-01-19T11:30:00"
   },
   {
-    "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 인증 실패 오류가 발생하여 변경이 되지 않습니다.",
+    "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 비밀번호가 맞지 않아 변경이 되지 않습니다.",
     "issue_type": "현재 비밀번호가 맞지 않습니다",
-    "summary": "비밀번호 변경 시 인증 실패 문제",
-    "action_flow": "1. 현재 비밀번호 확인 2. 대소문자 구분 확인 3. 특수문자 포함 여부 확인",
+    "summary": "비밀번호 변경 시 비밀번호가 맞지 않아 변경 불가",
+    "action_flow": "1. PrivKeeper P에 등록된 비밀번호로 실제 카메라 웹에 로그인 가능한지 확인 2.VMS에 등록된 비밀번호와 PrivKeeper P에 등록된 비밀버호가 일치하는지 확인",
     "customer_name": "ABC 주식회사",
     "timestamp": "2024-01-15T10:30:00"
   },
   {
-    "customer_input": "VMS와의 통신이 실패하여 카메라 영상을 볼 수 없습니다.",
+    "customer_input": "VMS와의 통신이 실패하여 카메라 패스워드 변경에 실패했습니다",
     "issue_type": "VMS와의 통신에 실패했습니다",
     "summary": "VMS 통신 실패로 인한 영상 확인 불가",
     "action_flow": "1. 네트워크 연결 상태 확인 2. VMS 서버 상태 확인 3. 방화벽 설정 확인",
@@ -56,68 +56,12 @@
     "timestamp": "2024-01-16T14:20:00"
   },
   {
-    "customer_input": "Ping 테스트에 실패하여 네트워크 연결이 안 됩니다.",
-    "issue_type": "Ping 테스트에 실패했습니다",
-    "summary": "네트워크 연결 문제로 인한 Ping 실패",
-    "action_flow": "1. 물리적 네트워크 연결 확인 2. IP 주소 설정 확인 3. 라우터 설정 확인",
-    "customer_name": "DEF 시스템",
-    "timestamp": "2024-01-17T09:15:00"
-  },
-  {
-    "customer_input": "Onvif 응답이 없어서 카메라 설정이 안 됩니다.",
+    "customer_input": "Onvif 응답이 없어서 카메라 비밀번호 변경에 실패합니다",
     "issue_type": "Onvif 응답이 없습니다",
     "summary": "Onvif 프로토콜 응답 없음",
     "action_flow": "1. 카메라 Onvif 설정 확인 2. 포트 설정 확인 3. 인증 정보 확인",
     "customer_name": "GHI 테크",
     "timestamp": "2024-01-18T16:45:00"
-  },
-  {
-    "customer_input": "CCTV 로그인이 차단되어 접속이 안 됩니다.",
-    "issue_type": "로그인 차단 상태입니다(CCTV)",
-    "summary": "CCTV 로그인 차단으로 인한 접속 불가",
-    "action_flow": "1. 계정 잠금 상태 확인 2. 관리자에게 계정 잠금 해제 요청 3. 비밀번호 재설정",
-    "customer_name": "JKL 보안",
-    "timestamp": "2024-01-19T11:30:00"
-  },
-  {
-    "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 인증 실패 오류가 발생하여 변경이 되지 않습니다.",
-    "issue_type": "현재 비밀번호가 맞지 않습니다",
-    "summary": "비밀번호 변경 시 인증 실패 문제",
-    "action_flow": "1. 현재 비밀번호 확인 2. 대소문자 구분 확인 3. 특수문자 포함 여부 확인",
-    "customer_name": "ABC 주식회사",
-    "timestamp": "2024-01-15T10:30:00"
-  },
-  {
-    "customer_input": "VMS와의 통신이 실패하여 카메라 영상을 볼 수 없습니다.",
-    "issue_type": "VMS와의 통신에 실패했습니다",
-    "summary": "VMS 통신 실패로 인한 영상 확인 불가",
-    "action_flow": "1. 네트워크 연결 상태 확인 2. VMS 서버 상태 확인 3. 방화벽 설정 확인",
-    "customer_name": "XYZ 기업",
-    "timestamp": "2024-01-16T14:20:00"
-  },
-  {
-    "customer_input": "Ping 테스트에 실패하여 네트워크 연결이 안 됩니다.",
-    "issue_type": "Ping 테스트에 실패했습니다",
-    "summary": "네트워크 연결 문제로 인한 Ping 실패",
-    "action_flow": "1. 물리적 네트워크 연결 확인 2. IP 주소 설정 확인 3. 라우터 설정 확인",
-    "customer_name": "DEF 시스템",
-    "timestamp": "2024-01-17T09:15:00"
-  },
-  {
-    "customer_input": "Onvif 응답이 없어서 카메라 설정이 안 됩니다.",
-    "issue_type": "Onvif 응답이 없습니다",
-    "summary": "Onvif 프로토콜 응답 없음",
-    "action_flow": "1. 카메라 Onvif 설정 확인 2. 포트 설정 확인 3. 인증 정보 확인",
-    "customer_name": "GHI 테크",
-    "timestamp": "2024-01-18T16:45:00"
-  },
-  {
-    "customer_input": "CCTV 로그인이 차단되어 접속이 안 됩니다.",
-    "issue_type": "로그인 차단 상태입니다(CCTV)",
-    "summary": "CCTV 로그인 차단으로 인한 접속 불가",
-    "action_flow": "1. 계정 잠금 상태 확인 2. 관리자에게 계정 잠금 해제 요청 3. 비밀번호 재설정",
-    "customer_name": "JKL 보안",
-    "timestamp": "2024-01-19T11:30:00"
   },
   {
     "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 인증 실패 오류가 발생하여 변경이 되지 않습니다.",
@@ -136,14 +80,6 @@
     "timestamp": "2024-01-16T14:20:00"
   },
   {
-    "customer_input": "Ping 테스트에 실패하여 네트워크 연결이 안 됩니다.",
-    "issue_type": "Ping 테스트에 실패했습니다",
-    "summary": "네트워크 연결 문제로 인한 Ping 실패",
-    "action_flow": "1. 물리적 네트워크 연결 확인 2. IP 주소 설정 확인 3. 라우터 설정 확인",
-    "customer_name": "DEF 시스템",
-    "timestamp": "2024-01-17T09:15:00"
-  },
-  {
     "customer_input": "Onvif 응답이 없어서 카메라 설정이 안 됩니다.",
     "issue_type": "Onvif 응답이 없습니다",
     "summary": "Onvif 프로토콜 응답 없음",
@@ -152,335 +88,7 @@
     "timestamp": "2024-01-18T16:45:00"
   },
   {
-    "customer_input": "CCTV 로그인이 차단되어 접속이 안 됩니다.",
-    "issue_type": "로그인 차단 상태입니다(CCTV)",
-    "summary": "CCTV 로그인 차단으로 인한 접속 불가",
-    "action_flow": "1. 계정 잠금 상태 확인 2. 관리자에게 계정 잠금 해제 요청 3. 비밀번호 재설정",
-    "customer_name": "JKL 보안",
-    "timestamp": "2024-01-19T11:30:00"
-  },
-  {
-    "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 인증 실패 오류가 발생하여 변경이 되지 않습니다.",
-    "issue_type": "현재 비밀번호가 맞지 않습니다",
-    "summary": "비밀번호 변경 시 인증 실패 문제",
-    "action_flow": "1. 현재 비밀번호 확인 2. 대소문자 구분 확인 3. 특수문자 포함 여부 확인",
-    "customer_name": "ABC 주식회사",
-    "timestamp": "2024-01-15T10:30:00"
-  },
-  {
-    "customer_input": "VMS와의 통신이 실패하여 카메라 영상을 볼 수 없습니다.",
-    "issue_type": "VMS와의 통신에 실패했습니다",
-    "summary": "VMS 통신 실패로 인한 영상 확인 불가",
-    "action_flow": "1. 네트워크 연결 상태 확인 2. VMS 서버 상태 확인 3. 방화벽 설정 확인",
-    "customer_name": "XYZ 기업",
-    "timestamp": "2024-01-16T14:20:00"
-  },
-  {
-    "customer_input": "Ping 테스트에 실패하여 네트워크 연결이 안 됩니다.",
-    "issue_type": "Ping 테스트에 실패했습니다",
-    "summary": "네트워크 연결 문제로 인한 Ping 실패",
-    "action_flow": "1. 물리적 네트워크 연결 확인 2. IP 주소 설정 확인 3. 라우터 설정 확인",
-    "customer_name": "DEF 시스템",
-    "timestamp": "2024-01-17T09:15:00"
-  },
-  {
-    "customer_input": "Onvif 응답이 없어서 카메라 설정이 안 됩니다.",
-    "issue_type": "Onvif 응답이 없습니다",
-    "summary": "Onvif 프로토콜 응답 없음",
-    "action_flow": "1. 카메라 Onvif 설정 확인 2. 포트 설정 확인 3. 인증 정보 확인",
-    "customer_name": "GHI 테크",
-    "timestamp": "2024-01-18T16:45:00"
-  },
-  {
-    "customer_input": "CCTV 로그인이 차단되어 접속이 안 됩니다.",
-    "issue_type": "로그인 차단 상태입니다(CCTV)",
-    "summary": "CCTV 로그인 차단으로 인한 접속 불가",
-    "action_flow": "1. 계정 잠금 상태 확인 2. 관리자에게 계정 잠금 해제 요청 3. 비밀번호 재설정",
-    "customer_name": "JKL 보안",
-    "timestamp": "2024-01-19T11:30:00"
-  },
-  {
-    "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 인증 실패 오류가 발생하여 변경이 되지 않습니다.",
-    "issue_type": "현재 비밀번호가 맞지 않습니다",
-    "summary": "비밀번호 변경 시 인증 실패 문제",
-    "action_flow": "1. 현재 비밀번호 확인 2. 대소문자 구분 확인 3. 특수문자 포함 여부 확인",
-    "customer_name": "ABC 주식회사",
-    "timestamp": "2024-01-15T10:30:00"
-  },
-  {
-    "customer_input": "VMS와의 통신이 실패하여 카메라 영상을 볼 수 없습니다.",
-    "issue_type": "VMS와의 통신에 실패했습니다",
-    "summary": "VMS 통신 실패로 인한 영상 확인 불가",
-    "action_flow": "1. 네트워크 연결 상태 확인 2. VMS 서버 상태 확인 3. 방화벽 설정 확인",
-    "customer_name": "XYZ 기업",
-    "timestamp": "2024-01-16T14:20:00"
-  },
-  {
-    "customer_input": "Ping 테스트에 실패하여 네트워크 연결이 안 됩니다.",
-    "issue_type": "Ping 테스트에 실패했습니다",
-    "summary": "네트워크 연결 문제로 인한 Ping 실패",
-    "action_flow": "1. 물리적 네트워크 연결 확인 2. IP 주소 설정 확인 3. 라우터 설정 확인",
-    "customer_name": "DEF 시스템",
-    "timestamp": "2024-01-17T09:15:00"
-  },
-  {
-    "customer_input": "Onvif 응답이 없어서 카메라 설정이 안 됩니다.",
-    "issue_type": "Onvif 응답이 없습니다",
-    "summary": "Onvif 프로토콜 응답 없음",
-    "action_flow": "1. 카메라 Onvif 설정 확인 2. 포트 설정 확인 3. 인증 정보 확인",
-    "customer_name": "GHI 테크",
-    "timestamp": "2024-01-18T16:45:00"
-  },
-  {
-    "customer_input": "CCTV 로그인이 차단되어 접속이 안 됩니다.",
-    "issue_type": "로그인 차단 상태입니다(CCTV)",
-    "summary": "CCTV 로그인 차단으로 인한 접속 불가",
-    "action_flow": "1. 계정 잠금 상태 확인 2. 관리자에게 계정 잠금 해제 요청 3. 비밀번호 재설정",
-    "customer_name": "JKL 보안",
-    "timestamp": "2024-01-19T11:30:00"
-  },
-  {
-    "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 인증 실패 오류가 발생하여 변경이 되지 않습니다.",
-    "issue_type": "현재 비밀번호가 맞지 않습니다",
-    "summary": "비밀번호 변경 시 인증 실패 문제",
-    "action_flow": "1. 현재 비밀번호 확인 2. 대소문자 구분 확인 3. 특수문자 포함 여부 확인",
-    "customer_name": "ABC 주식회사",
-    "timestamp": "2024-01-15T10:30:00"
-  },
-  {
-    "customer_input": "VMS와의 통신이 실패하여 카메라 영상을 볼 수 없습니다.",
-    "issue_type": "VMS와의 통신에 실패했습니다",
-    "summary": "VMS 통신 실패로 인한 영상 확인 불가",
-    "action_flow": "1. 네트워크 연결 상태 확인 2. VMS 서버 상태 확인 3. 방화벽 설정 확인",
-    "customer_name": "XYZ 기업",
-    "timestamp": "2024-01-16T14:20:00"
-  },
-  {
-    "customer_input": "Ping 테스트에 실패하여 네트워크 연결이 안 됩니다.",
-    "issue_type": "Ping 테스트에 실패했습니다",
-    "summary": "네트워크 연결 문제로 인한 Ping 실패",
-    "action_flow": "1. 물리적 네트워크 연결 확인 2. IP 주소 설정 확인 3. 라우터 설정 확인",
-    "customer_name": "DEF 시스템",
-    "timestamp": "2024-01-17T09:15:00"
-  },
-  {
-    "customer_input": "Onvif 응답이 없어서 카메라 설정이 안 됩니다.",
-    "issue_type": "Onvif 응답이 없습니다",
-    "summary": "Onvif 프로토콜 응답 없음",
-    "action_flow": "1. 카메라 Onvif 설정 확인 2. 포트 설정 확인 3. 인증 정보 확인",
-    "customer_name": "GHI 테크",
-    "timestamp": "2024-01-18T16:45:00"
-  },
-  {
-    "customer_input": "CCTV 로그인이 차단되어 접속이 안 됩니다.",
-    "issue_type": "로그인 차단 상태입니다(CCTV)",
-    "summary": "CCTV 로그인 차단으로 인한 접속 불가",
-    "action_flow": "1. 계정 잠금 상태 확인 2. 관리자에게 계정 잠금 해제 요청 3. 비밀번호 재설정",
-    "customer_name": "JKL 보안",
-    "timestamp": "2024-01-19T11:30:00"
-  },
-  {
-    "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 인증 실패 오류가 발생하여 변경이 되지 않습니다.",
-    "issue_type": "현재 비밀번호가 맞지 않습니다",
-    "summary": "비밀번호 변경 시 인증 실패 문제",
-    "action_flow": "1. 현재 비밀번호 확인 2. 대소문자 구분 확인 3. 특수문자 포함 여부 확인",
-    "customer_name": "ABC 주식회사",
-    "timestamp": "2024-01-15T10:30:00"
-  },
-  {
-    "customer_input": "VMS와의 통신이 실패하여 카메라 영상을 볼 수 없습니다.",
-    "issue_type": "VMS와의 통신에 실패했습니다",
-    "summary": "VMS 통신 실패로 인한 영상 확인 불가",
-    "action_flow": "1. 네트워크 연결 상태 확인 2. VMS 서버 상태 확인 3. 방화벽 설정 확인",
-    "customer_name": "XYZ 기업",
-    "timestamp": "2024-01-16T14:20:00"
-  },
-  {
-    "customer_input": "Ping 테스트에 실패하여 네트워크 연결이 안 됩니다.",
-    "issue_type": "Ping 테스트에 실패했습니다",
-    "summary": "네트워크 연결 문제로 인한 Ping 실패",
-    "action_flow": "1. 물리적 네트워크 연결 확인 2. IP 주소 설정 확인 3. 라우터 설정 확인",
-    "customer_name": "DEF 시스템",
-    "timestamp": "2024-01-17T09:15:00"
-  },
-  {
-    "customer_input": "Onvif 응답이 없어서 카메라 설정이 안 됩니다.",
-    "issue_type": "Onvif 응답이 없습니다",
-    "summary": "Onvif 프로토콜 응답 없음",
-    "action_flow": "1. 카메라 Onvif 설정 확인 2. 포트 설정 확인 3. 인증 정보 확인",
-    "customer_name": "GHI 테크",
-    "timestamp": "2024-01-18T16:45:00"
-  },
-  {
-    "customer_input": "CCTV 로그인이 차단되어 접속이 안 됩니다.",
-    "issue_type": "로그인 차단 상태입니다(CCTV)",
-    "summary": "CCTV 로그인 차단으로 인한 접속 불가",
-    "action_flow": "1. 계정 잠금 상태 확인 2. 관리자에게 계정 잠금 해제 요청 3. 비밀번호 재설정",
-    "customer_name": "JKL 보안",
-    "timestamp": "2024-01-19T11:30:00"
-  },
-  {
-    "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 인증 실패 오류가 발생하여 변경이 되지 않습니다.",
-    "issue_type": "현재 비밀번호가 맞지 않습니다",
-    "summary": "비밀번호 변경 시 인증 실패 문제",
-    "action_flow": "1. 현재 비밀번호 확인 2. 대소문자 구분 확인 3. 특수문자 포함 여부 확인",
-    "customer_name": "ABC 주식회사",
-    "timestamp": "2024-01-15T10:30:00"
-  },
-  {
-    "customer_input": "VMS와의 통신이 실패하여 카메라 영상을 볼 수 없습니다.",
-    "issue_type": "VMS와의 통신에 실패했습니다",
-    "summary": "VMS 통신 실패로 인한 영상 확인 불가",
-    "action_flow": "1. 네트워크 연결 상태 확인 2. VMS 서버 상태 확인 3. 방화벽 설정 확인",
-    "customer_name": "XYZ 기업",
-    "timestamp": "2024-01-16T14:20:00"
-  },
-  {
-    "customer_input": "Ping 테스트에 실패하여 네트워크 연결이 안 됩니다.",
-    "issue_type": "Ping 테스트에 실패했습니다",
-    "summary": "네트워크 연결 문제로 인한 Ping 실패",
-    "action_flow": "1. 물리적 네트워크 연결 확인 2. IP 주소 설정 확인 3. 라우터 설정 확인",
-    "customer_name": "DEF 시스템",
-    "timestamp": "2024-01-17T09:15:00"
-  },
-  {
-    "customer_input": "Onvif 응답이 없어서 카메라 설정이 안 됩니다.",
-    "issue_type": "Onvif 응답이 없습니다",
-    "summary": "Onvif 프로토콜 응답 없음",
-    "action_flow": "1. 카메라 Onvif 설정 확인 2. 포트 설정 확인 3. 인증 정보 확인",
-    "customer_name": "GHI 테크",
-    "timestamp": "2024-01-18T16:45:00"
-  },
-  {
-    "customer_input": "CCTV 로그인이 차단되어 접속이 안 됩니다.",
-    "issue_type": "로그인 차단 상태입니다(CCTV)",
-    "summary": "CCTV 로그인 차단으로 인한 접속 불가",
-    "action_flow": "1. 계정 잠금 상태 확인 2. 관리자에게 계정 잠금 해제 요청 3. 비밀번호 재설정",
-    "customer_name": "JKL 보안",
-    "timestamp": "2024-01-19T11:30:00"
-  },
-  {
-    "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 인증 실패 오류가 발생하여 변경이 되지 않습니다.",
-    "issue_type": "현재 비밀번호가 맞지 않습니다",
-    "summary": "비밀번호 변경 시 인증 실패 문제",
-    "action_flow": "1. 현재 비밀번호 확인 2. 대소문자 구분 확인 3. 특수문자 포함 여부 확인",
-    "customer_name": "ABC 주식회사",
-    "timestamp": "2024-01-15T10:30:00"
-  },
-  {
-    "customer_input": "VMS와의 통신이 실패하여 카메라 영상을 볼 수 없습니다.",
-    "issue_type": "VMS와의 통신에 실패했습니다",
-    "summary": "VMS 통신 실패로 인한 영상 확인 불가",
-    "action_flow": "1. 네트워크 연결 상태 확인 2. VMS 서버 상태 확인 3. 방화벽 설정 확인",
-    "customer_name": "XYZ 기업",
-    "timestamp": "2024-01-16T14:20:00"
-  },
-  {
-    "customer_input": "Ping 테스트에 실패하여 네트워크 연결이 안 됩니다.",
-    "issue_type": "Ping 테스트에 실패했습니다",
-    "summary": "네트워크 연결 문제로 인한 Ping 실패",
-    "action_flow": "1. 물리적 네트워크 연결 확인 2. IP 주소 설정 확인 3. 라우터 설정 확인",
-    "customer_name": "DEF 시스템",
-    "timestamp": "2024-01-17T09:15:00"
-  },
-  {
-    "customer_input": "Onvif 응답이 없어서 카메라 설정이 안 됩니다.",
-    "issue_type": "Onvif 응답이 없습니다",
-    "summary": "Onvif 프로토콜 응답 없음",
-    "action_flow": "1. 카메라 Onvif 설정 확인 2. 포트 설정 확인 3. 인증 정보 확인",
-    "customer_name": "GHI 테크",
-    "timestamp": "2024-01-18T16:45:00"
-  },
-  {
-    "customer_input": "CCTV 로그인이 차단되어 접속이 안 됩니다.",
-    "issue_type": "로그인 차단 상태입니다(CCTV)",
-    "summary": "CCTV 로그인 차단으로 인한 접속 불가",
-    "action_flow": "1. 계정 잠금 상태 확인 2. 관리자에게 계정 잠금 해제 요청 3. 비밀번호 재설정",
-    "customer_name": "JKL 보안",
-    "timestamp": "2024-01-19T11:30:00"
-  },
-  {
-    "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 인증 실패 오류가 발생하여 변경이 되지 않습니다.",
-    "issue_type": "현재 비밀번호가 맞지 않습니다",
-    "summary": "비밀번호 변경 시 인증 실패 문제",
-    "action_flow": "1. 현재 비밀번호 확인 2. 대소문자 구분 확인 3. 특수문자 포함 여부 확인",
-    "customer_name": "ABC 주식회사",
-    "timestamp": "2024-01-15T10:30:00"
-  },
-  {
-    "customer_input": "VMS와의 통신이 실패하여 카메라 영상을 볼 수 없습니다.",
-    "issue_type": "VMS와의 통신에 실패했습니다",
-    "summary": "VMS 통신 실패로 인한 영상 확인 불가",
-    "action_flow": "1. 네트워크 연결 상태 확인 2. VMS 서버 상태 확인 3. 방화벽 설정 확인",
-    "customer_name": "XYZ 기업",
-    "timestamp": "2024-01-16T14:20:00"
-  },
-  {
-    "customer_input": "Ping 테스트에 실패하여 네트워크 연결이 안 됩니다.",
-    "issue_type": "Ping 테스트에 실패했습니다",
-    "summary": "네트워크 연결 문제로 인한 Ping 실패",
-    "action_flow": "1. 물리적 네트워크 연결 확인 2. IP 주소 설정 확인 3. 라우터 설정 확인",
-    "customer_name": "DEF 시스템",
-    "timestamp": "2024-01-17T09:15:00"
-  },
-  {
-    "customer_input": "Onvif 응답이 없어서 카메라 설정이 안 됩니다.",
-    "issue_type": "Onvif 응답이 없습니다",
-    "summary": "Onvif 프로토콜 응답 없음",
-    "action_flow": "1. 카메라 Onvif 설정 확인 2. 포트 설정 확인 3. 인증 정보 확인",
-    "customer_name": "GHI 테크",
-    "timestamp": "2024-01-18T16:45:00"
-  },
-  {
-    "customer_input": "CCTV 로그인이 차단되어 접속이 안 됩니다.",
-    "issue_type": "로그인 차단 상태입니다(CCTV)",
-    "summary": "CCTV 로그인 차단으로 인한 접속 불가",
-    "action_flow": "1. 계정 잠금 상태 확인 2. 관리자에게 계정 잠금 해제 요청 3. 비밀번호 재설정",
-    "customer_name": "JKL 보안",
-    "timestamp": "2024-01-19T11:30:00"
-  },
-  {
-    "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 인증 실패 오류가 발생하여 변경이 되지 않습니다.",
-    "issue_type": "현재 비밀번호가 맞지 않습니다",
-    "summary": "비밀번호 변경 시 인증 실패 문제",
-    "action_flow": "1. 현재 비밀번호 확인 2. 대소문자 구분 확인 3. 특수문자 포함 여부 확인",
-    "customer_name": "ABC 주식회사",
-    "timestamp": "2024-01-15T10:30:00"
-  },
-  {
-    "customer_input": "VMS와의 통신이 실패하여 카메라 영상을 볼 수 없습니다.",
-    "issue_type": "VMS와의 통신에 실패했습니다",
-    "summary": "VMS 통신 실패로 인한 영상 확인 불가",
-    "action_flow": "1. 네트워크 연결 상태 확인 2. VMS 서버 상태 확인 3. 방화벽 설정 확인",
-    "customer_name": "XYZ 기업",
-    "timestamp": "2024-01-16T14:20:00"
-  },
-  {
-    "customer_input": "Ping 테스트에 실패하여 네트워크 연결이 안 됩니다.",
-    "issue_type": "Ping 테스트에 실패했습니다",
-    "summary": "네트워크 연결 문제로 인한 Ping 실패",
-    "action_flow": "1. 물리적 네트워크 연결 확인 2. IP 주소 설정 확인 3. 라우터 설정 확인",
-    "customer_name": "DEF 시스템",
-    "timestamp": "2024-01-17T09:15:00"
-  },
-  {
-    "customer_input": "Onvif 응답이 없어서 카메라 설정이 안 됩니다.",
-    "issue_type": "Onvif 응답이 없습니다",
-    "summary": "Onvif 프로토콜 응답 없음",
-    "action_flow": "1. 카메라 Onvif 설정 확인 2. 포트 설정 확인 3. 인증 정보 확인",
-    "customer_name": "GHI 테크",
-    "timestamp": "2024-01-18T16:45:00"
-  },
-  {
-    "customer_input": "CCTV 로그인이 차단되어 접속이 안 됩니다.",
-    "issue_type": "로그인 차단 상태입니다(CCTV)",
-    "summary": "CCTV 로그인 차단으로 인한 접속 불가",
-    "action_flow": "1. 계정 잠금 상태 확인 2. 관리자에게 계정 잠금 해제 요청 3. 비밀번호 재설정",
-    "customer_name": "JKL 보안",
-    "timestamp": "2024-01-19T11:30:00"
-  },
-  {
-    "customer_input": "웹접속안됨",
+    "customer_input": "웹 접속 안됨",
     "issue_type": "PK P 웹 접속 안됨",
     "summary": "-  PK P 웹 접속 불가 현상 확인 필요.",
     "action_flow": "- 1. 윈도우 서비스 확인: 윈도우 서비스 목록에서 \"Apache Tomcat\" (혹은 해당 톰캣 서비스 명칭) 서비스가 실행 중인지 확인합니다. 2. 톰캣 상태 확인: 톰캣이 꺼져있는 경우, 서비스를 시작합니다. 시작 버튼을 눌러도 시작되지 않으면, 톰캣 로그(logs 폴더)를 확인하여 에러 원인을 파악합니다. 3. 웹 접속 재시도: 톰캣 서비스 시작 후, 웹 접속을 다시 시도합니다. 4. 방화벽 확인 (추가 조치):  만약 톰캣이 정상적으로 실행 중임에도 접속이 안 된다면, 방화벽 설정에서 톰캣 포트(기본값 8080)가 허용되어 있는지 확인합니다. 5. URL 확인 (추가 조치): 접속하려는 URL이 정확한지 다시 한번 확인합니다.  Context Path를 포함하여 정확한 URL을 사용해야 합니다.",
@@ -488,7 +96,7 @@
     "timestamp": "2025-08-07T09:27:00.650729"
   },
   {
-    "customer_input": "웹접속안됨",
+    "customer_input": "PKP 웹 접속하려고 하는데 아무것도 뜨지 않습니다다",
     "issue_type": "PK P 웹 접속 안됨",
     "summary": "-  PK P 웹 접속 불가",
     "action_flow": "- 1. 윈도우 서비스 확인: 윈도우 키 + R 입력 후 services.msc 입력하여 서비스 창 실행. 2. Tomcat 서비스 찾기: 서비스 목록에서 Apache Tomcat (혹은 Tomcat으로 시작하는 서비스명) 검색. 3. Tomcat 서비스 상태 확인: Tomcat 서비스의 상태가 \"실행 중\"인지 확인. 4. Tomcat 서비스 재시작: 만약 Tomcat 서비스가 꺼져있다면, 서비스를 선택하고 \"시작\" 버튼 클릭. 실행 중이라면 \"다시 시작\" 버튼 클릭. 5. 웹 접속 재시도: Tomcat 서비스 재시작 후, 웹 접속을 다시 시도.",
@@ -510,5 +118,21 @@
     "action_flow": "- 1. 톰캣 서비스 상태 확인: 고객님 PC에서 윈도우 서비스 목록(services.msc)을 열어 Apache Tomcat 서비스의 상태를 확인합니다. 2. 톰캣 재시작 시도: 만약 톰캣 서비스가 중지되어 있다면, 서비스를 시작합니다. 이미 실행 중이라면, 서비스를 재시작합니다. 3. 웹 접속 재시도: 위 조치 후 웹 접속을 다시 시도해봅니다.",
     "customer_name": "에스원",
     "timestamp": "2025-08-07T13:31:25.488417"
+  },
+  {
+    "customer_input": "VMS와의 통신이 실패하여 카메라 패스워드 변경에 실패했습니다.",
+    "issue_type": "VMS와의 통신에 실패했습니다",
+    "summary": "VMS 통신 실패로 인한 패스워드 변경 실패",
+    "action_flow": "1. PrivKeeperP웹 NVR/VMS 설정에 등록된 비밀번호가 실제 VMS 비밀번호와 일치하는지 확인 2. 네트워크 연결 상태 확인",
+    "customer_name": "XYZ 기업",
+    "timestamp": "2024-01-16T14:20:00"
+  },
+  {
+    "customer_input": "PrivKeeper P에서 비밀번호 변경을 시도했으나 인증 실패 오류가 발생하여 변경이 되지 않습니다.",
+    "issue_type": "현재 비밀번호가 맞지 않습니다",
+    "summary": "비밀번호 변경 시 인증 실패 문제",
+    "action_flow": "1. PrivKeeper P에 등록된 비밀번호로 실제 카메라 웹에 로그인 가능한지 확인 2.VMS에 등록된 비밀번호와 PrivKeeper P에 등록된 비밀버호가 일치하는지 확인",
+    "customer_name": "ABC 주식회사",
+    "timestamp": "2024-01-15T10:30:00"
   }
 ]

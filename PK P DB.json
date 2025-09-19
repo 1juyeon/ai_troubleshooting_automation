@@ -21,7 +21,7 @@
   ],
   "VMS와의 통신에 실패했습니다": [
     {
-      "condition_1": "SVMS Manager 접속 비밀번호와 Privkeepr P에 등록된 SVMS 비밀번호가 일치하지 않는가?",
+      "condition_1": "SVMS Manager 접속 비밀번호와 Privkeeper P에 등록된 SVMS 비밀번호가 일치하지 않는가?",
       "condition_2": "비밀번호가 일치하지 않는 경우인가?",
       "solution": "PKP 웹 설정 > NVR/VMS 항목에서 등록된 VMS 패스워드 확인 및 일치 처리",
       "onsite_needed": "N"
