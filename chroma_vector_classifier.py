@@ -58,23 +58,35 @@ class ChromaVectorClassifier:
             self.collection = None
             return
         
-        # Chroma 클라이언트 초기화 (의존성 문제 해결)
+        # Chroma 클라이언트 초기화 (클라우드 호환성 개선)
         try:
-            # 의존성 문제 해결을 위한 환경 변수 설정
-            import os
-            os.environ["CHROMA_DISABLE_ONNXRUNTIME"] = "1"
-            os.environ["CHROMA_DISABLE_IMPORT_ONNXRUNTIME"] = "1"
-            os.environ["CHROMA_DISABLE_TELEMETRY"] = "1"
-            os.environ["CHROMA_DISABLE_IMPORT_ONNXRUNTIME"] = "1"
+            from chroma_cloud_config import get_chromadb_config, create_chromadb_client
             
-            self.client = chromadb.PersistentClient(
-                path=persist_directory,
-                settings=Settings(anonymized_telemetry=False)
-            )
-            print("✅ Chroma 클라이언트 초기화 성공 (onnxruntime 비활성화)")
+            # 환경에 맞는 설정 가져오기
+            config = get_chromadb_config()
+            
+            # 클라이언트 생성
+            self.client = create_chromadb_client(config)
+            
+            if self.client is None:
+                raise Exception("클라이언트 생성 실패")
+                
         except Exception as e:
             print(f"❌ Chroma 클라이언트 초기화 실패: {e}")
-            self.client = None
+            # 폴백: 기본 설정으로 재시도
+            try:
+                import os
+                os.environ.update({
+                    "CHROMA_DISABLE_ONNXRUNTIME": "1",
+                    "CHROMA_DISABLE_IMPORT_ONNXRUNTIME": "1",
+                    "CHROMA_DISABLE_TELEMETRY": "1",
+                })
+                
+                self.client = chromadb.Client()
+                print("✅ ChromaDB 기본 클라이언트 폴백 성공")
+            except Exception as fallback_e:
+                print(f"❌ ChromaDB 폴백도 실패: {fallback_e}")
+                self.client = None
         
         # 임베딩 모델 초기화 (ChromaDB 기본 임베딩 함수 사용)
         try:

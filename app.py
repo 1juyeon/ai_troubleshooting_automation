@@ -1729,11 +1729,36 @@ def init_components():
             print("✅ Gemini API 키를 사이드바에서 로드했습니다.")
         
         # 컴포넌트 초기화 (API 키 로드 후)
-        # ChromaDB 벡터 분류기 사용
+        # ChromaDB 벡터 분류기 사용 (개선된 초기화)
+        classifier = None
         try:
+            print("🔄 ChromaDB 벡터 분류기 초기화 시도...")
             from chroma_vector_classifier import ChromaVectorClassifier
-            classifier = ChromaVectorClassifier()
-            print("✅ ChromaDB 벡터 분류기 초기화 성공")
+            
+            # 타임아웃 설정으로 무한 대기 방지
+            import threading
+            import time
+            
+            def init_chromadb():
+                nonlocal classifier
+                try:
+                    classifier = ChromaVectorClassifier()
+                    print("✅ ChromaDB 벡터 분류기 초기화 성공")
+                except Exception as e:
+                    print(f"❌ ChromaDB 벡터 분류기 초기화 실패: {e}")
+                    classifier = None
+            
+            # 별도 스레드에서 초기화 시도
+            init_thread = threading.Thread(target=init_chromadb)
+            init_thread.daemon = True
+            init_thread.start()
+            
+            # 최대 10초 대기
+            init_thread.join(timeout=10)
+            
+            if classifier is None:
+                raise Exception("ChromaDB 초기화 타임아웃 또는 실패")
+                
         except Exception as e:
             print(f"⚠️ ChromaDB 벡터 분류기 초기화 실패, 기본 분류기 사용: {e}")
             classifier = IssueClassifier(api_key=api_key)
@@ -2976,18 +3001,7 @@ with tab3:
         #st.markdown("#### 📋 기본 데이터프레임")
         st.dataframe(df_previous, use_container_width=True, hide_index=True)
         
-        # 0) 모달을 위쪽에서 먼저 그리기(있다면)
-        if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
-            with st.expander("🔍 상세 결과", expanded=True):
-                show_ai_analysis_modal(st.session_state.selected_row_for_detail)
-                # 모달 닫기 버튼
-                def close_modal_prev():
-                    st.session_state.show_detail_modal = False
-                    st.session_state.selected_row_for_detail = None
 
-                if st.button("❌ 닫기", key="prev_close_modal"):
-                    close_modal_prev()
-            st.markdown("---")  # 모달과 리스트 구분선
 
         # 1) 커스텀 테이블 UI
         st.markdown("#### 🔍상세 보기")
@@ -3058,6 +3072,18 @@ with tab3:
             st.session_state.items_per_page,
             "prev_"
         )
+
+        if st.session_state.get('show_detail_modal', False) and st.session_state.get('selected_row_for_detail'):
+            with st.expander("🔍 상세 결과", expanded=True):
+                show_ai_analysis_modal(st.session_state.selected_row_for_detail)
+                # 모달 닫기 버튼
+                def close_modal_prev():
+                    st.session_state.show_detail_modal = False
+                    st.session_state.selected_row_for_detail = None
+
+                if st.button("❌ 닫기", key="prev_close_modal"):
+                    close_modal_prev()
+            st.markdown("---")  # 모달과 리스트 구분선
         
 
 
