@@ -6,7 +6,7 @@ import json
 import os
 from typing import List, Dict, Any, Optional
 
-# FAISS 임포트 (Windows에서 더 안정적)
+# FAISS 임포트 (Streamlit Cloud 호환)
 try:
     import faiss
     FAISS_AVAILABLE = True
@@ -14,6 +14,13 @@ try:
 except ImportError as e:
     print(f"❌ FAISS 설치 필요: pip install faiss-cpu")
     FAISS_AVAILABLE = False
+
+# Streamlit Cloud 환경 확인
+import os
+if os.getenv('STREAMLIT_CLOUD'):
+    print("🌐 Streamlit Cloud 환경 감지")
+    if not FAISS_AVAILABLE:
+        print("⚠️ Streamlit Cloud에서 FAISS 사용 불가, 키워드 기반 분류로 폴백")
 
 # sentence-transformers 임포트
 try:

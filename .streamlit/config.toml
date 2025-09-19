@@ -4,9 +4,13 @@ maxUploadSize = 200
 maxMessageSize = 200
 
 [runner]
-# 메모리 사용량 제한
-maxMemoryUsage = 1
+# 메모리 사용량 제한 (FAISS 사용을 위해 증가)
+maxMemoryUsage = 2
 
 [logger]
 # 로그 레벨 설정
 level = "info"
+
+[global]
+# FAISS 벡터 검색을 위한 설정
+developmentMode = false

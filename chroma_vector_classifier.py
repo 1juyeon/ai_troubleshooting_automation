@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Optional
 import numpy as np
 import re
 
-# FAISS 안전하게 임포트
+# FAISS 안전하게 임포트 (Streamlit Cloud 호환)
 try:
     import faiss
     FAISS_AVAILABLE = True
@@ -18,6 +18,13 @@ except Exception as e:
     print(f"⚠️ FAISS 임포트 오류 (무시됨): {e}")
     FAISS_AVAILABLE = False
     faiss = None
+
+# Streamlit Cloud 환경 확인
+import os
+if os.getenv('STREAMLIT_CLOUD'):
+    print("🌐 Streamlit Cloud 환경 감지")
+    if not FAISS_AVAILABLE:
+        print("⚠️ Streamlit Cloud에서 FAISS 사용 불가, 키워드 기반 분류로 폴백")
 
 # sentence-transformers 임포트
 try:
